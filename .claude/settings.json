@@ -1,0 +1,45 @@
+{
+  "permissions": {
+    "deny": [
+      "Read(./.env)",
+      "Read(./.env.*)",
+      "Read(**/.env)",
+      "Read(**/.env.*)",
+      "Read(**/*firebase-adminsdk*.json)",
+      "Read(**/*serviceAccount*.json)",
+      "Read(**/*service-account*.json)",
+      "Read(~/.ssh/**)",
+      "Bash(firebase projects:delete:*)",
+      "Bash(firebase firestore:delete:*)",
+      "Bash(firebase hosting:disable:*)",
+      "Bash(npx firebase projects:delete:*)",
+      "Bash(npx firebase firestore:delete:*)",
+      "Bash(npx firebase hosting:disable:*)",
+      "Bash(git push --force:*)",
+      "Bash(git push -f:*)",
+      "Bash(git push * --force*)",
+      "Bash(git push * -f)",
+      "Bash(rm -rf:*)",
+      "Bash(rm -fr:*)"
+    ],
+    "ask": [
+      "Bash(firebase deploy:*)",
+      "Bash(npx firebase deploy:*)",
+      "Bash(git push:*)"
+    ]
+  },
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"$CLAUDE_PROJECT_DIR/.claude/hooks/log-tool-use.py\"",
+            "timeout": 5
+          }
+        ]
+      }
+    ]
+  }
+}

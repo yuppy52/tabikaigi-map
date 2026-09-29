@@ -1,2 +1,13 @@
 node_modules/
 tools/japan.topojson
+
+# Claude Code
+.claude/logs/
+.claude/settings.local.json
+
+# secrets
+.env
+.env.*
+*firebase-adminsdk*.json
+*serviceAccount*.json
+*service-account*.json
