@@ -4,18 +4,32 @@
 
 ## いまどこ？
 
-**Phase 1：設計** の途中。設計書を一通り書いたので、レビューと技術選定の確定を待っている。
+**要件定義のやり直し**に入るところ。開発の道具（ルール、サブエージェント、Skill、権限、作業ログ）は準備済み。
+**次にやること：用語集（`docs/glossary.md`）を作る。**
 
-## Phase 0：要件を決める ✅
+各ステップは「作る → `/review-docs` → 直す → `/compound`」で進める。
 
-- [x] 本人確認、ログインあり／なし、合算・紐づけ、メンバーの管理、人数、招待URL を決める → [requirements.md](requirements.md)
+## Phase 0：要件定義（やり直し）
 
-## Phase 1：設計
+たたき台の要件（本人確認、ログインあり／なし、合算・紐づけ、メンバーの管理、人数、招待URL）は決定済み → [requirements.md](requirements.md)。これを SE の要件定義の形に整える。
+
+- [ ] **用語集**を作る（メンバー、行った、紐づけ、合算 など言葉をそろえる）→ `docs/glossary.md`
+- [ ] **ユースケース**（誰が何をするか）を洗い出す。図は Mermaid、清書は draw.io
+- [ ] requirements.md を**要件ID付きの機能一覧**（REQ-001…）と非機能要件（NFR-001…）に作り直す
+- [ ] 非機能要件に運用（アクセス解析、無料枠の監視、エラーの把握）を入れる
+- [ ] `/review-docs` でレビュー → 直す → **要件定義を確定**
+
+## Phase 1：基本設計・詳細設計
+
+たたき台の設計書（構成、データ、認証、画面）と ADR は作成済み。要件IDとの対応を付けて仕上げる。
 
 - [x] Firebase の調査と、それを踏まえた設計の見直し
 - [x] 設計書を分けて書く（要件、構成、データ、認証、画面）
-- [ ] **設計書のレビュー**
-- [ ] **技術選定を確定する** → [adr/0001](adr/0001-backend-firebase.md)、[adr/0002](adr/0002-frontend-vanilla-vite.md)
+- [ ] 設計書に要件IDの対応を付ける
+- [ ] **システム構成図とワイヤーフレーム**を draw.io で作る（`*.drawio.svg`）
+- [ ] **権限マトリクス**（誰が何をできるか）を表で作る
+- [ ] `/review-docs` でレビュー → 直す
+- [ ] **技術選定を確定する** → [adr/0001](adr/0001-backend-firebase.md)（Supabase・Cloudflare の欄は要調査）、[adr/0002](adr/0002-frontend-vanilla-vite.md)
 - [ ] 開発環境を用意する（JDK 21、Node.js 20、firebase-tools）
 - [ ] Firestore のルールを書き、エミュレータでテストする
 - [ ] 追加する画面をモックに足す → [design/screens.md](design/screens.md)
