@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
-"""PostToolUse フック：Claude が使ったツールを .claude/logs/tool-use.jsonl に1行ずつ記録する。
+"""PostToolUse / PostToolUseFailure フック：Claude が使ったツールを .claude/logs/tool-use.jsonl に1行ずつ記録する。
 
 「ファイルを読みました」と言ったときに、本当に読んだかを後から確かめるためのもの。
-ファイルの中身やツールの結果は記録しない（どのツールを、何に対して使ったかだけ）。
+成功した操作は "ok"、失敗した操作は "failed" として残す。
+ファイルの中身やツールの結果は記録しない（どのツールを、何に対して使ったかと、失敗の理由だけ）。
 """
 import json
 import os
@@ -34,8 +35,11 @@ def main():
         "session": data.get("session_id"),
         "agent": data.get("agent_id") or data.get("agent_type") or "main",
         "tool": data.get("tool_name"),
+        "result": "failed" if data.get("hook_event_name") == "PostToolUseFailure" else "ok",
         "target": target,
     }
+    if entry["result"] == "failed" and data.get("error"):
+        entry["error"] = short(data["error"])
     project_dir = os.environ.get("CLAUDE_PROJECT_DIR") or data.get("cwd") or "."
     log_dir = os.path.join(project_dir, ".claude", "logs")
     os.makedirs(log_dir, exist_ok=True)
