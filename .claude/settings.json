@@ -40,6 +40,18 @@
           }
         ]
       }
+    ],
+    "PostToolUseFailure": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"$CLAUDE_PROJECT_DIR/.claude/hooks/log-tool-use.py\"",
+            "timeout": 5
+          }
+        ]
+      }
     ]
   }
 }

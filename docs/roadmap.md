@@ -38,9 +38,23 @@
 ## 運用ルール（Phase 1 の中で決める）
 
 - [x] 開発の道具（ルール、サブエージェント、Skill、学びの記録）
-- [x] Claude の権限（deny / ask）と作業ログ（`.claude/settings.json`）
+- [x] Claude の権限（deny / ask）と作業ログ（成功・失敗の両方を記録）
+- [x] プルリクエストの運用と main のブランチ保護
+- [ ] LICENSE を決める（MIT にするか、置かないか）
 - [ ] 利用状況の把握（何グループが使っているか）：アクセス解析の選定と、プライバシーポリシーへの記載（外部送信）
 - [ ] 無料枠の監視、エラーの把握
+
+## 工程ごとの道具の見直し
+
+各 Phase を始める前に、サブエージェント・Skill・ルール・CI が足りているかを見直す。いまの見通し：
+
+| 工程 | 追加を検討するもの |
+|---|---|
+| 基本設計 | 画面設計のレビュー（`ui-reviewer`、または既存の `design:design-critique`） |
+| ルールの実装の前 | **`rules-reviewer`**（Firestore のルールを攻撃する側の目で見る）、GitHub Actions でルールのテストを自動実行、サンドボックス（`/sandbox`） |
+| 実装（Phase 2）の前 | コードレビュー（まず既存の `/code-review` を試す）、`test-writer`、Dependabot |
+| 要件定義の後 | docs の自動チェック（Markdown の書式、Mermaid の構文、リンク切れ） |
+| βテスト（Phase 4）の前 | GitHub Issues（友達からのフィードバックの受け口） |
 
 ## Phase 2：MVP①（ログインなし）
 
