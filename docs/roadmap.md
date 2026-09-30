@@ -52,9 +52,22 @@
 |---|---|
 | 基本設計 | 画面設計のレビュー（`ui-reviewer`、または既存の `design:design-critique`） |
 | ルールの実装の前 | **`rules-reviewer`**（Firestore のルールを攻撃する側の目で見る）、GitHub Actions でルールのテストを自動実行、サンドボックス（`/sandbox`） |
-| 実装（Phase 2）の前 | コードレビュー（まず既存の `/code-review` を試す）、`test-writer`、Dependabot |
+| 実装（Phase 2）の前 | コードレビュー（まず既存の `/code-review` を試す）、`test-writer`、Dependabot、**Playwright CLI**（下のメモ） |
+| 公開（Phase 2 の終わり）の前 | **Strix**（下のメモ） |
 | 要件定義の後 | docs の自動チェック（Markdown の書式、Mermaid の構文、リンク切れ） |
 | βテスト（Phase 4）の前 | GitHub Issues（友達からのフィードバックの受け口） |
+
+### 導入を検討している道具（メモ）
+
+導入する前に `researcher` で最新の情報を調べ、ADR か learnings に判断を残す。
+
+- **Playwright CLI**：Claude が実際にブラウザを動かして、画面の操作や表示を確かめる（E2E テスト、スクリーンショット）。
+  - 目的：スマホ幅での表示、参加 → 塗る → 別の人の画面に反映、の流れを自動で確かめる
+  - 要調査：CLI と MCP（Playwright MCP はすでに接続済み）、アプリ内蔵のブラウザとの使い分け、CI で動かす方法
+- **Strix**：AI エージェントがアプリを攻撃する側の目で調べ、セキュリティの弱点を見つける。
+  - 目的：Firestore のルールの抜け道、他人のグループを読み書きできないか、などを公開前に確かめる
+  - 注意：**調べてよいのは自分のアプリだけ**。本番ではなく、エミュレータかテスト用のプロジェクトに対して実行する
+  - 要調査：導入方法、必要な環境（Docker、LLM の API キーなど）と費用、Firebase の構成で使えるか
 
 ## Phase 2：MVP①（ログインなし）
 
