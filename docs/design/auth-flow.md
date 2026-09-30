@@ -18,8 +18,10 @@ sequenceDiagram
   Auth-->>App: 匿名の uid
   App->>DB: groups/{groupId} と members を読む
   App->>U: 名前を入力してもらう
-  alt 同じ名前のメンバーがいる
+  alt 同じ名前の、紐づいていないメンバーがいる
     App->>U: その人として続きから操作
+  else 同じ名前の、紐づいたメンバーがいる
+    App->>U: その名前では入れないので、別の名前を求める
   else いない
     App->>DB: トランザクションで空いている枠 s0〜s19 に参加
   end
