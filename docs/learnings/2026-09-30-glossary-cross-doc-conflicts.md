@@ -1,5 +1,5 @@
 ---
-tags: [docs, glossary, requirements, design, terminology]
+tags: [docs, glossary, use-cases, requirements, design, terminology]
 area: design
 ---
 
@@ -17,8 +17,14 @@ area: design
 ## 次にどうするか
 用語集や設計書に新しい用語・定義を足すときは、「読んで自然に見える」ことと「他のドキュメントと矛盾していない」ことは別の基準として扱う。後者は自分の目視確認だけで済ませず、`doc-reviewer`（`/review-docs`）に実際に横断チェックさせる。`doc-reviewer` の観点には元々「整合性」「用語」の項目があり、今回もそれで機能したため、エージェント側の変更は不要。
 
+## 追記（2026-10-01）：ユースケースでも同じことが起きた
+`docs/use-cases.md` を書き、ユーザーと未決事項を決めて「決定したこと」に移した直後の `/review-docs` で27件（重大4）が出た。重大の中身は、決めたことが他のドキュメントに戻っていない（同名の扱い、作成者の決め方、退出）、「決定」と「未決」に同じ論点が重複、例外の行が決定と逆、の3種類だった。決定を反映する先（requirements、用語集、auth-flow、data-model）は、決めた時点で分かっていたのに、ユースケースの中だけを直していた。
+
+次にどうするか：ユーザーと何かを決めたら、そのドキュメントだけでなく、同じ論点を書いている他のドキュメントを `grep` で探し、同じ変更の中で直す。「決定したこと」に移した論点は「未決事項」から消す。
+
 ## 関連
 - docs/glossary.md
+- docs/use-cases.md
 - docs/requirements.md
 - docs/design/data-model.md
 - docs/design/auth-flow.md

@@ -17,7 +17,8 @@ erDiagram
     string groupId PK "Firestore の自動ID（20文字）。招待URLにも使う"
     string name "グループ名（20文字まで）"
     timestamp createdAt
-    string ownerUid "作成者の uid（匿名を含む）"
+    string ownerMemberId "作成者のメンバーの枠ID（sN）。作成者＝作成者のメンバー"
+    string ownerUid "作成者のメンバーに紐づいた uid（匿名を含む）。紐づけと同時にだけ更新できる（要確認：Q-012）"
     string manageBy "anyone | owner"
   }
   MEMBER {
