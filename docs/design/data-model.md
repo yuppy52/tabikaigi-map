@@ -18,7 +18,7 @@ erDiagram
     string name "グループ名（20文字まで）"
     timestamp createdAt
     string ownerMemberId "作成者のメンバーの枠ID（sN）。作成者＝作成者のメンバー"
-    string ownerUid "作成者のメンバーに紐づいた uid（匿名を含む）。紐づけと同時にだけ更新できる（要確認）"
+    string ownerUid "作成者のメンバーに紐づいた uid（匿名を含む）。紐づけと同時にだけ更新できる（要確認：Q-012）"
     string manageBy "anyone | owner"
   }
   MEMBER {
