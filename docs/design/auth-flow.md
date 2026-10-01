@@ -1,6 +1,6 @@
 # 認証の流れ
 
-状態：レビュー待ち
+状態：レビュー待ち（2026-10-02：名前の入力、作成者の引き継ぎ、ログアウト、退会を、要件定義の決定に合わせた）
 
 関係する要件：[requirements.md](../requirements.md) の「ログインして使う」以降。
 
@@ -78,7 +78,8 @@ sequenceDiagram
   App->>DB: members/{m}.uid = uid、visited = U（紐づいた全グループも更新）
 ```
 
-- 匿名のときに作ったグループの `ownerUid` は、この場合は引き継がない（MVP での割り切り）
+- 作成者は「作成者のメンバー」で決まる（[use-cases.md](../use-cases.md) の決定）。この場合も、作成者のメンバーを紐づけたら、`ownerUid` をアカウントの uid に更新する（ルールで書けるかは要確認：Q-012）
+- 紐づけるのは、ログインしたときに開いていたグループだけ。同じ端末からログインなしで参加していた他のグループは、何もしない（暫定。端末に覚える内容（要確認：Q-017）を決めたら見直す）
 - 退避先はメモリか `sessionStorage`。Google ログインをリダイレクト方式にするとページが読み直されるので、ポップアップ方式を基本にする
 
 ## 4. ログインした状態でグループに入る
@@ -93,17 +94,56 @@ sequenceDiagram
   App->>DB: members を読む
   alt 自分の uid のメンバーがいる
     Note over App: そのまま表示
-  else 自分の表示名と同じ名前のメンバーがいる（uid なし）
-    App->>U: 「この人はあなたですか？」
-    alt はい
-      App->>DB: 紐づけ（データは 3. と同じ流れ）
-    else いいえ
-      App->>U: 別の名前を入力してもらう
-    end
   else いない
-    App->>DB: 空いている枠に uid 付きで参加（visited = U）
+    App->>U: 名前を入力してもらう（アカウントは表示名を持たない）
+    alt 入れた名前と同じ名前のメンバーがいる（uid なし）
+      App->>U: 「この人はあなたですか？」
+      alt はい
+        App->>DB: 紐づけ（データは 3. と同じ流れ）
+      else いいえ
+        App->>U: 別の名前を入力してもらう（同じ判定をやり直す）
+      end
+    else 同じ名前の、紐づいたメンバーがいる
+      App->>U: その名前では入れないので、別の名前を求める
+    else いない
+      App->>DB: 空いている枠に uid 付きで参加（visited = U）
+    end
   end
 ```
+
+## 5. ログアウトする
+
+- `signOut` してトップを開く。グループ一覧とマイページには入れなくなる
+- 次にグループを開いたときは、1. と同じく匿名でサインインし、名前の入力から入る。紐づいたメンバーの名前ではログインなしで入れないので、参加の画面で「ログインしていた人はログインして入る」と案内する
+- 端末に覚えた名前をログアウトのときに消すかは、端末に覚える内容と一緒に決める（要確認：Q-017）
+
+## 6. 退会する
+
+```mermaid
+sequenceDiagram
+  actor U as 利用者
+  participant App as 画面
+  participant Auth as Firebase Auth
+  participant DB as Firestore
+
+  U->>App: マイページで「退会」→ 確認
+  App->>Auth: ログインし直す（reauthenticateWithCredential / reauthenticateWithPopup）
+  App->>DB: 紐づいた全グループの members を探す（uid == 自分）
+  loop 各グループ
+    alt 最後のメンバー
+      App->>DB: メンバーとグループを削除
+    else ほかにもメンバーがいる
+      App->>DB: メンバーを削除（作成者なら manageBy = anyone）
+    end
+  end
+  App->>DB: users/{uid} を削除
+  App->>Auth: deleteUser
+  App->>U: トップを開く
+```
+
+- アカウントの削除には、直前にログインしていることが必要（古いと `auth/requires-recent-login` で失敗する）。そのため先にログインし直してもらう（出典：https://firebase.google.com/docs/auth/web/manage-users#delete_a_user ）
+- Firestore の削除はアカウントが残っているうちに行い、アカウントの削除は最後にする（先にアカウントを消すと、ルールで本人と確かめられなくなる）
+- 途中で失敗したときにやり直せるようにするか、1つのバッチにまとめるかは、Q-010（グループ削除の後始末）と一緒に基本設計で決める
 
 ## LINE のアプリ内ブラウザ
 
