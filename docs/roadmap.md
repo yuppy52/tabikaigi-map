@@ -5,8 +5,8 @@
 ## いまどこ？
 
 **要件定義のやり直し**に入るところ。開発の道具（ルール、サブエージェント、Skill、権限、作業ログ）は準備済み。用語集は確定した。
-ユースケースは下書きができた（`/review-docs` 待ち）。
-**次にやること：ユースケースをレビューして直し、要件ID付きの機能一覧（REQ-001…）に作り直す。**
+ユースケースは下書きができ、`/review-docs` で27件の指摘が出た（重大4件は反映済み）。未決事項は [open-questions.md](open-questions.md) に一本化した。
+**次にやること：未決事項のうち「要件定義」の段階のもの（Q-001〜Q-009、Q-015）を1つずつ決め、決めたことを use-cases・requirements に反映する。そのあと、要件ID付きの機能一覧（REQ-001…）に作り直す。**
 
 各ステップは「作る → `/review-docs` → 直す → `/compound`」で進める。
 
@@ -15,7 +15,8 @@
 たたき台の要件（本人確認、ログインあり／なし、合算・紐づけ、メンバーの管理、人数、招待URL）は決定済み → [requirements.md](requirements.md)。これを SE の要件定義の形に整える。
 
 - [x] **用語集**を作る（メンバー、行った、紐づけ、合算 など言葉をそろえる）→ [glossary.md](glossary.md)
-- [x] **ユースケース**（誰が何をするか）を洗い出す（下書き、レビュー待ち）→ [use-cases.md](use-cases.md)。図は Mermaid、清書は draw.io
+- [x] **ユースケース**（誰が何をするか）を洗い出す（レビュー待ち）→ [use-cases.md](use-cases.md)。図は Mermaid、清書は draw.io
+- [ ] **未決事項を決める**（要件定義の段階のもの：Q-001〜Q-009、Q-015）→ [open-questions.md](open-questions.md)。決めたら use-cases・requirements に反映し、`/review-docs` の中・軽の指摘も直す
 - [ ] requirements.md を**要件ID付きの機能一覧**（REQ-001…）と非機能要件（NFR-001…）に作り直す
 - [ ] 非機能要件に運用（アクセス解析、無料枠の監視、エラーの把握）を入れる
 - [ ] `/review-docs` でレビュー → 直す → **要件定義を確定**
@@ -26,13 +27,13 @@
 
 - [x] Firebase の調査と、それを踏まえた設計の見直し
 - [x] 設計書を分けて書く（要件、構成、データ、認証、画面）
-- [ ] 設計書に要件IDの対応を付ける
+- [ ] 設計書に要件IDの対応を付ける（あわせて、基本設計の段階の未決事項 Q-010・Q-011・Q-014 を決める）
 - [ ] **システム構成図とワイヤーフレーム**を draw.io で作る（`*.drawio.svg`）
 - [ ] **権限マトリクス**（誰が何をできるか）を表で作る
 - [ ] `/review-docs` でレビュー → 直す
 - [ ] **技術選定を確定する** → [adr/0001](adr/0001-backend-firebase.md)（Supabase・Cloudflare の欄は要調査）、[adr/0002](adr/0002-frontend-vanilla-vite.md)
 - [ ] 開発環境を用意する（JDK 21、Node.js 20、firebase-tools）
-- [ ] Firestore のルールを書き、エミュレータでテストする
+- [ ] Firestore のルールを書き、エミュレータでテストする（先に Q-012 `getAfter` の可否を確かめる）
 - [ ] 追加する画面をモックに足す → [design/screens.md](design/screens.md)
 - [ ] 固定の OGP 画像と文言を用意する
 
@@ -80,7 +81,7 @@
 
 - [ ] メール＋パスワード（パスワードの再設定を含む）、Googleログイン
 - [ ] グループの切り替え、アカウントの「行った」の同期、合算、紐づけ
-- [ ] 要確認：匿名からメール＋パスワードへの昇格が SDK v12 で動くか（[auth-flow.md](design/auth-flow.md) 参照）
+- [ ] 要確認（Q-013）：匿名からメール＋パスワードへの昇格が SDK v12 で動くか（[auth-flow.md](design/auth-flow.md) 参照）
 
 ## Phase 4：βテスト → 拡張
 
