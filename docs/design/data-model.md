@@ -1,6 +1,6 @@
 # データモデル
 
-状態：レビュー待ち
+状態：レビュー待ち（2026-10-02：表示名をなくし、名前・色の変更、退会、0人のグループ、作成者がいなくなるときの扱いを要件定義の決定に合わせた）
 
 ## ER図
 
@@ -17,20 +17,19 @@ erDiagram
     string groupId PK "Firestore の自動ID（20文字）。招待URLにも使う"
     string name "グループ名（20文字まで）"
     timestamp createdAt
-    string ownerMemberId "作成者のメンバーの枠ID（sN）。作成者＝作成者のメンバー"
-    string ownerUid "作成者のメンバーに紐づいた uid（匿名を含む）。紐づけと同時にだけ更新できる（要確認：Q-012）"
+    string ownerMemberId "作成者のメンバーの枠ID（sN）。作成者＝作成者のメンバー。作成者のメンバーが消えたら空にする（作成者はいなくなる）"
+    string ownerUid "作成者のメンバーに紐づいた uid（匿名を含む）。紐づけと同時にだけ更新できる（要確認：Q-012）。持ち続けるかは要確認：Q-019"
     string manageBy "anyone | owner"
   }
   MEMBER {
     string memberId PK "s0〜s19 の固定枠"
-    string name "表示名（10文字まで）。グループ内で重複しない"
-    string color "パレットの色。重複してよい"
+    string name "メンバーの名前（10文字まで）。グループ内で重複しない（ログインあり・なしとも）"
+    string color "パレットの色。参加したときに自動で決まり、変えない。重複してよい"
     int_array visited "行った都道府県コード。ログイン済みなら USER の複製"
     string uid FK "ログインしたメンバーだけ持つ"
   }
   USER {
     string uid PK "Firebase Auth の uid"
-    string displayName
     int_array visited "行った都道府県コードの正本"
   }
   PREFECTURE {
@@ -42,9 +41,9 @@ erDiagram
 ## Firestore の構造
 
 ```
-groups/{groupId}                 name, createdAt, ownerUid, manageBy
+groups/{groupId}                 name, createdAt, ownerMemberId, ownerUid, manageBy
   └ members/{s0〜s19}            name, color, visited: number[], uid?
-users/{uid}                      displayName, visited: number[]
+users/{uid}                      visited: number[]（表示名は持たない。名前はメンバーごと）
 ```
 
 ## 設計上のポイント
@@ -68,11 +67,22 @@ users/{uid}                      displayName, visited: number[]
 - このクエリ用の複合インデックスは不要（単一フィールドの等価条件のため）
 
 ### 名前の重複
-- ルールでは防げない。参加するときにトランザクションで同じグループのメンバーを確認する
+- ルールでは防げない。参加するとき、名前を変えるとき（ログインありの本人だけ）、トランザクションで同じグループのメンバーを確認する
 - ほぼ同時に同じ名前で参加する競合は許容する
 
 ### グループの削除
 - 親のドキュメントを消してもサブコレクションは残る。先に `members`（最大20件）をバッチで消してからグループを消す
+- 最後のメンバーが退出したとき（退会を含む）も、メンバーとグループを一緒に消す（細部は要確認：Q-010）
+
+### 作成者がいなくなるとき
+- 作成者のメンバーを消すとき（退出、削除、退会、同じアカウントのメンバーが2つになりそうなときの片付け）は、同じバッチで `ownerMemberId` を空にし、`manageBy` を `anyone` にする。枠は使い回すので、空にしないと次にその枠に入った人が作成者になってしまう
+- `ownerUid` も古いまま残ると、もうメンバーでない人が設定を変えられる。`ownerUid` をやめて、ルールで `get(members/$(ownerMemberId)).data.uid == request.auth.uid` のように作成者のメンバーから引く案がある（要確認：Q-019）
+
+### 1グループに1アカウント1メンバー
+- 同じグループで、同じ `uid` のメンバーは1つだけにする（[auth-flow.md](auth-flow.md) の 3.）。ルールで守れるかは Q-019 と一緒に確かめる
+
+### 退会
+- 紐づいた全グループのメンバーを消し（退出と同じ扱い）、`users/{uid}` を消してから、最後にアカウントを削除する（流れは [auth-flow.md](auth-flow.md) の 6.）
 
 ## セキュリティルールの方針
 
@@ -87,16 +97,17 @@ users/{uid}                      displayName, visited: number[]
 | `members/{m}` | get / list | 認証済み |
 | | create | IDが `s0`〜`s19`。`uid` を付けるなら自分の uid でログイン済み |
 | | update（`visited`） | `uid` がなければ認証済みなら誰でも。あれば本人だけ |
-| | update（名前・色） | `uid` があれば本人だけ。なければ `manageBy` に従う |
+| | update（名前） | `uid` があれば本人だけ。なければ誰も変えられない |
+| | update（色） | 禁止（参加したときに決まる） |
 | | update（紐づけ） | `uid` がないメンバーに、ログイン済みの本人が自分の `uid` を書く |
-| | delete | `manageBy` に従う |
+| | delete | `manageBy` に従う。自分の退出はいつでもできる（ログインなしのメンバーの退出をどう書くかは要確認：Q-018） |
 | 全グループの `members` | list（横断検索） | 検索結果が `uid == 自分` のものだけ |
 | `users/{uid}` | すべて | 本人だけ |
 
 ほかに入れる検証：
 - フィールド名のホワイトリスト（決まったフィールド以外は書けない）
 - `visited` の要素が 1〜47 の整数であること
-- 名前の長さ（グループ名20文字、表示名10文字）
+- 名前の長さ（グループ名20文字、メンバーの名前10文字）
 
 ルールの叩き台は Firebase 調査のときに作ったものがあり、`firestore.rules` を書くときの出発点にする。
 
