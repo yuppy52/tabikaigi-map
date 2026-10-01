@@ -1,6 +1,6 @@
 # データモデル
 
-状態：レビュー待ち（2026-10-02：表示名をなくし、名前・色の変更と退会・0人のグループの扱いを要件定義の決定に合わせた）
+状態：レビュー待ち（2026-10-02：表示名をなくし、名前・色の変更、退会、0人のグループ、作成者がいなくなるときの扱いを要件定義の決定に合わせた）
 
 ## ER図
 
@@ -17,8 +17,8 @@ erDiagram
     string groupId PK "Firestore の自動ID（20文字）。招待URLにも使う"
     string name "グループ名（20文字まで）"
     timestamp createdAt
-    string ownerMemberId "作成者のメンバーの枠ID（sN）。作成者＝作成者のメンバー"
-    string ownerUid "作成者のメンバーに紐づいた uid（匿名を含む）。紐づけと同時にだけ更新できる（要確認：Q-012）"
+    string ownerMemberId "作成者のメンバーの枠ID（sN）。作成者＝作成者のメンバー。作成者のメンバーが消えたら空にする（作成者はいなくなる）"
+    string ownerUid "作成者のメンバーに紐づいた uid（匿名を含む）。紐づけと同時にだけ更新できる（要確認：Q-012）。持ち続けるかは要確認：Q-019"
     string manageBy "anyone | owner"
   }
   MEMBER {
@@ -41,7 +41,7 @@ erDiagram
 ## Firestore の構造
 
 ```
-groups/{groupId}                 name, createdAt, ownerUid, manageBy
+groups/{groupId}                 name, createdAt, ownerMemberId, ownerUid, manageBy
   └ members/{s0〜s19}            name, color, visited: number[], uid?
 users/{uid}                      visited: number[]（表示名は持たない。名前はメンバーごと）
 ```
@@ -73,6 +73,13 @@ users/{uid}                      visited: number[]（表示名は持たない。
 ### グループの削除
 - 親のドキュメントを消してもサブコレクションは残る。先に `members`（最大20件）をバッチで消してからグループを消す
 - 最後のメンバーが退出したとき（退会を含む）も、メンバーとグループを一緒に消す（細部は要確認：Q-010）
+
+### 作成者がいなくなるとき
+- 作成者のメンバーを消すとき（退出、削除、退会、同じアカウントのメンバーが2つになりそうなときの片付け）は、同じバッチで `ownerMemberId` を空にし、`manageBy` を `anyone` にする。枠は使い回すので、空にしないと次にその枠に入った人が作成者になってしまう
+- `ownerUid` も古いまま残ると、もうメンバーでない人が設定を変えられる。`ownerUid` をやめて、ルールで `get(members/$(ownerMemberId)).data.uid == request.auth.uid` のように作成者のメンバーから引く案がある（要確認：Q-019）
+
+### 1グループに1アカウント1メンバー
+- 同じグループで、同じ `uid` のメンバーは1つだけにする（[auth-flow.md](auth-flow.md) の 3.）。ルールで守れるかは Q-019 と一緒に確かめる
 
 ### 退会
 - 紐づいた全グループのメンバーを消し（退出と同じ扱い）、`users/{uid}` を消してから、最後にアカウントを削除する（流れは [auth-flow.md](auth-flow.md) の 6.）
