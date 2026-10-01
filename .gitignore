@@ -1,6 +1,9 @@
 node_modules/
 tools/japan.topojson
 
+# macOS
+.DS_Store
+
 # Claude Code
 .claude/logs/
 .claude/settings.local.json
