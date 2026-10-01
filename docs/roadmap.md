@@ -32,7 +32,7 @@
 - [ ] **システム構成図とワイヤーフレーム**を draw.io で作る（`*.drawio.svg`）
 - [ ] **権限マトリクス**（誰が何をできるか）を表で作る
 - [ ] `/review-docs` でレビュー → 直す
-- [ ] **技術選定を確定する** → [adr/0001](adr/0001-backend-firebase.md)（Supabase・Cloudflare の欄は要調査）、[adr/0002](adr/0002-frontend-vanilla-vite.md)
+- [ ] **技術選定を確定する** → [adr/0001](adr/0001-backend-firebase.md)（Supabase・Cloudflare の欄は要調査）、[adr/0002](adr/0002-frontend-vanilla-vite.md)。費用の心配（従量課金で見積もれない）から、Firebase のままにするかを見直す（[Q-023](open-questions.md)）。Firebase が前提の設計書と Q（Q-011〜Q-014・Q-019・Q-021・Q-022）は、ここで決めてから仕上げる
 - [ ] 開発環境を用意する（JDK 21、Node.js 20、firebase-tools）
 - [ ] Firestore のルールを書き、エミュレータでテストする（先に Q-012 `getAfter` の可否を確かめる）
 - [ ] 追加する画面をモックに足す → [design/screens.md](design/screens.md)

@@ -20,11 +20,12 @@
 - `.claude/agents/`：`researcher`（調査）、`doc-reviewer`（設計書のレビュー）
 - `.claude/skills/`：`/review-docs`（設計書のレビュー）、`/compound`（学びを残す）
 
-## 決まっている技術
+## 技術の前提
 
-- Firebase（Hosting、Authentication、Firestore）の無料 Spark プランの範囲で作る。Blaze が必要になる機能（Cloud Functions、Cloud Storage など）は、入れる前に相談する
+- **費用**：使った分だけ上限なく請求が来る構成にはしない（個人開発で費用を見積もれないため）。サービスを比べるときは、無料枠だけでなく、費用に上限があるか（超えたら止まるか、請求の上限を設定できるか）を必ず比べる。有料プランや、課金を有効にしないと使えない機能は、入れる前に相談する
+- **バックエンド**：Firebase（Hosting、Authentication、Firestore）の無料 Spark プランを第一候補として設計してきたが、未確定（[ADR 0001](docs/adr/0001-backend-firebase.md) は提案中）。費用の心配から、基本設計で見直す（[open-questions の Q-023](docs/open-questions.md)）。それまでは要件を特定のサービスに依存させない
 - 画面は素の JavaScript ＋ Vite（Phase 2 から）
-- Firestore のアクセス制御はセキュリティルールで行い、ルールを変えたらエミュレータのテストも更新する
+- Firebase を使う場合、Firestore のアクセス制御はセキュリティルールで行い、ルールを変えたらエミュレータのテストも更新する
 
 ## 進め方
 
