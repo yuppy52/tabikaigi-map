@@ -1,6 +1,6 @@
 # システム構成
 
-状態：レビュー待ち（技術選定は [ADR 0001](../adr/0001-backend-firebase.md)・[ADR 0002](../adr/0002-frontend-vanilla-vite.md) で確定させる）
+状態：レビュー待ち（技術選定は [ADR 0001](../adr/0001-backend-firebase.md)・[ADR 0002](../adr/0002-frontend-vanilla-vite.md) で確定させる。バックエンドを Firebase のままにするかは、費用の心配から基本設計で見直す：[Q-023](../open-questions.md)。この文書は Firebase を前提にしている）
 
 ## 構成図
 
