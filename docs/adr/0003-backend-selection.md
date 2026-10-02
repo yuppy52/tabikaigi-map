@@ -1,0 +1,265 @@
+# ADR 0003：バックエンドの選び直し（Q-023）
+
+- 状態：**提案中**（2026-10-03 に `researcher` で4つのサービスを調べ、比較と推奨案を書いた。`doc-reviewer` のレビュー（15件）を受けて、Firebase の追加調査をして書き直した。ユーザーが決め、下の「決定の前に確かめること」を済ませたら「決定」にし、[ADR 0001](0001-backend-firebase.md) を確定するか、この ADR で置き換えるかを書く）
+- 日付：2026-10-03
+- 関係する要件：NFR-004（費用の上限）、NFR-006（保存先で守るもの）、NFR-007・NFR-008（外部に送る情報）、NFR-010〜NFR-014（運用）、NFR-015（想定規模）、NFR-016（表示の速さ）、NFR-017（バックアップ）、NFR-018（問い合わせのフォーム）、REQ-027〜REQ-029・REQ-057〜REQ-059（ログインの方法、確認メール、パスワード）、REQ-036（退会のときのログインし直し）、REQ-037〜REQ-043（匿名からログインへ）、Q-029（広告）、Q-031（無料枠を使い切られる）
+
+## 背景
+
+[ADR 0001](0001-backend-firebase.md) で Firebase を提案したが、ユーザーから「従量課金で、見積もれない金額の請求が来るのが怖い」と出た（2026-10-02）。NFR-004 で「使った分だけ上限なく請求が来る構成は不可。無料枠を超えたら止まる構成にする」と決めたので、その観点で Firebase・Supabase・Cloudflare・Vercel を比べ直す。
+
+### 調査の前提と仮定
+
+[learnings](../learnings/2026-10-03-confirm-premises-before-research.md) にならい、調査の前提を書いておく。**仮定**は、ユーザーに確かめていないもの（調査の時点でユーザーがいなかった）。下の「ユーザーに決めてもらうこと」で確かめる。
+
+- 確かな前提：MVP は数グループ。想定規模は NFR-015（100グループ、平均6人、1日500回開かれる）。ログインなしでも使え、あとからログインに移る。広告は MVP では入れないが、使われ始めたら入れる予定（Q-029）＝将来は商用利用になりうる
+- 仮定1：クレジットカードの登録は、上限なく請求されないなら許容かもしれない
+- 仮定2：独自ドメインはまだ持っていない。最初はサービスのサブドメイン（`*.web.app` など）で始める
+- 仮定3：サーバーのプログラムは、なるべく書きたくない（1人で開発・運用するため）
+
+## 選択肢
+
+| 案 | 中身 |
+|---|---|
+| A | **Firebase 一式**（Spark：Hosting・Authentication・Firestore）。いまの設計のまま |
+| B | **画面の配信だけ Cloudflare**（Workers の静的アセット）、認証とデータは Firebase（Spark） |
+| C | **Cloudflare Workers ＋ D1**（SQL のデータベース）。認証だけ Firebase Authentication（Spark） |
+| D | **Supabase**（Free：Auth・Postgres）。画面の配信は別のサービス |
+| E | **Vercel**（Hobby）＋ Marketplace のデータベース（Neon など）と認証 |
+
+## 比較
+
+確かさ：特に書いていないものは公式の情報で確認した。（ブログ）は二次情報、（要確認）は確かめきれなかったもの、（見積もり）は調査担当や筆者の計算。出典は末尾。
+
+### 費用と止まり方（NFR-004）
+
+| 観点 | A Firebase | B Cloudflare 配信＋Firebase | C Cloudflare＋D1 | D Supabase | E Vercel |
+|---|---|---|---|---|---|
+| カードの登録 | 不要 | 不要（Cloudflare は公式の明記なし。要確認） | 同左 | 不要（公式の明記なし。要確認） | Hobby は要確認 |
+| 無料枠を超えたら | **止まる**。Hosting は短い猶予のあと**サイトが無効になり、翌月の初めまで戻らない**。Firestore は「毎日太平洋時間の0時に戻る」と「その月の残りは止まる」の両方の書き方が公式にある（要確認） | 止まる。Firestore は A と同じ。**画面の配信は無料・無制限** | 止まる。API は**日ごと**（日本時間9時）に戻る。画面の配信は無料・無制限 | 通知 → 猶予 → 制限（402、読み取り専用、一時停止）。2回目以降は猶予なし。止まる時期が読みにくい | 止まる。**30日**たつまで使えない（画面ごと止まるかは要確認） |
+| 有料にしたときの上限 | Blaze は**上限なし**（予算アラートは知らせるだけ。Firestore を止める手段はない） | 同左（Firebase 側） | Workers Paid（月$5）は**上限なし**（従量課金） | **Pro（月$25）は Spend Cap で上限あり**（独自ドメインなど一部は対象外） | Pro（月$20）は Spend Management で止められる（数分の遅れ。座席・Marketplace は対象外） |
+
+→ **5案とも、無料プランのままなら請求は来ない**。違いは「有料に上げたとき上限を付けられるか」で、上限を付けられるのは D・E だけ。A・B・C は「有料には上げない」ことが前提になる。
+
+**A・B・C で「有料に上げない」を守る具体的な決まり**：Firebase のプロジェクトに Cloud Billing の課金アカウントをつながない。コンソールの案内（Blaze へのアップグレード、Identity Platform へのアップグレード、App Check のスコアを11段階にする、など）に従わない。Identity Platform にアップグレードすると、Spark のままでも匿名を含む利用者が **1日3,000人まで**になる（公式）。
+
+### 想定規模（NFR-015）に収まるか
+
+1回開くごとの見積もり（見積もり。設計が変わったらこの式で計算し直す）：
+
+| 操作 | 読み取り | 書き込み | 回数/日（NFR-015） |
+|---|---|---|---|
+| グループを開く | グループ1＋メンバー（平均6、最大20）＋自分の `users` 1（ログインあり）＝ 約8（最大22） | 最後に使った日時（NFR-010 で持つなら）1 | 500 |
+| 「行った」の付け外し | ルールの中の `get()` 1〜2 | ログインなし：メンバー1。ログインあり：`users` 1＋紐づいた全グループのメンバー（平均2と仮定）＝3 | 1回開くごとに5と仮定 → 2,500 |
+| 参加・改名 | 名前の重複を確かめる20枠（Q-011） | メンバー1 | 少ない（20と仮定） |
+
+- A・B（Firestore）：読み取り 約4,000〜11,000＋付け外しのルールの `get()` 約2,500〜5,000＋参加 約400 ＝ **約7,000〜16,000/日**（枠5万の14〜32%）。書き込み 約500＋2,500〜7,500 ＝ **約3,000〜8,000/日**（枠2万の15〜40%）
+- C（D1）：読み取り 約10万行/日（枠500万行の2%）。Workers のリクエスト 約5,000/日（枠10万の5%）（調査担当の見積もり）
+- D：DB 数MB（枠500MB）、通信量 約300MB/月（枠5GB）（調査担当の見積もり）
+- E：関数 約15万/月（枠100万）（調査担当の見積もり）
+
+**画面の配信（A だけの問題）**：Hosting の無料枠は、料金ページでは「360MB/日」、使用量のページでは「10GB/月」で、日ごとに効くのかは公式の説明がない（要確認）。いまのモックは gzip で約42KB。Firebase の SDK（Auth と Firestore）を足して1回150KB と仮定すると（SDK の大きさは要確認。Phase 2 でビルドして測る）、日ごとなら1日約2,400回、月ごとなら月約6万6千回まで。NFR-015（1日500回）に対して約4.8倍の余裕。ブラウザのキャッシュが効けば2回目以降はもっと小さい。LINE のクローラーが OGP の画像を取りに来る分も足される（要確認）。
+
+→ どれも NFR-015 に収まる。A で最初に危なくなるのは **Hosting の転送量**で、超えると翌月まで画面が出ない（NFR-012 の対象外になる）。
+
+### 使われないと止まるか（Q-014）
+
+- A・B・C（Firebase・Cloudflare）：使われないと止まる・消える、という公式の記載は見つからなかった（「ない」の証明ではない。要確認）
+- **D Supabase：7日間ほとんど使われないと一時停止**（公式）。データは残り、運営者がダッシュボードから戻す。MVP の数グループでは、止まる可能性が高い。止まると、友達が招待URLを開いても動かない
+- E：Neon は5分使われないと眠るが、データは消えず、次のアクセスで起きる（削除の方針は記載なし。要確認）
+
+### 匿名からログインへ（REQ-037〜REQ-043）
+
+- A・B・C：Firebase Authentication の `linkWithCredential`・`linkWithPopup` で、**匿名の `uid` がそのままアカウントになる**（メールの確認の前でも `uid` は変わらない）。[auth-flow](../design/auth-flow.md) がそのまま使える。SDK v12 で動くかは実機で試す（Q-013。過去に、メールの列挙保護がオンだと失敗し、10.6.0 で直ったという報告がある：ブログ）
+- C：Worker の側で Firebase の ID トークンを検証する（公式ではなく GitHub のライブラリと解説。要確認）
+- D：メールは `updateUser`、Google は `linkIdentity`（**手動の紐づけはベータの設定**）
+- E：匿名ログインに対応した仕組みが乏しい（Clerk は匿名の記載なし、Neon Auth は限定的）。自前で Better Auth を組むと `uid` が変わる前提になり、auth-flow を作り直す
+
+### メールの確認・パスワード（REQ-029・REQ-057〜REQ-059）
+
+| 観点 | A・B・C（Firebase Authentication） | D Supabase | E |
+|---|---|---|---|
+| 送れる数 | 確認メール **1日1,000通**、パスワードの再設定 **1日150通** | 内蔵は1時間2通・チームのメンバー宛だけ → **自分でメール送信のサービスを用意する** | 認証の仕組みしだい（Better Auth なら自前で送る） |
+| 届きやすさ | 送信元は既定で `firebaseapp.com`。迷惑メールに入りやすい、iCloud に届かない、という報告がある（ブログ）。**独自ドメインを送信元にできる**（DNS の設定。Spark で使えるかは公式の明記なし、ブログでは可）。日本の携帯キャリアのメールは要確認 | 送信サービスしだい | 同左 |
+| 確認が済むまで使えない（REQ-057） | ルールで `request.auth.token.email_verified` を見られる。確認した後、画面でトークンを取り直さないとルールに反映されない（ブログ） | `is_anonymous` などで区別 | 自前 |
+| パスワード8文字以上（REQ-059） | パスワードのポリシー（6〜30文字、満たさなければ登録できない）を設定できる。Spark で使えるかは公式の明記がない（使える可能性が高い。コンソールで試す：要確認） | 設定できる（要確認） | 自前 |
+
+### 保存先で守るもの（NFR-006）
+
+A・B（Firestore のルール）と C（API のプログラムとデータベースの制約）で、NFR-006 の8つと、それに準じる REQ-039・REQ-057 を書けるか。
+
+| NFR-006 | A・B：Firestore のルール | C：Worker ＋ D1 |
+|---|---|---|
+| (1) 紐づいたメンバーの「行った」と名前は本人だけ | 書ける（`resource.data.uid == request.auth.uid`） | 書ける（API で `uid` を比べる） |
+| (2) アカウントの「行った」とメールは本人だけが書ける | 書ける | 書ける |
+| (3) 紐づいたメンバーを付け替えられない | 書ける見込み（変更の前後の `uid` を比べる）。エミュレータで確かめる | 書ける |
+| (4) 管理できる人を変えられるのはログインしている作成者だけ。作成者を勝手に変えられない | **要確認（Q-012・Q-019）**。`ownerUid` を紐づけと同時にだけ更新する（`getAfter`）か、作成者のメンバーから引くか | 書ける（API で作成者のメンバーを引く） |
+| (5) 「作成者のみ」のときの変更・削除 | (4) と同じ | 書ける |
+| (6) 自分のアカウントは自分だけが消せる | 書ける（Authentication は本人だけ、`users` はルール） | 書ける |
+| (7) 参加していないグループを探せない | **一番素直に書ける**（`allow list` を禁止） | 一覧の API を作らなければ守れる |
+| (8) 20人まで、名前の長さの上限 | 20人はメンバーIDを `s0`〜`s19` に限って守る。長さはルールの `size()` が見た目の文字数か要確認なので、余裕のある上限で守る | `CHECK` 制約と、API で数える |
+| REQ-039 1グループ1アカウント1メンバー | **要確認（Q-019）**。ルールでは他のメンバーを全部見られないので、書けない可能性がある → 書けなければ「分かっている限界」へ | `UNIQUE(group_id, uid)` で**データベースが守る** |
+| REQ-057 確認が済むまでログインなし扱い | 書ける（`email_verified`） | 書ける（トークンの中身を見る） |
+| ほぼ同時の参加で同じ枠に2人 | トランザクションで防げる（同じIDの作成は失敗する） | `UNIQUE(group_id, slot)` |
+
+→ A で**決まらないのは (4)(5) と REQ-039**。これらはルールを書いて試すまで分からないので、「決定の前に確かめること」に入れる。書けないと分かったら、推奨を見直す（C が有利になる）。
+
+ルールの制約：`get()`・`exists()`・`getAfter()` は1回の書き込みで10回、バッチ・トランザクションで20回まで。退会でメンバーの多いグループを一度に消すと当たりうる。
+
+### 作るもの・続ける作業
+
+| | A Firebase | C Cloudflare＋D1 |
+|---|---|---|
+| 画面の外で書くもの | Firestore のルール（数百行の見込み）とそのテスト。全データの書き出しのスクリプト（NFR-017）。利用状況の集計のスクリプト（NFR-010）。どちらも管理用の鍵を使い、鍵はリポジトリに置かない | API（10本前後、数百行：調査担当の見積もり）とそのテスト。テーブルの定義（SQL）。書き出しは `wrangler d1 export` の1行。集計は SQL |
+| ふだんの作業（NFR-011・NFR-014） | 週1回、Firebase のコンソールで使用量を見る（Spark では自動の知らせを作れない） | 週1回、Cloudflare と Firebase（認証）の2か所で使用量を見る |
+| テストの道具 | エミュレータ（JDK 21 以上）、`@firebase/rules-unit-testing` | Vitest（JDK も Docker も要らない）。認証を Firebase のエミュレータで試すなら JDK が要る |
+| 確かめる場所の数 | 1つ（Firebase） | 2つ（Cloudflare・Firebase） |
+
+B は A とほぼ同じで、確かめる場所が Cloudflare と Firebase の2つになる。
+
+### 運用（NFR-010〜NFR-013、NFR-017、Q-031）
+
+| 観点 | A | B | C | D | E |
+|---|---|---|---|---|---|
+| 使用量の知らせ（NFR-011） | 予算アラートは Blaze の機能 → **手で確かめる**（Cloud Monitoring が Spark で使えないことの公式の明記は見つからない） | 同左 | Free では自動の知らせなし → 手で確かめる | 超えたら通知（事前の知らせは要確認） | 近づくと通知（一部確認） |
+| 止まったときの画面（NFR-012） | Firestore は `RESOURCE_EXHAUSTED` で判別できる。Hosting が止まると画面ごと出ない | **画面は出続け、保存だけ止まる** | **画面は出続け、API だけ止まる** | HTTP 402。一時停止中はつながらない | 画面ごと止まる可能性（要確認） |
+| 全データの書き出し（NFR-017） | 公式の書き出しは課金が要る → **自前のスクリプト** | 同左 | `wrangler d1 export` で1行。過去7日に戻せる機能も無料 | `pg_dump` | `pg_dump`（未確認） |
+| 利用状況の集計（NFR-010） | 苦手（`count()` と自前のスクリプト） | 同左 | SQL で簡単 | SQL で簡単 | SQL で簡単 |
+| エラーの把握（NFR-013） | 別に考える（Q-027） | 同左 | Workers のログ（1日20万件、3日保存） | 別に考える | ログ1時間分のみ |
+| 使い切られる対策（Q-031） | App Check（reCAPTCHA Enterprise）は課金アカウントなしで使えるが、無料は**月1万回**の評価まで。トークンは既定で1時間に2回取り直すので、1日500回開かれると月1.5万〜3万回になり超えるおそれ（見積もり）。超えたときの Spark の挙動は要確認。入れるなら「強制しない（見るだけ）」か、トークンの有効時間を長くする | 同左 | **Turnstile（無料・回数無制限）を参加・作成の API に付けられる** | CAPTCHA は認証にだけ効く | WAF のレート制限1つ |
+| 匿名アカウントを作る回数 | **IP ごとに1時間100件**（公式）。携帯回線は多くの人で同じ IP を使うことがあり、当たると参加できない（一般知識。超えたときのエラー名は要確認） | 同左 | 同左（Firebase Authentication を使うため） | IP ごとに1時間30件 | 認証の仕組みしだい |
+
+→ どれも「完全に防ぐ」手段は無料では見つからなかった。最悪は「その日（月）止まる、請求は来ない」で、requirements の「分かっている限界」と合う。
+
+### 表示の速さ（NFR-016）
+
+- A・B：Firestore の場所は**東京（`asia-northeast1`）を選べる。作った後は変えられない**（公式）。Spark で無料のデータベースは1つだけなので、作り直して移すこともできない
+- C：D1 の置き場所は選べる範囲がある（要確認）
+- D：Supabase の地域は選べる（要確認）。一時停止から起きるまでは画面が動かない
+- E：Neon が眠っていると最初の1回が遅れる（数百ミリ秒〜1秒台と言われる：要確認）
+
+### 招待URLとドメイン
+
+- A：`firebase.json` で `/g/**` のリライトと、別ドメインへの転送（パスを保ったまま301）が書ける。ただし、**転送も Hosting から返すので、Hosting が転送量の枠で止まると転送も止まる**
+- B・C：`/g/**` は SPA の設定で返せる。別ドメインへの転送は静的ファイルにしか効かないので、小さな転送用の Worker を置く（調査担当の案。要確認）
+- **どの案でも**：ドメインを変えると、ブラウザに覚えた内容（端末が覚えたメンバー Q-017、匿名のログイン状態）は引き継がれない（ブラウザの仕組み。一般知識）。ログインなしの人は全員、名前を入れ直す。LINE に残った古い招待URLは、転送を残すかぎり使える
+
+**Google ログインとドメイン**（公式：redirect-best-practices）：
+- 2024年6月から、リダイレクト方式のログイン（`signInWithRedirect`）は、画面のドメインと認証のドメイン（`authDomain`、既定は `<project>.firebaseapp.com`）が違うと、Chrome・Firefox・Safari で対策なしでは動かない（ブラウザが別ドメインの保存を分けるため）
+- **ポップアップ方式（`signInWithPopup`）なら、ドメインが違っても動く**（ポップアップがブロックされることはある）。[auth-flow](../design/auth-flow.md) はすでにポップアップを基本にしている。退会の前のログインし直し（REQ-036、`reauthenticateWithPopup`）も同じにする
+- A で `*.web.app` から配信すると、既定の `authDomain` とドメインが違う。ポップアップなら問題ない（`*.web.app` が公式の「影響なし」に入るかは明記がない：要確認）。Hosting に独自ドメインを付ければ、それを `authDomain` にできる
+- B・C（画面が Cloudflare）では、独自ドメインを `authDomain` にする方法は使えない。ポップアップにするか、`/__/auth/` を `firebaseapp.com` に中継する（中継は Worker のリクエストに数えられる）。どちらでも、配信のドメインを Firebase の「承認済みドメイン」に足す。確認メール・再設定メールから画面に戻すURL（continue URL）のドメインも承認が要る
+
+### 規約（広告：Q-029）
+
+- **E Vercel の Hobby は非商用だけ。広告は商用の例として明記されている**（公式）。広告を入れるときに Pro（月$20）が必須になる
+- A・B・C・D：無料プランで広告を禁じる記載は見つからなかった（全文は未確認。広告を入れるときに読み直す）
+- B・C：Cloudflare も外部の送り先になるので、プライバシーポリシー（NFR-008）に書く
+
+### ローカルの開発
+
+- A・B：Firebase のエミュレータに **JDK 21 以上**が要る（firebase-tools v15 のリリースノート。公式の手順ページの「JDK 11」は古い）
+- C：Node.js と wrangler だけ（認証を Firebase のエミュレータで試すなら JDK が要る）
+- D：Docker が要る
+
+## 推奨（ユーザーの判断待ち）
+
+**案 A（Firebase 一式、Spark のまま、課金アカウントをつながない）。あわせて、独自ドメインを最初から取って Hosting に付ける（決まった額の費用なので相談：NFR-004）。**
+
+理由：
+- **費用**：Spark はカードを登録せず、超えたら止まる（請求は来ない）。NFR-004 を満たす
+- **作る量が少なく、これまでの設計を使える**：サーバーのプログラムを持たず、ルールとそのテスト、書き出しと集計の小さなスクリプトを書けばよい。data-model・auth-flow をそのまま使える。確かめる場所も1つで済む（NFR-014）
+- **独自ドメインを最初から付ける理由**：
+  - A の一番の弱点（Hosting の転送量を超えると翌月まで画面が出ない）が心配になったとき、**DNS の向き先を変えるだけで画面の配信を Cloudflare に移せる（案 B）**。ドメインが変わらないので、ログインなしの人の入り直しも、古い招待URLの転送も要らない。`*.web.app` のまま始めると、B に移すときにドメインが変わり、全員が名前を入れ直すことになる
+  - 確認メール・再設定メールの送信元を自分のドメインにでき、迷惑メールに入りにくくなる（ブログ）
+  - Google ログインの `authDomain` を画面と同じドメインにできる
+- D（Supabase）は、7日の一時停止が、たまにしか使われない友達グループの使い方に合わない。メール送信も自前で要る
+- E（Vercel）は、広告を入れる時点で月$20の有料プランが要る。匿名ログインの仕組みも乏しい
+- C（Cloudflare＋D1）は、運用（集計、書き出し、ログ、使い切られる対策）とデータベースの制約（REQ-039 など）では一番よい。ただし API のプログラムを数百行書き、確かめる場所が2つになる。**A で NFR-006 の (4)(5) や REQ-039 がルールで書けないと分かったら、C に切り替える**
+
+## ユーザーに決めてもらうこと
+
+ここは提案。決めたら、このファイルの「決定」として書き直す。
+
+1. **作る量と守りの固さ、どちらを重く見るか（A か C か）**。場面：ほぼ同時に同じ人が2つの端末からログインして同じグループを開くと、A では同じアカウントのメンバーが2人できる可能性がある（ルールで書けなければ）。C ならデータベースが2人目を拒む。代わりに C は、API を自分で書いて直し続ける。推奨は A（友達向けで、起きても余分なメンバーを消せば済むため）。あわせて仮定3（サーバーのプログラムは書きたくない）が合っているか
+2. **独自ドメインを最初から取るか**（年1,000〜2,000円程度の決まった額。要確認：取る会社とドメインの種類で変わる）。選択肢：(a) 最初から取って Firebase Hosting に付ける（推奨）、(b) 取らずに `*.web.app` で始め、移すときの全員の入り直しを受け入れる、(c) 最初から B（Cloudflare で配信）にする（この場合も、後で変えないドメインが要るのは同じ）
+3. **使用量は、週1回コンソールを手で見る運用でよいか**（NFR-011。A・B・C とも自動の知らせを無料で作れない）
+4. **「Blaze に上げない」と決めたときの、将来の機能の作り方**。サーバーの処理が要る機能（グループごとの OGP、運営者用の管理画面 Q-030、広告 Q-029）は、Firebase の Cloud Functions ではなく、Cloudflare の Worker（無料、超えたら止まる）を足して作る道がある（要確認）。この方針でよいか
+5. 仮定1（カードの登録）：A・B・C は登録しない前提で組めるので、登録したくなければ「登録しない」を決まりにする
+
+## 決定の前に確かめること
+
+推奨の A を「決定」にする前に、エミュレータで試す（Phase 1 の「Firestore のルールを書き、エミュレータでテストする」を前倒しする）。
+
+- NFR-006 (4)(5)：作成者をルールで守れるか（Q-012・Q-019）
+- REQ-039：1グループに1アカウント1メンバーをルールで守れるか（Q-019）。書けなければ「分かっている限界」に入れてよいか、をユーザーに聞く
+- REQ-057：確認が済むまでメンバーに `uid` を書かせない、をルールで書けるか
+- REQ-059：Spark のコンソールでパスワードのポリシーを設定できるか（実際の本番のプロジェクトを作るときに確かめる）
+- 匿名からメール＋パスワードへの昇格が SDK v12 で動くか（Q-013）
+
+## 決めたら直すもの
+
+- A なら：ADR 0001 を「決定」にし、この ADR から参照する。architecture に「Firestore は東京で作る（後から変えられない）」「課金アカウントをつながない」「Identity Platform にアップグレードしない」を書く。NFR-011 の方法は「週1回、手で確かめる」（Q-026）、NFR-017 は「自前のスクリプト」に決める。auth-flow に、確認メールの後にトークンを取り直すことと、`reauthenticateWithPopup` を足す。Q-020 に「匿名のログインに失敗したとき（IP ごとの上限）」の表示を足す
+- C なら：architecture・data-model・auth-flow を書き直す（サーバーのプログラムを持つ構成）。NFR-006 の「保存先」を「API とデータベースの制約」と読み替える表を足す
+- どの案でも：open-questions の Q-011〜Q-014・Q-019・Q-021・Q-022・Q-025〜Q-027・Q-031 の書き方を、選んだ案に合わせる。NFR-018 の問い合わせのフォームをどこで作るかを決める（どの案でも別のサービスが要るかもしれない）
+
+## 調査で分かった数字（Firebase、Q-022）
+
+- Hosting：保存 10GB。転送は「10GB/月」（使用量のページ）と「360MB/日」（料金ページ）。日ごとに効くかは要確認。超えると短い猶予のあとサイトが無効になり、翌月の初めまで戻らない
+- Authentication：5万 MAU（匿名も数える）。新しいアカウント（匿名を含む）は IP ごとに1時間100件まで。確認メール1日1,000通、パスワードの再設定1日150通。Identity Platform にアップグレードすると、Spark では1日3,000人まで
+- Firestore：読み取り 5万/日、書き込み 2万/日、削除 2万/日、保存 1GiB、送信 10GiB/月。1日の枠は太平洋時間の0時（日本時間の16〜17時ごろ）に戻る（超えたあと月末まで止まるかは要確認）。場所は東京を選べ、後から変えられない
+- App Check（reCAPTCHA Enterprise）：課金アカウントなしで使える。無料は月1万回の評価。スコアは4段階だけ
+- エミュレータ：JDK 21 以上（firebase-tools v15.0.0 のリリースノート）
+
+## 出典
+
+Firebase
+- https://firebase.google.com/pricing
+- https://firebase.google.com/docs/projects/billing/firebase-pricing-plans
+- https://firebase.google.com/docs/projects/billing/avoid-surprise-bills
+- https://firebase.google.com/docs/projects/billing/advanced-billing-alerts-logic
+- https://firebase.google.com/docs/firestore/quotas
+- https://firebase.google.com/docs/firestore/pricing
+- https://firebase.google.com/docs/firestore/locations
+- https://firebase.google.com/docs/hosting/usage-quotas-pricing
+- https://firebase.google.com/docs/hosting/full-config
+- https://firebase.google.com/docs/auth/web/anonymous-auth
+- https://firebase.google.com/docs/auth/web/redirect-best-practices
+- https://firebase.google.com/docs/auth/web/password-auth
+- https://firebase.google.com/docs/auth/web/manage-users
+- https://firebase.google.com/docs/auth/email-custom-domain
+- https://firebase.google.com/docs/auth/limits
+- https://firebase.google.com/docs/rules/rules-and-auth
+- https://firebase.google.com/docs/firestore/manage-data/export-import
+- https://firebase.google.com/docs/app-check/web/recaptcha-enterprise-provider
+- https://github.com/firebase/firebase-tools/releases/tag/v15.0.0
+- https://github.com/firebase/firebase-js-sdk/issues/7675（ブログ・開発者の報告）
+- https://engineer-papa.com/firebase-auth-icloud-email-not-delivered/（ブログ）
+
+Supabase
+- https://supabase.com/pricing
+- https://supabase.com/docs/guides/platform/cost-control
+- https://supabase.com/docs/guides/platform/billing-faq
+- https://supabase.com/docs/guides/platform/free-project-pausing
+- https://supabase.com/docs/guides/auth/auth-anonymous
+- https://supabase.com/docs/guides/auth/auth-smtp
+- https://supabase.com/docs/guides/auth/rate-limits
+
+Cloudflare
+- https://developers.cloudflare.com/workers/platform/limits/
+- https://developers.cloudflare.com/d1/platform/pricing/
+- https://developers.cloudflare.com/d1/platform/limits/
+- https://developers.cloudflare.com/billing/manage/budget-alerts/
+- https://developers.cloudflare.com/workers/static-assets/billing-and-limitations/
+- https://developers.cloudflare.com/workers/static-assets/routing/single-page-application/
+- https://developers.cloudflare.com/workers/static-assets/redirects/
+- https://developers.cloudflare.com/d1/best-practices/import-export-data/
+- https://developers.cloudflare.com/workers/testing/vitest-integration/
+- https://developers.cloudflare.com/turnstile/plans/
+- https://github.com/Code-Hex/firebase-auth-cloudflare-workers（ブログ・GitHub）
+
+Vercel・Neon
+- https://vercel.com/docs/plans/hobby
+- https://vercel.com/docs/limits/fair-use-guidelines
+- https://vercel.com/docs/spend-management
+- https://neon.com/docs/introduction/plans
