@@ -5,10 +5,10 @@
 | ドキュメント | 内容 | 状態 |
 |---|---|---|
 | [roadmap.md](roadmap.md) | フェーズと進み具合、次にやること | 更新中 |
-| [glossary.md](glossary.md) | 用語集（言葉の意味をそろえる） | レビュー待ち |
-| [use-cases.md](use-cases.md) | ユースケース（誰が何をするか）。要件の元になる | レビュー待ち |
+| [glossary.md](glossary.md) | 用語集（言葉の意味をそろえる） | 確定 |
+| [use-cases.md](use-cases.md) | ユースケース（誰が何をするか）。要件の元になる | 確定 |
 | [open-questions.md](open-questions.md) | 未決事項の一覧（ID・影響先・決める段階） | レビュー待ち |
-| [requirements.md](requirements.md) | 要件定義（何を作るか、何を作らないか） | レビュー待ち |
+| [requirements.md](requirements.md) | 要件定義（何を作るか、何を作らないか） | 確定 |
 | [design/architecture.md](design/architecture.md) | システム構成図、使うサービス、開発環境 | レビュー待ち |
 | [design/data-model.md](design/data-model.md) | ER図、Firestore の構造、セキュリティルールの方針 | レビュー待ち |
 | [design/auth-flow.md](design/auth-flow.md) | 認証の流れ（匿名 → ログイン → 合算・紐づけ）のシーケンス図 | レビュー待ち |
