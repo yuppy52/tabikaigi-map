@@ -204,6 +204,25 @@ B は A とほぼ同じで、確かめる場所が Cloudflare と Firebase の2�
 - C なら：architecture・data-model・auth-flow を書き直す（サーバーのプログラムを持つ構成）。NFR-006 の「保存先」を「API とデータベースの制約」と読み替える表を足す
 - どの案でも：open-questions の Q-011〜Q-014・Q-019・Q-021・Q-022・Q-025〜Q-027・Q-031 の書き方を、選んだ案に合わせる。NFR-018 の問い合わせのフォームをどこで作るかを決める（どの案でも別のサービスが要るかもしれない）
 
+## 独自ドメインの費用（2026-10-04 調査）
+
+ユーザーは「年1,000〜2,000円程度なら取る」。**`.com` なら収まる**。円は1ドル約158円（2026-10-02）で換算した概算。外貨の手数料と消費税は要確認。
+
+| 取る会社 | `.com` の年額 | ほかの種類 | WHOIS の公開代行（名前・住所を隠す） |
+|---|---|---|---|
+| **Cloudflare Registrar** | **初年度も更新も約1,650円**（原価で売り、上乗せしない：公式。数字は第三者の一覧なので、買う画面で確かめる） | `.app` は更新で約2,240円、`.jp` は扱いなし（要確認） | 無料・標準（公式） |
+| Porkbun | 約1,750円 | 安い表示は初年度のセール | 無料・標準 |
+| ムームードメイン | 初年度750円、**更新1,728円**（税込） | `.jp` は更新3,344円、`.app` は3,520円 | 無料（ブログ） |
+| お名前.com | 1円は初年度だけ、更新は約1,780円。為替で動く「サービス維持調整費」が上乗せされる | | オプション扱い（要確認） |
+
+- **推奨：Cloudflare Registrar で `.com` を1つ（年約1,650円）**。更新で値上がりしにくく、名前・住所が公開されない。DNS も Cloudflare に置くことになるので、将来、画面の配信を Cloudflare に移すとき（案 B・C）も DNS の付け替えで済む。Firebase Hosting も、Cloudflare の DNS に Firebase の指示するレコードを入れれば使える（プロキシは切る：ブログ）
+- 避けるもの：初年度だけ安い種類（`.xyz`、`.site` など。`.site` は更新で約4,380円）、`.jp`・`.app`（更新が予算を超える）
+- 支払いはカード（年額の決まった費用なので NFR-004 には反しない）。自動更新に失敗するとドメインを失うので、カードの期限に気をつける
+- Firebase Hosting の独自ドメインは Spark で無料（SSL 込み：公式）。Firebase Authentication のメールの送信元を独自ドメインにする設定は、Spark で使えるかの明記がない（ドメインを取った後に試す：要確認）
+- ドメインの種類は、後から変えると全員が入り直しになるので、最初に決めたものを使い続ける
+
+出典：https://www.cloudflare.com/products/registrar/ 、https://developers.cloudflare.com/registrar/account-options/renew-domains/ 、https://developers.cloudflare.com/registrar/account-options/whois-redaction/ 、https://developers.cloudflare.com/registrar/get-started/transfer-domain-to-cloudflare/ 、https://cfdomainpricing.com/（第三者）、https://porkbun.com/products/domains 、https://muumuu-domain.com/domain/price/ 、https://www.onamae.com/news/article/11340/ 、https://firebase.google.com/docs/hosting/custom-domain 、https://firebase.google.com/docs/auth/email-custom-domain
+
 ## 調査で分かった数字（Firebase、Q-022）
 
 - Hosting：保存 10GB。転送は「10GB/月」（使用量のページ）と「360MB/日」（料金ページ）。日ごとに効くかは要確認。超えると短い猶予のあとサイトが無効になり、翌月の初めまで戻らない
