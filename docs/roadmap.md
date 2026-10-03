@@ -61,7 +61,7 @@
 
 | 工程 | 追加を検討するもの |
 |---|---|
-| 基本設計 | 画面設計のレビュー（`ui-reviewer`、または既存の `design:design-critique`）。技術の比較と ADR（既存の `researcher` と、Skill の `engineering:architecture` を試す）。権限マトリクスは NFR-006 の8つを出発点にする |
+| 基本設計 | 画面設計のレビューは既存の `design:design-critique` を使う（2026-10-04 に決定。新しい `ui-reviewer` は作らない）。構成図とワイヤーフレームは接続済みの draw.io のツールを試す（`.drawio.svg` で保存できるかは要確認）。技術の比較と ADR（既存の `researcher` と、Skill の `engineering:architecture` を試す）。権限マトリクスは NFR-006 の8つを出発点にする |
 | ルールの実装の前 | **`rules-reviewer`**（Firestore のルールを攻撃する側の目で見る）、GitHub Actions でルールのテストを自動実行、サンドボックス（`/sandbox`） |
 | 実装（Phase 2）の前 | コードレビュー（まず既存の `/code-review` を試す）、`test-writer`、Dependabot、**Playwright CLI**（下のメモ） |
 | 公開（Phase 2 の終わり）の前 | **Strix**（下のメモ） |
