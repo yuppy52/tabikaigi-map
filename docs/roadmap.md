@@ -4,15 +4,17 @@
 
 ## いまどこ？
 
-**Phase 1（基本設計）の最初、技術選定の判断待ち**（2026-10-04）。
-- requirements は要件ID付き（REQ-001〜REQ-059、NFR-001〜NFR-018）。2026-10-03 夜に確定の前の再レビュー（18件）をかけ、判断の要らない文面の直しは反映した。判断が要る指摘（確認メールと紐づけの順番、後からの紐づけの本人確認など）が残っていて、決めたら「確定」にする
-- 技術選定（Q-023）は、`researcher` で Firebase・Supabase・Cloudflare・Vercel を比べ、[ADR 0003](adr/0003-backend-selection.md)（提案中）に比較と推奨案を書いた。前提をユーザーに確かめられなかったので、仮定を明記して依頼した
+**Phase 1（基本設計）。技術の方向が決まり、小さく試す前**（2026-10-04）。
+- 要件定義は 2026-10-04 に確定した。そのあと検索に出す要件（NFR-019）を足したので、requirements だけ「レビュー待ち」に戻っている
+- 技術の方向：画面は React＋TypeScript＋Vite、検索に出すページは素の HTML（[ADR 0004](adr/0004-frontend-react-typescript.md)、決定）。バックエンドは Cloudflare Workers（Hono）＋D1、認証だけ Firebase Authentication、ドメインは Cloudflare の `.com`（[ADR 0003](adr/0003-backend-selection.md)、提案中。小さく試してから決定）
 - 経緯は git の履歴と [learnings/](learnings/) を参照
 
-**次のセッションでやること（この順で）：**
-1. **ユーザーに決めてもらう**：再レビューの判断が要る指摘、ADR 0003 の論点、`/compound`（2026-10-03）の反映案3つ（(1) CLAUDE.md の費用に「決まった額の費用は相談の上で可」、(2) CLAUDE.md に「調査の前に前提を確かめ、確かめられないものは仮定と書く」、(3) `doc-reviewer` の権限の観点を2つ足す）、Phase 1 の道具
-2. 決めたことを反映し、requirements・use-cases・用語集を「確定」に、ADR 0003 を「決定」にする
-3. 選んだバックエンドに合わせて、設計書に要件IDの対応を付け、基本設計の Q を決める
+**次にやること（この順で）：**
+1. ADR 0003・ADR 0004・NFR-019 の変更を `/review-docs` でレビューし、直す。`/compound` で学びを残す（調査の前提の思い込み：SEO・サーバーのコード・JavaScript の経験）
+2. ユーザーが PR を確かめてマージする
+3. **ユーザーの作業**：Cloudflare のアカウントを作り、`.com` のドメインを取る。Firebase のプロジェクトを Spark で作る（課金アカウントはつながない）。どちらも Claude は代わりにできない（支払い・アカウント作成）
+4. **小さく試す**（`feat/` のブランチ）：ADR 0003 の「決定の前に確かめること」の C の5項目を、ローカル（wrangler、Vitest）で試す。開発環境（Node.js、wrangler）を用意する。結果で ADR 0003 を「決定」にする
+5. 選んだ構成に合わせて architecture・data-model・auth-flow を書き直し、要件IDの対応を付け、基本設計の Q を決める。権限マトリクス、構成図とワイヤーフレーム
 
 各ステップは「作る → `/review-docs` → 直す → `/compound`」で進める。
 
