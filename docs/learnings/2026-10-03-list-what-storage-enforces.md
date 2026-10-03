@@ -27,3 +27,6 @@ NFR-006 に保存先で必ず守るもの8つを番号付きで並べ、守ら�
 - docs/design/data-model.md（名前の重複、セキュリティルールの方針）
 - docs/learnings/2026-10-02-owner-and-slot-lifecycle.md
 - .claude/agents/doc-reviewer.md
+
+## 仕組みへの反映（2026-10-04）
+- `doc-reviewer` の権限の観点に「保存先で守るものが並べて書かれ、design と食い違っていないか」「自動で消すものが権限の判断に使われていないか」を足した
