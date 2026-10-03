@@ -12,7 +12,7 @@
 **次にやること（この順で）：**
 1. ADR 0003・ADR 0004・NFR-019 の変更を `/review-docs` でレビューし、直す。`/compound` で学びを残す（調査の前提の思い込み：SEO・サーバーのコード・JavaScript の経験）
 2. ユーザーが PR を確かめてマージする
-3. **ユーザーの作業**：Cloudflare のアカウントを作り、`.com` のドメインを取る。Firebase のプロジェクトを Spark で作る（課金アカウントはつながない）。どちらも Claude は代わりにできない（支払い・アカウント作成）
+3. **ユーザーの作業**：Cloudflare のアカウントを作り、`.com` のドメインを取る（Cloudflare で知らずに有料にならないための決まりを ADR 0003 に書いてから）。Firebase のプロジェクトを Spark で作る（課金アカウントはつながない）。どちらも Claude は代わりにできない（支払い・アカウント作成）
 4. **小さく試す**（`feat/` のブランチ）：ADR 0003 の「決定の前に確かめること」の C の5項目を、ローカル（wrangler、Vitest）で試す。開発環境（Node.js、wrangler）を用意する。結果で ADR 0003 を「決定」にする
 5. 選んだ構成に合わせて architecture・data-model・auth-flow を書き直し、要件IDの対応を付け、基本設計の Q を決める。権限マトリクス、構成図とワイヤーフレーム
 
@@ -42,10 +42,11 @@
 - [ ] **システム構成図とワイヤーフレーム**を draw.io で作る（`*.drawio.svg`）
 - [ ] **権限マトリクス**（誰が何をできるか）を表で作る
 - [ ] `/review-docs` でレビュー → 直す
-- [ ] **技術選定を確定する** → [adr/0001](adr/0001-backend-firebase.md)（Supabase・Cloudflare の欄は要調査）、[adr/0002](adr/0002-frontend-vanilla-vite.md)。費用の心配（従量課金で見積もれない）から、Firebase のままにするかを見直す（[Q-023](open-questions.md)）。Firebase が前提の設計書と Q（Q-011〜Q-014・Q-019・Q-021・Q-022）は、ここで決めてから仕上げる
-- [ ] 開発環境を用意する（JDK 21、Node.js 20、firebase-tools）
-- [ ] Firestore のルールを書き、エミュレータでテストする（先に Q-012 `getAfter` の可否を確かめる）
-- [ ] 追加する画面をモックに足す → [design/screens.md](design/screens.md)
+- [x] 画面の作り方を決める（2026-10-04：React＋TypeScript＋Vite、検索に出すページは素の HTML。[ADR 0004](adr/0004-frontend-react-typescript.md)）
+- [ ] **技術選定を確定する**（[ADR 0003](adr/0003-backend-selection.md)、推奨は案 C）：Cloudflare の課金の道を調べて決まりを書く → ドメインを取る → 小さく試す → 決定。Firebase が前提の設計書と Q（Q-011〜Q-014・Q-019・Q-021・Q-022）は、決めてから書き直す
+- [ ] 開発環境を用意する（Node.js、wrangler。案 C の場合。案 A なら JDK 21・firebase-tools）
+- [ ] 保存先で守るもの（NFR-006 の (1)〜(10)）を実装してテストする（案 C なら API と D1 の制約を Vitest で。案 A なら Firestore のルールをエミュレータで）
+- [ ] 追加する画面を決める → [design/screens.md](design/screens.md)（検索に出すページとアプリの画面を分ける：Q-016）
 - [ ] 固定の OGP 画像と文言を用意する
 
 ## 運用ルール（Phase 1 の中で決める）
@@ -64,7 +65,7 @@
 | 工程 | 追加を検討するもの |
 |---|---|
 | 基本設計 | 画面設計のレビューは既存の `design:design-critique` を使う（2026-10-04 に決定。新しい `ui-reviewer` は作らない）。構成図とワイヤーフレームは接続済みの draw.io のツールを試す（`.drawio.svg` で保存できるかは要確認）。技術の比較と ADR（既存の `researcher` と、Skill の `engineering:architecture` を試す）。権限マトリクスは NFR-006 の8つを出発点にする |
-| ルールの実装の前 | **`rules-reviewer`**（Firestore のルールを攻撃する側の目で見る）、GitHub Actions でルールのテストを自動実行、サンドボックス（`/sandbox`） |
+| 保存先で守るものの実装の前 | **`rules-reviewer`**（API とデータベースの制約、または Firestore のルールを、攻撃する側の目で見る）、GitHub Actions でルールのテストを自動実行、サンドボックス（`/sandbox`） |
 | 実装（Phase 2）の前 | コードレビュー（まず既存の `/code-review` を試す）、`test-writer`、Dependabot、**Playwright CLI**（下のメモ） |
 | 公開（Phase 2 の終わり）の前 | **Strix**（下のメモ） |
 | 要件定義の後 | docs の自動チェック（Markdown の書式、Mermaid の構文、リンク切れ） |
@@ -78,16 +79,20 @@
   - 目的：スマホ幅での表示、参加 → 塗る → 別の人の画面に反映、の流れを自動で確かめる
   - 要調査：CLI と MCP（Playwright MCP はすでに接続済み）、アプリ内蔵のブラウザとの使い分け、CI で動かす方法
 - **Strix**：AI エージェントがアプリを攻撃する側の目で調べ、セキュリティの弱点を見つける。
-  - 目的：Firestore のルールの抜け道、他人のグループを読み書きできないか、などを公開前に確かめる
+  - 目的：API やルールの抜け道、他人のグループを読み書きできないか、などを公開前に確かめる
   - 注意：**調べてよいのは自分のアプリだけ**。本番ではなく、エミュレータかテスト用のプロジェクトに対して実行する
-  - 要調査：導入方法、必要な環境（Docker、LLM の API キーなど）と費用、Firebase の構成で使えるか
+  - 要調査：導入方法、必要な環境（Docker、LLM の API キーなど）と費用、選んだ構成で使えるか
 
 ## Phase 2：MVP①（ログインなし）
 
-- [ ] Vite の構成に移し、`localStorage` の読み書きを Firestore に置き換える
+（ADR 0003 が案 C に決まった場合の書き方。A なら「API」を「Firestore」に読み替える）
+
+- [ ] Vite＋React＋TypeScript の構成を作り、モックの画面を React の部品に書き直す（ADR 0004）
+- [ ] `localStorage` の読み書きを API（Hono＋D1）に置き換える
 - [ ] 匿名認証、本物の招待URL
 - [ ] グループ設定：グループ名の変更、管理できる人、メンバーの削除、グループの削除、退出（最後の1人ならグループも削除）
-- [ ] Firebase Hosting にデプロイし、友達グループで使ってもらう
+- [ ] 検索に出すページ（トップ、使い方、プライバシーポリシー）を素の HTML で作る。アプリの画面に `noindex`、sitemap、Google Search Console への登録（NFR-019、[architecture](design/architecture.md) の「検索に出すページと出さないページ」）
+- [ ] 独自ドメインで公開し（NFR-020）、友達グループで使ってもらう
 
 ## Phase 3：MVP②（ログインあり）
 

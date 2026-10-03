@@ -1,6 +1,6 @@
 # ADR 0001：バックエンドに Firebase を使う
 
-- 状態：**提案中**（レビューで確定する。2026-10-02：費用の心配から、基本設計で見直す。下の「見直しの理由」と [open-questions の Q-023](../open-questions.md)）
+- 状態：**提案中**（レビューで確定する。2026-10-02：費用の心配から、基本設計で見直す。下の「見直しの理由」と [open-questions の Q-023](../open-questions.md)。2026-10-04：[ADR 0003](0003-backend-selection.md) で、Cloudflare Workers＋D1 に認証だけ Firebase Authentication を組み合わせる案 C を推奨にした。C に決まれば、この ADR は ADR 0003 で置き換える）
 - 日付：2026-09-27
 
 ## 見直しの理由（2026-10-02）
@@ -23,8 +23,8 @@
 
 | | Firebase（Auth + Firestore + Hosting） | Supabase（Auth + Postgres） | Cloudflare（Pages + Workers + D1） |
 |---|---|---|---|
-| 匿名 → ログインへの移行 | 標準機能（`linkWithCredential`） | 匿名ログインあり。アカウントへの移行も可能 | 自前で作る |
-| Google ログイン | 標準 | 標準 | 自前か外部サービス |
+| 匿名 → ログインへの移行 | 標準機能（`linkWithCredential`） | 匿名ログインあり。アカウントへの移行も可能 | 自前で作る（または認証だけ Firebase と組み合わせる：ADR 0003 の案 C） |
+| Google ログイン | 標準 | 標準 | 自前か外部サービス（同上） |
 | アクセス制御 | セキュリティルール | RLS（SQL で書く） | API のコードで書く |
 | サーバーのコード | 不要 | 不要 | 必要（Workers） |
 | データの形 | ドキュメント（NoSQL） | リレーショナル | リレーショナル（SQLite） |
