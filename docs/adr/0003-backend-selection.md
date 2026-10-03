@@ -167,6 +167,46 @@ B は A とほぼ同じで、確かめる場所が Cloudflare と Firebase の2�
 
 ## 推奨（ユーザーの判断待ち）
 
+### 2026-10-04 の見直し：案 C を第一候補にする
+
+ユーザーの回答で前提が3つ変わった。(1) サーバーのプログラムは書いてもよい（仮定3の訂正）、(2) NFR-006 に (9) 1グループ1アカウント1メンバー、(10) 確認前はログインありとして扱わない、を足し、できるだけ保存先で守りたい、(3) 有料プランには上げない。
+
+(2) の (9) は、A ではルールで書けない可能性がある一方、C ならデータベースの `UNIQUE` 制約で確実に守れる。運用（集計、書き出し、ログ、使い切られる対策の Turnstile）も C が楽。作る量の多さ（API を数百行）は、(1) により大きな欠点ではなくなった。
+
+**推奨（改）：案 C。画面は Vite＋素の JS（[ADR 0002](0002-frontend-vanilla-vite.md) のまま）を静的ファイルとして Cloudflare で配り、`/api/*` だけを Worker が受ける。API は Hono（Workers で動く小さなフレームワーク。Django の urls と views に近い感覚で書ける）、データは D1、認証は Firebase Authentication（Spark）。ドメインは Cloudflare Registrar の `.com`。** ただし、下の「決定の前に確かめること」の C の項目を試してから決める。
+
+以下の「案 A」の推奨は、2026-10-03 の時点のもの（比べるために残す）。
+
+### 画面の作り方と認証の組み合わせ（2026-10-04 調査）
+
+ユーザーから「画面は Next.js にすべきか（Cloudflare Workers で動くのでは）」「認証は Firebase 以外がよいのでは」と出たので調べた。
+
+**画面：Next.js は選ばない（ADR 0002 の Vite＋素の JS のまま）**
+- Next.js は Cloudflare Workers で動かせる（`@opennextjs/cloudflare`、Cloudflare が作った互換の vinext）。Worker のサイズの上限は 2026-09-04 に「展開後64MiB」に広がり、大きさは問題になりにくい（公式）
+- ただし、サーバーで画面を作る使い方（SSR）だと、**ページを開くたびに Worker の無料枠（1日10万）を使う**。静的ファイルなら無料・無制限なのに、その良さを捨てることになる
+- 静的に書き出す使い方（`output: 'export'`）なら無料枠を使わないが、**招待URL `/g/<グループID>` のように、作った後に増えるURLを素直に作れない**（公式の制約）。リダイレクトなどの設定も使えなくなる
+- このアプリは SEO が要らず、画面は10未満で、地図は結局ブラウザで描く。Next.js の利点が薄く、React と Next.js の両方を学ぶ手間だけが増える
+- 画面が増えて素の JS がつらくなったら、Vite＋React への移行を別の ADR で考える
+
+**認証：Firebase Authentication のまま**
+
+条件は「匿名で使い始め、同じ利用者IDのままログインに移れる」「無料で、超えたら止まる」「確認メール・再設定メールをサービスが送ってくれる」「日本語の文面にできる」。全部を満たしたのは Firebase Authentication だけだった。
+
+| 候補 | 選ばない理由 |
+|---|---|
+| Supabase Auth | 認証だけ使っても、7日使われないと一時停止になる可能性がある（要確認）。メールは自前の送信サービスが要る |
+| Clerk | 匿名ログインの記載が見つからない（要確認）。超えると1人あたりの従量課金になる道がある（NFR-004 に反する）。メールの文面の変更は有料 |
+| Auth0 | 匿名からの昇格が Firebase と別の仕組みで、超えたときの挙動も確かめきれない（要確認） |
+| Better Auth（自前で D1 に置く） | 昇格すると利用者IDが変わる（auth-flow の作り直し）。メールは自前で送る。パスワードの処理が Workers 無料の CPU 10ms を超えて失敗した報告がある（GitHub） |
+| Lucia | 2025年3月に開発終了（公式） |
+| Cloudflare Access | 社員などのログインの門番向けで、不特定の利用者の匿名ログインには合わない（一般知識。要確認） |
+
+C で Firebase Authentication を使うときは、Worker で ID トークン（ログインの証明書）を検証する。Hono 用の部品がある（GitHub）。検証が Workers 無料の CPU 10ms に毎回収まるかは、作って測る（要確認）。
+
+出典：https://developers.cloudflare.com/changelog/post/2026-09-04-increased-worker-size-limit/ 、https://developers.cloudflare.com/workers/framework-guides/web-apps/nextjs/ 、https://developers.cloudflare.com/workers/framework-guides/web-apps/react/ 、https://opennext.js.org/cloudflare 、https://nextjs.org/docs/app/guides/static-exports 、https://firebase.google.com/docs/auth/custom-email-handler 、https://github.com/honojs/middleware/tree/main/packages/firebase-auth 、https://clerk.com/pricing 、https://auth0.com/pricing 、https://www.better-auth.com/docs/plugins/anonymous 、https://github.com/better-auth/better-auth/issues/8860 、https://lucia-auth.com/
+
+### 2026-10-03 の推奨（案 A）
+
 **案 A（Firebase 一式、Spark のまま、課金アカウントをつながない）。あわせて、独自ドメインを最初から取って Hosting に付ける（決まった額の費用なので相談：NFR-004）。**
 
 理由：
@@ -199,6 +239,13 @@ B は A とほぼ同じで、確かめる場所が Cloudflare と Firebase の2�
 - REQ-057：確認が済むまでメンバーに `uid` を書かせない、をルールで書けるか
 - REQ-059：Spark のコンソールでパスワードのポリシーを設定できるか（実際の本番のプロジェクトを作るときに確かめる）
 - 匿名からメール＋パスワードへの昇格が SDK v12 で動くか（Q-013）
+
+**C（2026-10-04 の推奨）を「決定」にする前に、ローカル（wrangler と Vitest）で小さく試す：**
+- Worker で Firebase の ID トークンを検証でき、Workers 無料の CPU 10ms に収まるか
+- D1 の `UNIQUE(group_id, uid)`・`UNIQUE(group_id, slot)` で、NFR-006 の (8)(9) と同時の参加が守れるか
+- `/g/<グループID>` を静的な `index.html` で返し、`/api/*` だけを Worker に通す設定が動くか
+- 使用量の知らせを、Cloudflare の定期実行（Cron Triggers）で無料で作れるか（NFR-011。できなければ週1回、管理画面で見る）
+- 匿名からメール＋パスワードへの昇格が SDK v12 で動くか（Q-013。A と共通）
 
 ## 決めたら直すもの
 
