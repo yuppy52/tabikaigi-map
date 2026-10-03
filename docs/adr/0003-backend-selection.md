@@ -47,7 +47,20 @@
 
 **A・B・C で「有料に上げない」を守る具体的な決まり**：Firebase のプロジェクトに Cloud Billing の課金アカウントをつながない。コンソールの案内（Blaze へのアップグレード、Identity Platform へのアップグレード、App Check のスコアを11段階にする、など）に従わない。Identity Platform にアップグレードすると、Spark のままでも匿名を含む利用者が **1日3,000人まで**になる（公式）。
 
-**C で Cloudflare 側を守る決まり**：ドメインを買うために Cloudflare のアカウントにカードを登録する。そのアカウントで、知らずに従量の製品や有料プラン（Workers Paid など）を有効にしてしまう道があるかを調べている（2026-10-04、`researcher`）。結果を見て、ここに具体的な決まりを書く。**ドメインを買うのは、この決まりを書いてから**にする。
+**C で Cloudflare 側を守る決まり**（2026-10-04 調査）：ドメインを買うために Cloudflare のアカウントにカードを登録する。調べた結果：
+- Free のまま、操作をしないのに有料へ切り替わる道は、公式の記述からは見つからなかった（「ない」の証明ではない）。有料になるのは、利用者が購入・有効化の操作をしたときだけ。Workers・D1・KV は Free の枠を超えるとエラーで止まる
+- **R2（ファイルの保存）は、有効にした時点から無料枠を超えた分が上限なく従量で請求されうる**（公式の請求 FAQ からの推論とブログ）。一番の落とし穴
+- **請求の上限を設ける機能はない**。予算アラートは知らせるだけで、しかも従量課金のアカウントだけが対象（Free は対象外：公式）。Cloudflare 側の安全装置は「Free の枠で止まる」ことだけ
+- カードを登録しただけでは請求は起きない。Free でも $0 の請求書が届く。与信確認（一時的な保留）があることがある（公式）
+
+決まり：
+1. Cloudflare で買うのはドメインだけ。使う製品は Workers（Free）、静的アセット、D1、KV、Cron Triggers、Turnstile、Web Analytics に限る
+2. しない操作：Workers Paid へのアップグレード、R2 の有効化（有効化の画面にも進まない）、Images・Stream の購入、Workers AI、Queues、Logpush。画面やメールに「Upgrade」「Subscribe」「Enable」と出ても押さず、相談する。ファイルの保存（R2 など）が要る機能が出てきたら、使う前に相談する
+3. 請求書（Billing > Invoices）を月1回見る。$0 とドメインの年額のほかに明細があれば、すぐ調べる
+4. ドメインの自動更新はオンのまま、カードの期限を年1回確かめる
+5. （提案）支払いは、使える額に上限を付けられる手段（デビットやプリペイドのカード、カード会社のアプリの利用通知）にすると、万一のときの被害を小さくできる
+
+出典：https://developers.cloudflare.com/workers/platform/pricing/ 、https://developers.cloudflare.com/r2/pricing/ 、https://developers.cloudflare.com/billing/understand/faq/ 、https://developers.cloudflare.com/billing/understand/billing-policy/ 、https://developers.cloudflare.com/billing/manage/budget-alerts/ 、https://developers.cloudflare.com/turnstile/plans/
 
 ### 想定規模（NFR-015）に収まるか
 
