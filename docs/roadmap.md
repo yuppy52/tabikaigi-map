@@ -4,17 +4,23 @@
 
 ## いまどこ？
 
-**Phase 1（基本設計）。技術の方向が決まり、小さく試す前**（2026-10-04）。
-- 要件定義は 2026-10-04 に確定した。そのあと検索に出す要件（NFR-019）を足したので、requirements だけ「レビュー待ち」に戻っている
-- 技術の方向：画面は React＋TypeScript＋Vite、検索に出すページは素の HTML（[ADR 0004](adr/0004-frontend-react-typescript.md)、決定）。バックエンドは Cloudflare Workers（Hono）＋D1、認証だけ Firebase Authentication、ドメインは Cloudflare の `.com`（[ADR 0003](adr/0003-backend-selection.md)、提案中。小さく試してから決定）
-- 経緯は git の履歴と [learnings/](learnings/) を参照
+**Phase 1（基本設計）。技術の方向が決まり、小さく試す前**（2026-10-04 の終わり。次のセッションへの引き継ぎ）。
+- 要件定義は 2026-10-04 に一度確定したが、その後に足したもの（検索 NFR-019、独自ドメイン NFR-020、リアルタイム NFR-003 の見直し、名前の重複を保存先で守る NFR-006 (11)、確認メールの流れなど）があるので、requirements・use-cases・用語集は「レビュー待ち」に戻っている。小さく試した後にまとめて見直して「確定」にする
+- 技術の方向：
+  - 画面は React＋TypeScript＋Vite、検索に出すページは素の HTML（[ADR 0004](adr/0004-frontend-react-typescript.md)、決定）
+  - バックエンドは案 C：Cloudflare Workers（API は Hono）＋D1、リアルタイムは Durable Objects＋WebSocket で「変わったこと」を配る、認証はログインする人だけ Firebase Authentication（ログインなしの人の匿名ログインはやめる）、ドメインは Cloudflare Registrar の `.com`（[ADR 0003](adr/0003-backend-selection.md)、提案中。小さく試してから決定）
+  - 費用：有料プランには上げない。無料枠を超えたらその日は止まるのを受け入れる。Cloudflare で有料にしない決まり（R2 を有効にしない等）は ADR 0003 にある
+- 2026-10-04 に決めたこと（ユーザー）：リアルタイムは「行った」の付け外しだけ（数秒の遅れは可）、名前の重複は保存先でも防ぐ、問い合わせはアプリの中のフォーム（API＋D1＋Turnstile）、匿名ログインはやめる
+- 設計書（architecture・data-model・auth-flow）は案 A（Firebase 一式）前提の古い版で、冒頭に注記がある。書き直しの方針は ADR 0003 の「C で書き直すときの方針」
+- PR：[yuppy52/tabikaigi-map#16](https://github.com/yuppy52/tabikaigi-map/pull/16)（リアルタイムと案 C のレビューの反映）がユーザーのマージ待ち
+- 経緯は git の履歴と [learnings/](learnings/) を参照。2026-10-04 の学び：前提の思い込み（SEO・JS の経験・サーバーのコード）、推奨が変わったときの反映漏れ、逃げ道の移行コスト
 
 **次にやること（この順で）：**
-1. ADR 0003・ADR 0004・NFR-019 の変更を `/review-docs` でレビューし、直す。`/compound` で学びを残す（調査の前提の思い込み：SEO・サーバーのコード・JavaScript の経験）
-2. ユーザーが PR を確かめてマージする
+1. ~~ADR 0003・0004・NFR-019 のレビューと `/compound`~~（2026-10-04 に済んだ）
+2. ユーザーが PR #16 を確かめてマージする
 3. **ユーザーの作業**：Cloudflare のアカウントを作り、`.com` のドメインを取る（ADR 0003 の「C で Cloudflare 側を守る決まり」を読んでから。2026-10-04 に書いた）。Firebase のプロジェクトを Spark で作る（課金アカウントはつながない）。どちらも Claude は代わりにできない（支払い・アカウント作成）
-4. **小さく試す**（`feat/` のブランチ）：ADR 0003 の「決定の前に確かめること」の C の5項目を、ローカル（wrangler、Vitest）で試す。開発環境（Node.js、wrangler）を用意する。結果で ADR 0003 を「決定」にする
-5. 選んだ構成に合わせて architecture・data-model・auth-flow を書き直し、要件IDの対応を付け、基本設計の Q を決める。権限マトリクス、構成図とワイヤーフレーム
+4. **小さく試す**（`feat/` のブランチ）：ADR 0003 の「決定の前に確かめること」の C の項目（リアルタイムを含む）を試す。まず、通らなければ考え直す2つ（招待URLを Worker を通さずに返せるか、ログインの確認が CPU 10ms に収まるか）から。ふだんはローカル（wrangler、Vitest）、CPU と速さは無料のまま本番の環境に置いて測る。開発環境（Node.js、wrangler）を用意する。結果で ADR 0003 を「決定」にする
+5. 選んだ構成に合わせて architecture・data-model・auth-flow を書き直し（ER 図などのデータの形はユーザーと一緒に確かめる）、要件IDの対応を付け、基本設計の Q を決める。権限マトリクス、構成図とワイヤーフレーム
 
 各ステップは「作る → `/review-docs` → 直す → `/compound`」で進める。
 
@@ -45,7 +51,7 @@
 - [x] 画面の作り方を決める（2026-10-04：React＋TypeScript＋Vite、検索に出すページは素の HTML。[ADR 0004](adr/0004-frontend-react-typescript.md)）
 - [ ] **技術選定を確定する**（[ADR 0003](adr/0003-backend-selection.md)、推奨は案 C）：Cloudflare の課金の道を調べて決まりを書く → ドメインを取る → 小さく試す → 決定。Firebase が前提の設計書と Q（Q-011〜Q-014・Q-019・Q-021・Q-022）は、決めてから書き直す
 - [ ] 開発環境を用意する（Node.js、wrangler。案 C の場合。案 A なら JDK 21・firebase-tools）
-- [ ] 保存先で守るもの（NFR-006 の (1)〜(10)）を実装してテストする（案 C なら API と D1 の制約を Vitest で。案 A なら Firestore のルールをエミュレータで）
+- [ ] 保存先で守るもの（NFR-006 の (1)〜(11)）を実装してテストする（案 C なら API と D1 の制約を Vitest で。案 A なら Firestore のルールをエミュレータで）
 - [ ] 追加する画面を決める → [design/screens.md](design/screens.md)（検索に出すページとアプリの画面を分ける：Q-016）
 - [ ] 固定の OGP 画像と文言を用意する
 
@@ -64,7 +70,7 @@
 
 | 工程 | 追加を検討するもの |
 |---|---|
-| 基本設計 | 画面設計のレビューは既存の `design:design-critique` を使う（2026-10-04 に決定。新しい `ui-reviewer` は作らない）。構成図とワイヤーフレームは接続済みの draw.io のツールを試す（`.drawio.svg` で保存できるかは要確認）。技術の比較と ADR（既存の `researcher` と、Skill の `engineering:architecture` を試す）。権限マトリクスは NFR-006 の8つを出発点にする |
+| 基本設計 | 画面設計のレビューは既存の `design:design-critique` を使う（2026-10-04 に決定。新しい `ui-reviewer` は作らない）。構成図とワイヤーフレームは接続済みの draw.io のツールを試す（`.drawio.svg` で保存できるかは要確認）。技術の比較と ADR（既存の `researcher` と、Skill の `engineering:architecture` を試す）。権限マトリクスは NFR-006 の (1)〜(11) を出発点にする |
 | 保存先で守るものの実装の前 | **`rules-reviewer`**（API とデータベースの制約、または Firestore のルールを、攻撃する側の目で見る）、GitHub Actions でルールのテストを自動実行、サンドボックス（`/sandbox`） |
 | 実装（Phase 2）の前 | コードレビュー（まず既存の `/code-review` を試す）、`test-writer`、Dependabot、**Playwright CLI**（下のメモ） |
 | 公開（Phase 2 の終わり）の前 | **Strix**（下のメモ） |
@@ -87,7 +93,9 @@
 
 （ADR 0003 が案 C に決まった場合の書き方。A なら「API」を「Firestore」に読み替える）
 
+- [ ] 始める前に「デプロイとテーブル定義の変更（マイグレーション）の手順書」を作る（テーブル定義の変更は戻せないため。ADR 0003 の「C で書き直すときの方針」）
 - [ ] Vite＋React＋TypeScript の構成を作り、モックの画面を React の部品に書き直す（ADR 0004）
+- [ ] リアルタイムの共有（NFR-003）：Durable Objects ＋ WebSocket で「行った」の変更を配る
 - [ ] `localStorage` の読み書きを API（Hono＋D1）に置き換える
 - [ ] 匿名認証、本物の招待URL
 - [ ] グループ設定：グループ名の変更、管理できる人、メンバーの削除、グループの削除、退出（最後の1人ならグループも削除）
