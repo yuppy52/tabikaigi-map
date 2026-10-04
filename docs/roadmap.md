@@ -4,16 +4,22 @@
 
 ## いまどこ？
 
-**Phase 1（基本設計）。技術の方向が決まり、小さく試す前**（2026-10-04）。
-- 要件定義は 2026-10-04 に確定した。そのあと検索に出す要件（NFR-019）を足したので、requirements だけ「レビュー待ち」に戻っている
-- 技術の方向：画面は React＋TypeScript＋Vite、検索に出すページは素の HTML（[ADR 0004](adr/0004-frontend-react-typescript.md)、決定）。バックエンドは Cloudflare Workers（Hono）＋D1、認証だけ Firebase Authentication、ドメインは Cloudflare の `.com`（[ADR 0003](adr/0003-backend-selection.md)、提案中。小さく試してから決定）
-- 経緯は git の履歴と [learnings/](learnings/) を参照
+**Phase 1（基本設計）。技術の方向が決まり、小さく試す前**（2026-10-04 の終わり。次のセッションへの引き継ぎ）。
+- 要件定義は 2026-10-04 に一度確定したが、その後に足したもの（検索 NFR-019、独自ドメイン NFR-020、リアルタイム NFR-003 の見直し、名前の重複を保存先で守る NFR-006 (11)、確認メールの流れなど）があるので、requirements・use-cases・用語集は「レビュー待ち」に戻っている。小さく試した後にまとめて見直して「確定」にする
+- 技術の方向：
+  - 画面は React＋TypeScript＋Vite、検索に出すページは素の HTML（[ADR 0004](adr/0004-frontend-react-typescript.md)、決定）
+  - バックエンドは案 C：Cloudflare Workers（API は Hono）＋D1、リアルタイムは Durable Objects＋WebSocket で「変わったこと」を配る、認証はログインする人だけ Firebase Authentication（ログインなしの人の匿名ログインはやめる）、ドメインは Cloudflare Registrar の `.com`（[ADR 0003](adr/0003-backend-selection.md)、提案中。小さく試してから決定）
+  - 費用：有料プランには上げない。無料枠を超えたらその日は止まるのを受け入れる。Cloudflare で有料にしない決まり（R2 を有効にしない等）は ADR 0003 にある
+- 2026-10-04 に決めたこと（ユーザー）：リアルタイムは「行った」の付け外しだけ（数秒の遅れは可）、名前の重複は保存先でも防ぐ、問い合わせはアプリの中のフォーム（API＋D1＋Turnstile）、匿名ログインはやめる
+- 設計書（architecture・data-model・auth-flow）は案 A（Firebase 一式）前提の古い版で、冒頭に注記がある。書き直しの方針は ADR 0003 の「C で書き直すときの方針」
+- PR：[yuppy52/tabikaigi-map#16](https://github.com/yuppy52/tabikaigi-map/pull/16)（リアルタイムと案 C のレビューの反映）がユーザーのマージ待ち
+- 経緯は git の履歴と [learnings/](learnings/) を参照。2026-10-04 の学び：前提の思い込み（SEO・JS の経験・サーバーのコード）、推奨が変わったときの反映漏れ、逃げ道の移行コスト
 
 **次にやること（この順で）：**
-1. ADR 0003・ADR 0004・NFR-019 の変更を `/review-docs` でレビューし、直す。`/compound` で学びを残す（調査の前提の思い込み：SEO・サーバーのコード・JavaScript の経験）
-2. ユーザーが PR を確かめてマージする
+1. ~~ADR 0003・0004・NFR-019 のレビューと `/compound`~~（2026-10-04 に済んだ）
+2. ユーザーが PR #16 を確かめてマージする
 3. **ユーザーの作業**：Cloudflare のアカウントを作り、`.com` のドメインを取る（ADR 0003 の「C で Cloudflare 側を守る決まり」を読んでから。2026-10-04 に書いた）。Firebase のプロジェクトを Spark で作る（課金アカウントはつながない）。どちらも Claude は代わりにできない（支払い・アカウント作成）
-4. **小さく試す**（`feat/` のブランチ）：ADR 0003 の「決定の前に確かめること」の C の項目（リアルタイムを含む）を、ローカル（wrangler、Vitest）で試す。開発環境（Node.js、wrangler）を用意する。結果で ADR 0003 を「決定」にする
+4. **小さく試す**（`feat/` のブランチ）：ADR 0003 の「決定の前に確かめること」の C の項目（リアルタイムを含む）を試す。まず、通らなければ考え直す2つ（招待URLを Worker を通さずに返せるか、ログインの確認が CPU 10ms に収まるか）から。ふだんはローカル（wrangler、Vitest）、CPU と速さは無料のまま本番の環境に置いて測る。開発環境（Node.js、wrangler）を用意する。結果で ADR 0003 を「決定」にする
 5. 選んだ構成に合わせて architecture・data-model・auth-flow を書き直し（ER 図などのデータの形はユーザーと一緒に確かめる）、要件IDの対応を付け、基本設計の Q を決める。権限マトリクス、構成図とワイヤーフレーム
 
 各ステップは「作る → `/review-docs` → 直す → `/compound`」で進める。
