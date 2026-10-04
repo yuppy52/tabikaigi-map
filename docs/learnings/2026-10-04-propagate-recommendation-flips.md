@@ -28,3 +28,7 @@ area: process
 - docs/adr/0003-backend-selection.md、docs/adr/0004-frontend-react-typescript.md
 - .claude/rules/docs.md（決めたことの反映）
 - docs/learnings/2026-09-30-glossary-cross-doc-conflicts.md
+
+## 仕組みへの反映（2026-10-04）
+- `.claude/rules/docs.md` の「決めたことの反映」に、推奨や前提が変わったときの `grep` と注記を足した
+- `doc-reviewer` の整合性の観点に「推奨や前提が変わったときの注記」を足した

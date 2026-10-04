@@ -21,3 +21,6 @@ ADR 0003 の最初の推奨は「MVP は Firebase 一式。Hosting の転送量�
 ## 関連
 - docs/adr/0003-backend-selection.md（招待URLとドメイン、推奨）
 - docs/requirements.md（NFR-020）
+
+## 仕組みへの反映（2026-10-04）
+- `doc-reviewer` の観点に「逃げ道」（移すときに利用者に見えるものが変わらないか、きっかけの状況で使えるか）を足した
