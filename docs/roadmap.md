@@ -4,17 +4,17 @@
 
 ## いまどこ？
 
-**要件定義はほぼ終わり、Phase 1（基本設計）に入るところ**（2026-10-03）。
-- requirements は要件ID付き（REQ-001〜REQ-059、NFR-001〜NFR-018）に作り直し、`/review-docs`（31件）の指摘も決めて反映した。状態は「レビュー待ち」で、ユーザーが確かめたら「確定」にする
-- 要件定義の段階の未決事項はすべて決定済み。残りは基本設計の段階のもの（[open-questions.md](open-questions.md)）
+**Phase 1（基本設計）。技術の方向が決まり、小さく試す前**（2026-10-04）。
+- 要件定義は 2026-10-04 に確定した。そのあと検索に出す要件（NFR-019）を足したので、requirements だけ「レビュー待ち」に戻っている
+- 技術の方向：画面は React＋TypeScript＋Vite、検索に出すページは素の HTML（[ADR 0004](adr/0004-frontend-react-typescript.md)、決定）。バックエンドは Cloudflare Workers（Hono）＋D1、認証だけ Firebase Authentication、ドメインは Cloudflare の `.com`（[ADR 0003](adr/0003-backend-selection.md)、提案中。小さく試してから決定）
 - 経緯は git の履歴と [learnings/](learnings/) を参照
 
-**次のセッションでやること（この順で）：**
-1. **前回のやり残しを決める**（ユーザーに聞く）
-   - requirements・use-cases・用語集を「確定」にしてよいか（直した量が多いので、`/review-docs` をもう一度かけるかも聞く）
-   - `/compound`（2026-10-03）で出した、仕組みへの反映案3つを入れるか。(1) CLAUDE.md の費用に「決まった額の費用は相談の上で可」を足す。(2) CLAUDE.md の進め方に「調査を頼む前に、結論を左右する前提（お金を得るか、規模、扱う情報）を確かめ、確かめられないものは仮定と書く」を足す。(3) `doc-reviewer` の権限の観点に「保存先で守るものが並べて書かれ、design と食い違っていないか」「自動で消すものが権限の判断に使われていないか」を足す。根拠は [learnings の 2026-10-03 の2件](learnings/) と owner-and-slot-lifecycle の追記
-2. **Phase 1 の道具を見直す**（CLAUDE.md の決まり。下の「工程ごとの道具の見直し」）
-3. **技術選定（Q-023）から始める**。ほかの多くの Q（Q-011〜Q-014・Q-019・Q-021・Q-022・Q-025〜Q-027・Q-030・Q-031）がバックエンドで変わるため。`researcher` に Firebase・Supabase・Cloudflare・Vercel を比べてもらう。比べる観点は Q-023 のメモ（費用の上限、想定規模 NFR-015 で無料枠に収まるか、運用の要件 NFR-010〜NFR-013、匿名からログインへの移行、一時停止、古い招待URLの転送）。依頼の前に、前提をユーザーと確かめる
+**次にやること（この順で）：**
+1. ADR 0003・ADR 0004・NFR-019 の変更を `/review-docs` でレビューし、直す。`/compound` で学びを残す（調査の前提の思い込み：SEO・サーバーのコード・JavaScript の経験）
+2. ユーザーが PR を確かめてマージする
+3. **ユーザーの作業**：Cloudflare のアカウントを作り、`.com` のドメインを取る（ADR 0003 の「C で Cloudflare 側を守る決まり」を読んでから。2026-10-04 に書いた）。Firebase のプロジェクトを Spark で作る（課金アカウントはつながない）。どちらも Claude は代わりにできない（支払い・アカウント作成）
+4. **小さく試す**（`feat/` のブランチ）：ADR 0003 の「決定の前に確かめること」の C の5項目を、ローカル（wrangler、Vitest）で試す。開発環境（Node.js、wrangler）を用意する。結果で ADR 0003 を「決定」にする
+5. 選んだ構成に合わせて architecture・data-model・auth-flow を書き直し、要件IDの対応を付け、基本設計の Q を決める。権限マトリクス、構成図とワイヤーフレーム
 
 各ステップは「作る → `/review-docs` → 直す → `/compound`」で進める。
 
@@ -29,7 +29,7 @@
 - [x] requirements.md を**要件ID付きの機能一覧**（REQ-001…）と非機能要件（NFR-001…）に作り直す（2026-10-02。名前の決まり REQ-009〜REQ-011 は推奨案で決定：Q-024）
 - [x] 非機能要件に運用（アクセス解析、無料枠の監視、エラーの把握）を入れる（2026-10-02。NFR-008・NFR-010〜NFR-014。方法は基本設計の Q-025〜Q-028）
 - [x] `/review-docs` でレビュー → 直す（2026-10-03。31件。決める項目はユーザーと決め、画面の抜けは Q-020、無料枠の対策は Q-031 へ）
-- [ ] **要件定義を確定**（requirements の状態を「確定」にする）
+- [x] **要件定義を確定**（2026-10-04。requirements・use-cases・用語集。用語集の残りの指摘は基本設計で直す）
 
 ## Phase 1：基本設計・詳細設計
 
@@ -37,15 +37,16 @@
 
 - [x] Firebase の調査と、それを踏まえた設計の見直し
 - [x] 設計書を分けて書く（要件、構成、データ、認証、画面）
-- [ ] **最初に**：技術選定（Q-023）を比べて決め、新しい ADR を書く（下の「技術選定を確定する」の比較の部分を先にやる）
+- [ ] **最初に**：技術選定（Q-023）を比べて決め、新しい ADR を書く（下の「技術選定を確定する」の比較の部分を先にやる）。2026-10-03：比較と推奨案を [ADR 0003](adr/0003-backend-selection.md) に書いた。ユーザーの判断待ち
 - [ ] 設計書に要件IDの対応を付ける（あわせて、基本設計の段階の未決事項 Q-010・Q-011・Q-014・Q-016〜Q-022・Q-025〜Q-028・Q-030・Q-031 を決める）
 - [ ] **システム構成図とワイヤーフレーム**を draw.io で作る（`*.drawio.svg`）
 - [ ] **権限マトリクス**（誰が何をできるか）を表で作る
 - [ ] `/review-docs` でレビュー → 直す
-- [ ] **技術選定を確定する** → [adr/0001](adr/0001-backend-firebase.md)（Supabase・Cloudflare の欄は要調査）、[adr/0002](adr/0002-frontend-vanilla-vite.md)。費用の心配（従量課金で見積もれない）から、Firebase のままにするかを見直す（[Q-023](open-questions.md)）。Firebase が前提の設計書と Q（Q-011〜Q-014・Q-019・Q-021・Q-022）は、ここで決めてから仕上げる
-- [ ] 開発環境を用意する（JDK 21、Node.js 20、firebase-tools）
-- [ ] Firestore のルールを書き、エミュレータでテストする（先に Q-012 `getAfter` の可否を確かめる）
-- [ ] 追加する画面をモックに足す → [design/screens.md](design/screens.md)
+- [x] 画面の作り方を決める（2026-10-04：React＋TypeScript＋Vite、検索に出すページは素の HTML。[ADR 0004](adr/0004-frontend-react-typescript.md)）
+- [ ] **技術選定を確定する**（[ADR 0003](adr/0003-backend-selection.md)、推奨は案 C）：Cloudflare の課金の道を調べて決まりを書く → ドメインを取る → 小さく試す → 決定。Firebase が前提の設計書と Q（Q-011〜Q-014・Q-019・Q-021・Q-022）は、決めてから書き直す
+- [ ] 開発環境を用意する（Node.js、wrangler。案 C の場合。案 A なら JDK 21・firebase-tools）
+- [ ] 保存先で守るもの（NFR-006 の (1)〜(10)）を実装してテストする（案 C なら API と D1 の制約を Vitest で。案 A なら Firestore のルールをエミュレータで）
+- [ ] 追加する画面を決める → [design/screens.md](design/screens.md)（検索に出すページとアプリの画面を分ける：Q-016）
 - [ ] 固定の OGP 画像と文言を用意する
 
 ## 運用ルール（Phase 1 の中で決める）
@@ -63,8 +64,8 @@
 
 | 工程 | 追加を検討するもの |
 |---|---|
-| 基本設計 | 画面設計のレビュー（`ui-reviewer`、または既存の `design:design-critique`）。技術の比較と ADR（既存の `researcher` と、Skill の `engineering:architecture` を試す）。権限マトリクスは NFR-006 の8つを出発点にする |
-| ルールの実装の前 | **`rules-reviewer`**（Firestore のルールを攻撃する側の目で見る）、GitHub Actions でルールのテストを自動実行、サンドボックス（`/sandbox`） |
+| 基本設計 | 画面設計のレビューは既存の `design:design-critique` を使う（2026-10-04 に決定。新しい `ui-reviewer` は作らない）。構成図とワイヤーフレームは接続済みの draw.io のツールを試す（`.drawio.svg` で保存できるかは要確認）。技術の比較と ADR（既存の `researcher` と、Skill の `engineering:architecture` を試す）。権限マトリクスは NFR-006 の8つを出発点にする |
+| 保存先で守るものの実装の前 | **`rules-reviewer`**（API とデータベースの制約、または Firestore のルールを、攻撃する側の目で見る）、GitHub Actions でルールのテストを自動実行、サンドボックス（`/sandbox`） |
 | 実装（Phase 2）の前 | コードレビュー（まず既存の `/code-review` を試す）、`test-writer`、Dependabot、**Playwright CLI**（下のメモ） |
 | 公開（Phase 2 の終わり）の前 | **Strix**（下のメモ） |
 | 要件定義の後 | docs の自動チェック（Markdown の書式、Mermaid の構文、リンク切れ） |
@@ -78,16 +79,20 @@
   - 目的：スマホ幅での表示、参加 → 塗る → 別の人の画面に反映、の流れを自動で確かめる
   - 要調査：CLI と MCP（Playwright MCP はすでに接続済み）、アプリ内蔵のブラウザとの使い分け、CI で動かす方法
 - **Strix**：AI エージェントがアプリを攻撃する側の目で調べ、セキュリティの弱点を見つける。
-  - 目的：Firestore のルールの抜け道、他人のグループを読み書きできないか、などを公開前に確かめる
+  - 目的：API やルールの抜け道、他人のグループを読み書きできないか、などを公開前に確かめる
   - 注意：**調べてよいのは自分のアプリだけ**。本番ではなく、エミュレータかテスト用のプロジェクトに対して実行する
-  - 要調査：導入方法、必要な環境（Docker、LLM の API キーなど）と費用、Firebase の構成で使えるか
+  - 要調査：導入方法、必要な環境（Docker、LLM の API キーなど）と費用、選んだ構成で使えるか
 
 ## Phase 2：MVP①（ログインなし）
 
-- [ ] Vite の構成に移し、`localStorage` の読み書きを Firestore に置き換える
+（ADR 0003 が案 C に決まった場合の書き方。A なら「API」を「Firestore」に読み替える）
+
+- [ ] Vite＋React＋TypeScript の構成を作り、モックの画面を React の部品に書き直す（ADR 0004）
+- [ ] `localStorage` の読み書きを API（Hono＋D1）に置き換える
 - [ ] 匿名認証、本物の招待URL
 - [ ] グループ設定：グループ名の変更、管理できる人、メンバーの削除、グループの削除、退出（最後の1人ならグループも削除）
-- [ ] Firebase Hosting にデプロイし、友達グループで使ってもらう
+- [ ] 検索に出すページ（トップ、使い方、プライバシーポリシー）を素の HTML で作る。アプリの画面に `noindex`、sitemap、Google Search Console への登録（NFR-019、[architecture](design/architecture.md) の「検索に出すページと出さないページ」）
+- [ ] 独自ドメインで公開し（NFR-020）、友達グループで使ってもらう
 
 ## Phase 3：MVP②（ログインあり）
 

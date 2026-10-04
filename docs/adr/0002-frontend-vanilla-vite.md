@@ -1,6 +1,6 @@
 # ADR 0002：画面は素の JavaScript ＋ Vite で作る
 
-- 状態：**提案中**（レビューで確定する）
+- 状態：**置き換え**（2026-10-04 に [ADR 0004](0004-frontend-react-typescript.md) で、React ＋ TypeScript ＋ Vite に置き換えた。ユーザーが JavaScript に慣れておらず TypeScript を使うことになり、モックのコードをそのまま使う理由がなくなったため）
 - 日付：2026-09-27
 
 ## 背景
