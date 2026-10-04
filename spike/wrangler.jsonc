@@ -10,8 +10,8 @@
     "run_worker_first": ["/api/*"]
   },
   "vars": {
-    // Firebase のプロジェクトID。プロジェクトを作ったら差し替える（秘密の値ではない）
-    "FIREBASE_PROJECT_ID": "tabikaigi-spike-placeholder"
+    // Firebase のプロジェクトID。2026-10-04 に作った（秘密の値ではない）
+    "FIREBASE_PROJECT_ID": "tabikaigi-map"
   },
   "observability": { "enabled": true }
 }
