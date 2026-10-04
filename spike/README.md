@@ -50,7 +50,7 @@ npm run bench    # ログインの確認にかかる時間の目安（このパ�
 
 ## 本番の環境で試すのに必要なもの（ユーザーの作業）
 
-- Cloudflare のアカウント（`*.workers.dev` に置けばドメインがなくても測れる）
+- ~~Cloudflare のアカウント~~（2026-10-04 にできた。ドメイン `tabikaigi-map.com` も取った。試すのは `*.workers.dev` でよい）
 - Firebase のプロジェクト（Spark）。プロジェクトIDを `wrangler.jsonc` の `FIREBASE_PROJECT_ID` に入れる
 
 `wrangler deploy` などの本番に触る操作は、`.claude/settings.json` で毎回確認を求める設定にしてある。
