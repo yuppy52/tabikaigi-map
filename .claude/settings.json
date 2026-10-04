@@ -25,7 +25,19 @@
     "ask": [
       "Bash(firebase deploy:*)",
       "Bash(npx firebase deploy:*)",
-      "Bash(git push:*)"
+      "Bash(git push:*)",
+      "Bash(wrangler deploy:*)",
+      "Bash(npx wrangler deploy:*)",
+      "Bash(wrangler d1 delete:*)",
+      "Bash(npx wrangler d1 delete:*)",
+      "Bash(wrangler delete:*)",
+      "Bash(npx wrangler delete:*)",
+      "Bash(wrangler secret:*)",
+      "Bash(npx wrangler secret:*)",
+      "Bash(wrangler d1 execute * --remote*)",
+      "Bash(npx wrangler d1 execute * --remote*)",
+      "Bash(wrangler d1 migrations apply * --remote*)",
+      "Bash(npx wrangler d1 migrations apply * --remote*)"
     ]
   },
   "hooks": {

@@ -1,0 +1,23 @@
+{
+  "name": "tabikaigi-spike",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit",
+    "types": "wrangler types --env-interface Env --include-runtime false src/worker-configuration.d.ts",
+    "bench": "node --experimental-strip-types scripts/bench-verify.ts"
+  },
+  "dependencies": {
+    "hono": "^4.13.13",
+    "jose": "^6.2.12"
+  },
+  "devDependencies": {
+    "@cloudflare/vitest-pool-workers": "^0.22.0",
+    "@cloudflare/workers-types": "^5.20261004.1",
+    "typescript": "^5.9.3",
+    "vitest": "~4.1",
+    "wrangler": "^4.147.0"
+  }
+}
