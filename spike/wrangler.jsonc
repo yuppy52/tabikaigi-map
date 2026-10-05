@@ -13,5 +13,14 @@
     // Firebase のプロジェクトID。2026-10-04 に作った（秘密の値ではない）
     "FIREBASE_PROJECT_ID": "tabikaigi-map"
   },
-  "observability": { "enabled": true }
+  "observability": { "enabled": true },
+  // D1（データベース）。いまはローカルで試すだけ。本番に作ったら database_id を差し替える
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "tabikaigi-spike",
+      "database_id": "00000000-0000-0000-0000-000000000000",
+      "migrations_dir": "migrations"
+    }
+  ]
 }
