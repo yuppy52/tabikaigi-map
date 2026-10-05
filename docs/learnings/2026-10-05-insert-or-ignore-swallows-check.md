@@ -25,6 +25,10 @@ SQLite（D1）の `OR IGNORE` は、重複（`UNIQUE`・`PRIMARY KEY`）だけ�
 - データベースの制約を足したら、「違反がエラーになる」テストを1つ書く。制約を書いただけでは、効いているか分からない
 - 本番のコードのレビュー（`/code-review`）で、`OR IGNORE`・`OR REPLACE` を探す
 
+## 仕組みへの反映
+
+2026-10-06 に `.claude/rules/sql.md` を作って反映した。
+
 ## 関連
 
 - docs/adr/0003-backend-selection.md（C で書き直すときの方針）

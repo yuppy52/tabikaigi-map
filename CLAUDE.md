@@ -17,12 +17,14 @@
 - `docs/`：要件、設計、ADR、ロードマップ
 - `docs/learnings/`：過去の失敗や判断の記録（tags 付き）。設計やレビューの前に、関係するものを探して読む
 - `.claude/rules/docs.md`：ドキュメントの書き方（要件ID、状態、図の使い分け）
+- `.claude/rules/sql.md`：SQL（D1）の書き方
 - `.claude/agents/`：`researcher`（調査）、`doc-reviewer`（設計書のレビュー）
 - `.claude/skills/`：`/review-docs`（設計書のレビュー）、`/compound`（学びを残す）
 
 ## 技術の前提
 
 - **費用**：使った分だけ上限なく請求が来る構成にはしない（個人開発で費用を見積もれないため）。サービスを比べるときは、無料枠だけでなく、費用に上限があるか（超えたら止まるか、請求の上限を設定できるか）を必ず比べる。有料プランや、課金を有効にしないと使えない機能は、入れる前に相談する。月額固定や年額のドメイン代など、決まった額の費用は相談の上で使ってよい
+- **鍵と初期設定**：外部サービスの鍵（API トークン、OAuth の許可）は、テンプレートや「おすすめ」を使わず、要る権限だけを選び、期限を付ける。作る前に、お金に関わる権限が入っていないか、自動で付く名前や URL に個人の情報が使われていないかを確かめる（[docs/learnings/2026-10-05-check-service-defaults.md](docs/learnings/2026-10-05-check-service-defaults.md)）
 - **バックエンド**：2026-10-04 に、第一候補を Firebase 一式から「Cloudflare Workers（API は Hono）＋ D1、認証だけ Firebase Authentication（Spark）」に見直した（[ADR 0003](docs/adr/0003-backend-selection.md)、提案中）。ローカルで小さく試してから決定にする。有料プランには上げない。要件は特定のサービスに依存させない
 - コードは TypeScript で書く。アプリの画面は React ＋ Vite、検索に出すページ（トップ、使い方、プライバシーポリシー）は素の HTML（[ADR 0004](docs/adr/0004-frontend-react-typescript.md)、Phase 2 から）。ユーザーは JavaScript／TypeScript に慣れていないので、コードを見せるときは考え方を一言添える
 - アクセス制御（requirements の NFR-006）は保存先の側で守る。Cloudflare 案なら API とデータベースの制約、Firebase 案なら Firestore のセキュリティルールで行い、変えたらテストも更新する
