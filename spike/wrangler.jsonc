@@ -1,0 +1,17 @@
+// 試作（小さく試す）用の設定。本番のアプリの設定ではない
+{
+  "name": "tabikaigi-spike",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-08-15",
+  "assets": {
+    "directory": "./public",
+    "binding": "ASSETS",
+    // /api/ で始まるものだけ Worker を通す。それ以外（トップ、/g/…）は静的なファイルとして返す
+    "run_worker_first": ["/api/*"]
+  },
+  "vars": {
+    // Firebase のプロジェクトID。2026-10-04 に作った（秘密の値ではない）
+    "FIREBASE_PROJECT_ID": "tabikaigi-map"
+  },
+  "observability": { "enabled": true }
+}

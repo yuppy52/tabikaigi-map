@@ -1,0 +1,7 @@
+# アプリの画面は検索に出さない（NFR-019）
+/g/*
+  X-Robots-Tag: noindex
+/app
+  X-Robots-Tag: noindex
+/app.html
+  X-Robots-Tag: noindex
