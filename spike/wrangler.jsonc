@@ -14,6 +14,11 @@
     "FIREBASE_PROJECT_ID": "tabikaigi-map"
   },
   "observability": { "enabled": true },
+  // グループごとの「部屋」（Durable Object）。Free で使えるのは SQLite 版だけなので new_sqlite_classes で作る
+  "durable_objects": {
+    "bindings": [{ "name": "GROUP_ROOM", "class_name": "GroupRoom" }]
+  },
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["GroupRoom"] }],
   // D1（データベース）。いまはローカルで試すだけ。本番に作ったら database_id を差し替える
   "d1_databases": [
     {
