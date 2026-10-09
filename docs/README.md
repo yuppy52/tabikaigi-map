@@ -8,12 +8,13 @@
 | [glossary.md](glossary.md) | 用語集（言葉の意味をそろえる） | レビュー待ち |
 | [use-cases.md](use-cases.md) | ユースケース（誰が何をするか）。要件の元になる | レビュー待ち |
 | [open-questions.md](open-questions.md) | 未決事項の一覧（ID・影響先・決める段階） | レビュー待ち |
-| [requirements.md](requirements.md) | 要件定義（何を作るか、何を作らないか） | レビュー待ち（NFR-019 を追加） |
+| [requirements.md](requirements.md) | 要件定義（何を作るか、何を作らないか） | レビュー待ち（2026-10-10：NFR-007・NFR-008 を更新） |
 | [design/architecture.md](design/architecture.md) | システム構成図、使うサービス、開発環境 | レビュー待ち |
-| [design/data-model.md](design/data-model.md) | ER図、Firestore の構造、セキュリティルールの方針 | レビュー待ち |
-| [design/auth-flow.md](design/auth-flow.md) | 認証の流れ（匿名 → ログイン → 合算・紐づけ）のシーケンス図 | レビュー待ち |
+| [design/data-model.md](design/data-model.md) | ER図、Firestore の構造、セキュリティルールの方針（案 A の版。ADR 0003 が決まったら書き直す） | レビュー待ち |
+| [design/auth-flow.md](design/auth-flow.md) | 認証の流れ（匿名 → ログイン → 合算・紐づけ）のシーケンス図（案 A の版。ADR 0003 が決まったら書き直す） | レビュー待ち |
 | [design/screens.md](design/screens.md) | 画面一覧と画面遷移図 | レビュー待ち |
 | [adr/](adr/) | 技術選定などの決定の記録（ADR） | — |
+| [../spike/](../spike/README.md) | 案 C を小さく試した試作と結果（docs の外。ADR 0003 の根拠） | — |
 | [learnings/](learnings/) | 学びの記録（ハマったこと、レビューの指摘）。`/compound` で書く | — |
 
 ## 書き分けのルール
