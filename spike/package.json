@@ -3,11 +3,12 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "wrangler dev",
+    "dev": "npm run build:demo && wrangler dev",
     "test": "vitest run",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "tsc --noEmit && tsc --noEmit -p demo",
     "types": "wrangler types --env-interface Env --include-runtime false src/worker-configuration.d.ts",
-    "bench": "node --experimental-strip-types scripts/bench-verify.ts"
+    "bench": "node --experimental-strip-types scripts/bench-verify.ts",
+    "build:demo": "esbuild demo/main.ts --bundle --format=esm --target=es2022 --outfile=public/demo.js"
   },
   "dependencies": {
     "hono": "^4.13.13",
@@ -16,6 +17,7 @@
   "devDependencies": {
     "@cloudflare/vitest-pool-workers": "^0.22.0",
     "@cloudflare/workers-types": "^5.20261004.1",
+    "esbuild": "^0.28.1",
     "typescript": "^5.9.3",
     "vitest": "~4.1",
     "wrangler": "^4.147.0"
