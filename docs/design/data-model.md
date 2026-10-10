@@ -2,7 +2,7 @@
 
 状態：レビュー待ち（2026-10-02：表示名をなくし、名前・色の変更、退会、0人のグループ、作成者がいなくなるときの扱いを要件定義の決定に合わせた。2026-10-03：同じアカウントのメンバーが2つになりそうなときは片付けない（REQ-039）、名前の重複はルールで守らない、名前の長さの守り方を合わせた）
 
-> **注意（2026-10-04）**：この文書は Firebase 一式（[ADR 0003](../adr/0003-backend-selection.md) の案 A）を前提にした版。ADR 0003 では、Cloudflare Workers＋D1 に認証だけ Firebase Authentication を組み合わせる案 C を推奨にしていて、小さく試して C に決まったら書き直す（[roadmap](../roadmap.md) の「次にやること」5.）。画面は React＋TypeScript（[ADR 0004](../adr/0004-frontend-react-typescript.md)）
+> **注意（2026-10-04）**：この文書は Firebase 一式（[ADR 0003](../adr/0003-backend-selection.md) の案 A）を前提にした版。ADR 0003 では、Cloudflare Workers＋D1 に認証だけ Firebase Authentication を組み合わせる案 C を推奨にしていて、2026-10-10 に C に決まった。書き直しは [roadmap](../roadmap.md) の「次にやること」7.。画面は React＋TypeScript（[ADR 0004](../adr/0004-frontend-react-typescript.md)）
 
 ## ER図
 

@@ -1,6 +1,6 @@
 # ADR 0001：バックエンドに Firebase を使う
 
-- 状態：**提案中**（レビューで確定する。2026-10-02：費用の心配から、基本設計で見直す。下の「見直しの理由」と [open-questions の Q-023](../open-questions.md)。2026-10-04：[ADR 0003](0003-backend-selection.md) で、Cloudflare Workers＋D1 に認証だけ Firebase Authentication を組み合わせる案 C を推奨にした。C に決まれば、この ADR は ADR 0003 で置き換える）
+- 状態：**置き換え**（2026-10-10 に [ADR 0003](0003-backend-selection.md) で、案 C（Cloudflare Workers＋D1、認証だけ Firebase Authentication）に置き換えた。以下は経緯。レビューで確定する予定だった。2026-10-02：費用の心配から、基本設計で見直す。下の「見直しの理由」と [open-questions の Q-023](../open-questions.md)。2026-10-04：[ADR 0003](0003-backend-selection.md) で、Cloudflare Workers＋D1 に認証だけ Firebase Authentication を組み合わせる案 C を推奨にした。C に決まれば、この ADR は ADR 0003 で置き換える）
 - 日付：2026-09-27
 
 ## 見直しの理由（2026-10-02）
