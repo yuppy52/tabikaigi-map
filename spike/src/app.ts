@@ -100,7 +100,12 @@ export function createApp(getKey: KeyProvider) {
 
   // 知らない API は JSON で 404（画面が「いまは使えない」などを出し分けやすいように）
   app.notFound((c) => c.json({ error: "not_found" }, 404));
-  app.onError((_e, c) => c.json({ error: "internal" }, 500));
+  // 途中で落ちたとき（D1 の枠切れなど）は、「あとで試す」の意味で 503 unavailable を返す（NFR-009・NFR-012）。
+  // 画面は、JSON で返らない応答（Cloudflare の枠切れの画面など）と合わせて「いまは使えない」を出す
+  app.onError((e, c) => {
+    console.error("api error", e);
+    return c.json({ error: "unavailable" }, 503);
+  });
 
   return app;
 }
