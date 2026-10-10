@@ -152,6 +152,14 @@ ADR 0003 の決定の基準の5。見積もりの前提（すべて仮定。NFR-
 - 実際の使用量は本番で測る（Phase 2。管理画面で週1回見る運用）。ローカルでは回数は数えられない。
 - 部屋への知らせの仕組み自体は、ローカルで確かめた（グループごとに届く範囲が分かれること、§4）。アカウントと紐づけの処理は、Phase 3 で作る（この試作にはアカウントがない）。
 
+### 8. 本物の Firebase の証明書で通るか（2026-10-10、ローカルの Worker）→ 通った
+
+ADR 0003 の決定の基準の2。テスト用の利用者（メール＋パスワード、Firebase Authentication）でログインして ID トークンを取り、`npm run dev` の Worker の `/api/me` に送った（`scripts/firebase-login-check.ts`）。
+
+- 結果：`200 {"uid":"…","emailVerified":false}`。Google の本物の公開鍵で署名を確かめ、`aud`・`iss` も通った
+- テスト用の利用者は、まだ確認メールを済ませていない（`emailVerified: false`）。確認前の扱いは基準の4で確かめる
+- 残り：本番（`*.workers.dev`）の Worker でも同じ確認（Phase 2）
+
 ## 本番の環境で試すのに必要なもの（ユーザーの作業）
 
 - ~~Cloudflare のアカウント~~（2026-10-04 にできた。ドメイン `tabikaigi-map.com` も取った。試すのは `*.workers.dev` でよい）
