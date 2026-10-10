@@ -1,118 +1,207 @@
 # データモデル
 
-状態：レビュー待ち（2026-10-02：表示名をなくし、名前・色の変更、退会、0人のグループ、作成者がいなくなるときの扱いを要件定義の決定に合わせた。2026-10-03：同じアカウントのメンバーが2つになりそうなときは片付けない（REQ-039）、名前の重複はルールで守らない、名前の長さの守り方を合わせた）
+状態：下書き（2026-10-10：[ADR 0003](../adr/0003-backend-selection.md) が案 C（Cloudflare Workers＋Hono＋D1、認証だけ Firebase Authentication）に決まったので、Firestore の版から D1 の版に書き直した。元の版は git の履歴にある。形は [spike/migrations/0001_init.sql](../../spike/migrations/0001_init.sql) の試作をもとにし、試作から変えたところは「試作からの変更」に書いた。2026-10-10 にユーザーと決めた：作成者はメンバーの印 `is_owner` で持つ、メールアドレスは D1 に持たない）
 
-> **注意（2026-10-04）**：この文書は Firebase 一式（[ADR 0003](../adr/0003-backend-selection.md) の案 A）を前提にした版。ADR 0003 では、Cloudflare Workers＋D1 に認証だけ Firebase Authentication を組み合わせる案 C を推奨にしていて、2026-10-10 に C に決まった。書き直しは [roadmap](../roadmap.md) の「次にやること」7.。画面は React＋TypeScript（[ADR 0004](../adr/0004-frontend-react-typescript.md)）
+## 考え方
+
+- データの正本は D1（SQLite）の1か所。リアルタイムの部屋（Durable Objects）は「変わったこと」を配るだけで、データを持たない（[ADR 0003](../adr/0003-backend-selection.md) の「リアルタイムの共有」）
+- 画面を改造されても破られたくない決まり（NFR-006）は、できるだけデータベースの制約（`CHECK`・`UNIQUE`・外部キー）に持たせる。制約で書けないものは API の1つの SQL か batch の中で判断する（D1 には途中で他の人を待たせるトランザクションがないため）
+- 同じ事実を2か所に持たない（片方だけ古くなると抜け道になる：[learnings](../learnings/2026-10-02-owner-and-slot-lifecycle.md)）
+- 個人情報は要るものだけ持つ（NFR-007）
 
 ## ER図
 
-Firestore はリレーショナルDBではないが、関係を把握するために ER 図で表す。
-
 ```mermaid
 erDiagram
-  GROUP ||--o{ MEMBER : "members サブコレクション（最大20）"
-  USER |o--o{ MEMBER : "uid で紐づく（ログイン時のみ）"
-  PREFECTURE }o--o{ MEMBER : "visited（コード配列）"
-  PREFECTURE }o--o{ USER : "visited（コード配列）"
+  GROUPS ||--|{ MEMBERS : "メンバー（1〜20人）"
+  MEMBERS ||--o{ MEMBER_VISITS : "ログインなしのメンバーの「行った」"
+  ACCOUNTS |o--o{ MEMBERS : "紐づけ（uid。1アカウント最大10グループ）"
+  ACCOUNTS ||--o{ ACCOUNT_VISITS : "アカウントの「行った」"
 
-  GROUP {
-    string groupId PK "Firestore の自動ID（20文字）。招待URLにも使う"
-    string name "グループ名（20文字まで）"
-    timestamp createdAt
-    string ownerMemberId "作成者のメンバーの枠ID（sN）。作成者＝作成者のメンバー。作成者のメンバーが消えたら空にする（作成者はいなくなる）"
-    string ownerUid "作成者のメンバーに紐づいた uid（匿名を含む）。紐づけと同時にだけ更新できる（要確認：Q-012）。持ち続けるかは要確認：Q-019"
-    string manageBy "anyone | owner"
+  GROUPS {
+    text id PK "推測できない文字列（22文字）。招待URLにも使う"
+    text name "グループ名（REQ-010）"
+    text manage_by "everyone または owner（REQ-044）"
+    text created_at
   }
-  MEMBER {
-    string memberId PK "s0〜s19 の固定枠"
-    string name "メンバーの名前（10文字まで）。グループ内で重複しない（ログインあり・なしとも）"
-    string color "パレットの色。参加したときに自動で決まり、変えない。重複してよい"
-    int_array visited "行った都道府県コード。ログイン済みなら USER の複製"
-    string uid FK "ログインしたメンバーだけ持つ"
+  MEMBERS {
+    integer id PK "使い回さない番号（AUTOINCREMENT）"
+    text group_id FK "グループが消えたら一緒に消える"
+    text name "入力したとおりの名前（表示用）"
+    text name_key "「同じ名前」を比べる形（REQ-011）"
+    integer color "色の番号（REQ-021）"
+    integer is_owner "作成者のメンバーなら 1"
+    text uid FK "紐づいたアカウント。ログインなしは NULL"
+    text created_at
   }
-  USER {
-    string uid PK "Firebase Auth の uid"
-    int_array visited "行った都道府県コードの正本"
+  MEMBER_VISITS {
+    integer member_id PK "FK"
+    integer pref PK "県の番号 1〜47（JIS X 0401）"
   }
-  PREFECTURE {
-    int code PK "JIS X 0401 の 1〜47"
-    string name "DB には持たず、画面に埋め込む"
+  ACCOUNTS {
+    text uid PK "Firebase Authentication の uid"
+    text created_at
+  }
+  ACCOUNT_VISITS {
+    text uid PK "FK"
+    integer pref PK "県の番号 1〜47"
   }
 ```
 
-## Firestore の構造
+県の名前と地図の形は、データベースに持たず画面に埋め込む。
 
-```
-groups/{groupId}                 name, createdAt, ownerMemberId, ownerUid, manageBy
-  └ members/{s0〜s19}            name, color, visited: number[], uid?
-users/{uid}                      visited: number[]（表示名は持たない。名前はメンバーごと）
-```
+## テーブル
 
-## 設計上のポイント
+### groups（グループ）
 
-### メンバーのIDは20枠に固定する
-- ルールではサブコレクションの件数を数えられないため、メンバーのIDを `s0`〜`s19` に限定して20人の上限を守る
-- 参加するときは、トランザクションで空いている枠を選んで作る（同じIDがすでにあれば作成は失敗する）
+| 列 | 型 | 決まり | 要件 |
+|---|---|---|---|
+| `id` | TEXT | 主キー。`crypto.getRandomValues` で作る英数字22文字（約128ビット）。`CHECK (length(id) >= 20)` | NFR-005 |
+| `name` | TEXT | `NOT NULL`。`CHECK (length(name) BETWEEN 1 AND 40)`。見た目の1〜20文字は API で数える。ここは大量のデータを書かれないための、余裕のある上限 | REQ-010、NFR-006 (8) |
+| `manage_by` | TEXT | `'everyone'`（初期値）か `'owner'` | REQ-044 |
+| `created_at` | TEXT | 作った日時（UTC の ISO 8601） | NFR-010 |
 
-### 「行った」の付け外し
-- `arrayUnion` / `arrayRemove` を使う。サーバー側でアトミックに適用されるので、別の県を同時に塗っても消し合わない
-- 同じ県を付ける操作と外す操作がぶつかったら、後に届いた方が勝つ
+作成者はこの表に持たない（下の「作成者」）。
 
-### ログイン済みのメンバーの「行った」は複製する
-- 正本は `users/{uid}.visited`。本人しか読めない
-- 他の人に見せるため、`members/{m}.visited` にも同じ内容を持つ
-- 本人が塗ったら、1回のバッチで `users/{uid}` と、紐づいている全グループのメンバーを同時に更新する（バッチはアトミック。1回の件数の上限は要確認）
+### members（メンバー）
 
-### 参加中のグループの一覧
-- コレクショングループクエリ（全グループの `members` から `uid == 自分` を検索）で取る
-- `users` にグループIDの一覧は持たない（二重管理でずれるのを防ぐ）
-- このクエリ用の複合インデックスは不要（単一フィールドの等価条件のため）
+| 列 | 型 | 決まり | 要件 |
+|---|---|---|---|
+| `id` | INTEGER | 主キー。`AUTOINCREMENT` で、消したメンバーの番号を使い回さない | REQ-025、REQ-052 |
+| `group_id` | TEXT | `NOT NULL REFERENCES groups (id) ON DELETE CASCADE` | REQ-047 |
+| `name` | TEXT | 入力したとおり（前後の空白は API で取る）。`CHECK (length(name) BETWEEN 1 AND 40)`。見た目の1〜10文字は API で数える | REQ-009、NFR-006 (8) |
+| `name_key` | TEXT | 比べる形。API で NFKC にそろえてから小文字にする。`CHECK (length(name_key) BETWEEN 1 AND 40)` | REQ-011 |
+| `color` | INTEGER | パレットの番号。`CHECK (color BETWEEN 0 AND 19)`。参加したときに API が「使われていない番号の小さい順」で決める。変える API は作らない | REQ-021 |
+| `is_owner` | INTEGER | 0 か 1。`CHECK (is_owner IN (0, 1))` | REQ-052 |
+| `uid` | TEXT | `REFERENCES accounts (uid) ON DELETE CASCADE`。ログインなしは `NULL`（空の文字にしない） | REQ-037、REQ-036 |
+| `created_at` | TEXT | 参加した日時 | — |
 
-### 名前の重複
-- ルールでは守らない（requirements の「分かっている限界」、NFR-006 の対象外）。参加するとき、名前を変えるとき（ログインありの本人だけ）、画面の側で同じグループのメンバーを確認する。比べるときは REQ-011 の決まりで正規化した名前を使う
-- ほぼ同時に同じ名前で参加する競合と、改造した画面から同じ名前を作られることは許容する（起きたら余分なメンバーを削除する）
+制約：
+- `UNIQUE (group_id, name_key)`：1つのグループで同じ名前は1人だけ（NFR-006 (11)）
+- `UNIQUE (group_id, uid)`：1つのグループで、1つのアカウントに紐づくメンバーは1人だけ（NFR-006 (9)）。`NULL` どうしは重複とみなされないので、ログインなしのメンバーは何人でもよい
+- `CREATE UNIQUE INDEX … ON members (group_id) WHERE is_owner = 1`：作成者のメンバーは1グループに1人まで（NFR-006 (4)）
 
-### グループの削除
-- 親のドキュメントを消してもサブコレクションは残る。先に `members`（最大20件）をバッチで消してからグループを消す
-- 最後のメンバーが退出したとき（退会を含む）も、メンバーとグループを一緒に消す（細部は要確認：Q-010）
+### member_visits（ログインなしのメンバーの「行った」）
 
-### 作成者がいなくなるとき
-- 作成者のメンバーを消すとき（退出、削除、退会）は、同じバッチで `ownerMemberId` を空にし、`manageBy` を `anyone` にする。枠は使い回すので、空にしないと次にその枠に入った人が作成者になってしまう
-- `ownerUid` も古いまま残ると、もうメンバーでない人が設定を変えられる。`ownerUid` をやめて、ルールで `get(members/$(ownerMemberId)).data.uid == request.auth.uid` のように作成者のメンバーから引く案がある（要確認：Q-019）
-
-### 1グループに1アカウント1メンバー
-- 同じグループで、同じ `uid` のメンバーは1つだけにする（[auth-flow.md](auth-flow.md) の 3.、REQ-039）。すでにいるときは、もう片方を紐づけずにログインなしのメンバーとして残す。ルールで守れるかは Q-019 と一緒に確かめる
-
-### 退会
-- 紐づいた全グループのメンバーを消し（退出と同じ扱い）、`users/{uid}` を消してから、最後にアカウントを削除する（流れは [auth-flow.md](auth-flow.md) の 6.）
-
-## セキュリティルールの方針
-
-| 対象 | 操作 | 許可する条件 |
+| 列 | 型 | 決まり |
 |---|---|---|
-| `groups/{g}` | get | 認証済み（匿名を含む） |
-| | list | 禁止（グループIDを知らないと読めない） |
-| | create | 認証済みで、`ownerUid` が自分、`manageBy` が `anyone` |
-| | update（名前） | `manageBy` が `anyone`、または自分が `ownerUid` |
-| | update（`manageBy`） | 自分が `ownerUid` で、ログイン済み（匿名ではなく、メールが確認済み（`email_verified == true`）か Google。REQ-057・NFR-006 (10)） |
-| | delete | 名前の変更と同じ |
-| `members/{m}` | get / list | 認証済み |
-| | create | IDが `s0`〜`s19`。`uid` を付けるなら自分の uid でログイン済み（確認済みか Google） |
-| | update（`visited`） | `uid` がなければ認証済みなら誰でも。あれば本人だけ |
-| | update（名前） | `uid` があれば本人だけ。なければ誰も変えられない |
-| | update（色） | 禁止（参加したときに決まる） |
-| | update（紐づけ） | `uid` がないメンバーに、ログイン済み（確認済みか Google）の本人が自分の `uid` を書く |
-| | delete | `manageBy` に従う。自分の退出はいつでもできる（ログインなしのメンバーの退出をどう書くかは要確認：Q-018） |
-| 全グループの `members` | list（横断検索） | 検索結果が `uid == 自分` のものだけ |
-| `users/{uid}` | すべて | 本人だけ |
+| `member_id` | INTEGER | `REFERENCES members (id) ON DELETE CASCADE` |
+| `pref` | INTEGER | `CHECK (pref BETWEEN 1 AND 47)` |
 
-ほかに入れる検証：
-- フィールド名のホワイトリスト（決まったフィールド以外は書けない）
-- `visited` の要素が 1〜47 の整数であること
-- 名前の長さ。見た目の文字数（REQ-009・REQ-010。絵文字も1文字）は画面で判定する。ルールでは見た目の文字数を数えられない可能性が高い（要確認）ので、保存先は少し余裕のある上限で守る（大量のデータを書き込まれないため。NFR-006 (8)）。モックの `maxlength` は絵文字を2文字以上と数えることがあるので、画面の判定には使わない（要確認）
+主キーは `(member_id, pref)`。1県1行。付けるのは `INSERT … ON CONFLICT DO NOTHING`、外すのは `DELETE`（[rules/sql.md](../../.claude/rules/sql.md)）。押し直しても結果が変わらず、別の県を同時に塗っても消し合わない（NFR-009）。
 
-ルールの叩き台は Firebase 調査のときに作ったものがあり、`firestore.rules` を書くときの出発点にする。
+紐づいたメンバーは、この表に行を持たない（紐づけるときに消す：下の「紐づけ」）。
+
+### accounts（アカウント）
+
+| 列 | 型 | 決まり |
+|---|---|---|
+| `uid` | TEXT | 主キー。Firebase Authentication の `uid`。`CHECK (length(uid) BETWEEN 1 AND 128)` |
+| `created_at` | TEXT | 最初に紐づけたか「行った」を保存した日時 |
+
+行は、ログインした人が初めて「行った」を保存するか、メンバーに紐づけるときに API が作る。**メールアドレスは持たない**（下の「メールアドレス」）。
+
+### account_visits（アカウントの「行った」）
+
+| 列 | 型 | 決まり |
+|---|---|---|
+| `uid` | TEXT | `REFERENCES accounts (uid) ON DELETE CASCADE` |
+| `pref` | INTEGER | `CHECK (pref BETWEEN 1 AND 47)` |
+
+主キーは `(uid, pref)`。ログインしている人の「行った」の正本で、全グループで共有する（REQ-030）。メンバーには写さない。グループの地図を出すときは、紐づいたメンバーなら `account_visits` を、そうでなければ `member_visits` を読んで合わせる（下の「グループを開く」）。
+
+## 設計のポイント
+
+### 作成者
+
+**作成者のメンバーに `is_owner = 1` を付ける**（2026-10-10 にユーザーと決めた。試作と [ADR 0003](../adr/0003-backend-selection.md) の「C で書き直すときの方針」は `groups.owner_member_id` だった）。どちらの形でも作成者は1グループに1人までで、1つのアカウントが作成者になれるのは自分で作ったグループの数だけ（紐づけは最大10グループ：Q-032）。
+
+- 作成者のメンバーが消えれば（退出、削除、退会、グループの削除）、印も一緒に消える。「作成者がいなくなる」（REQ-051）を、消すときに何もしなくても守れる
+- 印はメンバーの行にあるので、**別のグループのメンバーが作成者になることが、形の上で起きない**。試作の `owner_member_id` だと、別のグループのメンバーの番号も入れられてしまい、API のテストで守る必要があった（[ADR 0003](../adr/0003-backend-selection.md) の「C で書き直すときの方針」）
+- `groups` と `members` がお互いを指す（循環する外部キー）こともなくなり、グループを作る batch が1文減る
+- `is_owner` を 1 にするのはグループを作るときだけ。後から付ける API は作らない（「作成者を勝手に変えられない」：NFR-006 (4)）
+- 「作成者のみ」が効くかは `manage_by = 'owner'` かつ「`is_owner = 1` のメンバーがいる」で計算する。作成者がいなくなったら、`manage_by` を書き換えなくても「誰でも」として扱う（REQ-051）
+
+場面ごとの確かめ（[learnings](../learnings/2026-10-02-owner-and-slot-lifecycle.md) の表）：
+
+| 場面 | どうなるか |
+|---|---|
+| 生まれる | グループを作るときに、最初のメンバーに付く（REQ-001） |
+| 紐づける | 作成者のメンバーに紐づけると、ログインした本人が作成者として設定を変えられる（REQ-037）。印は動かない |
+| 消える | 本人の退出・他の人による削除・退会・グループの削除のどれでも、メンバーの行と一緒に消える |
+| 使い回される | 番号を使い回さないので、後から入った人が作成者になることはない。同じ名前で入り直しても新しいメンバーで、印は付かない（2026-10-05 の試作で確認） |
+| 別の入口から来る | ログインなしなら、作成者の名前で入れば作成者のメンバーとして操作できる（信頼ベース：REQ-052）。ただし管理できる人を変えるのはログインしている作成者だけ（REQ-045） |
+
+### メールアドレス
+
+**D1 にはメールアドレスを持たない**（2026-10-10 にユーザーと決めた）。 Firebase Authentication がすでに持っていて、マイページ（REQ-033）は画面が Firebase の SDK から読める。API が要るときは ID トークンの `email` と `email_verified` を見る。D1 に写すと、変えたときや退会のときに2か所を直す必要が出て、漏れたときの影響も広がる。
+
+問い合わせのフォーム（NFR-018）の返信先は、フォームに入れてもらう（ログインしていない人も使うため。表の形は Phase 2 で決める）。
+
+### 「行った」と紐づけ
+
+- ログインなしのメンバーの「行った」は `member_visits`、ログインしている人の分は `account_visits` の1か所（REQ-023・REQ-030）
+- **紐づけ**（REQ-037〜REQ-040）は1つの batch で行う：(1) `accounts` に行がなければ作る、(2) REQ-038 の選び方に従って、G（`member_visits`）を U（`account_visits`）に足すか、捨てる、(3) そのメンバーの `member_visits` を消す、(4) `members.uid` を書く。(4) は `uid IS NULL` の行だけを書き換える条件付きの `UPDATE` にする（紐づいたメンバーを付け替えられない：NFR-006 (3)）
+- 紐づける前に、API が ID トークンの `email_verified` を見る（確認待ちなら断る：NFR-006 (10)、[ADR 0003](../adr/0003-backend-selection.md) の基準の4）
+- 1つのアカウントが紐づけられるのは10グループまで（Q-032）。(4) の `UPDATE` に「`uid` が同じメンバーが10未満」の条件を入れる
+- 同じグループにすでに自分のメンバーがいれば、`UNIQUE (group_id, uid)` で失敗するので、API はそれを REQ-039 の案内に変える
+- 紐づいたメンバーの「行った」と名前を変える API は、ID トークンの `uid` がそのメンバーの `uid` と同じときだけ通す（NFR-006 (1)）
+
+### グループを開く
+
+1回の batch で、グループ、メンバー、ログインなしのメンバーの「行った」、紐づいたメンバーのアカウントの「行った」を読む。最後の2つは、`members` と結合してそのグループの分だけを読む（NFR-006 (2)：アカウントの「行った」は同じグループのメンバーだけが読める）。
+
+### 参加する
+
+1つの SQL で、グループがあること・20人未満であることを確かめて入れる（`INSERT … SELECT … WHERE EXISTS (…) AND (SELECT count(*) …) < 20`。REQ-005、NFR-006 (8)）。名前の重複と1アカウント1メンバーは `UNIQUE` で失敗させ、API が理由を読み分ける。色の番号もこの SQL の中で決める。
+
+### 退出・削除・退会
+
+- **退出・メンバーの削除**（REQ-048・REQ-049）：メンバーを消すのと、「0人ならグループを消す」を同じ batch にする（REQ-050。Q-010）。「行った」は外部キーで一緒に消える
+- **グループの削除**（REQ-047）：`groups` の行を消せば、メンバーと `member_visits` が外部キーで消える。`account_visits` は残る
+- **退会**（REQ-036）：`accounts` の行を消すと、`account_visits` と、紐づいたメンバー（とその作成者の印）が外部キーで消える。同じ batch で、そのせいで0人になったグループも消す。Firebase のアカウントの削除は、D1 を消した後に画面から行う（流れは [auth-flow.md](auth-flow.md)）
+
+### 管理できる人の操作
+
+グループ名の変更、グループの削除、メンバーの削除は、`manage_by` と作成者を同じ SQL の `WHERE` で確かめる（NFR-006 (5)）。`manage_by` を変える API は、ID トークンが確認済みで、その `uid` が `is_owner = 1` のメンバーの `uid` と同じときだけ通す（NFR-006 (4)(10)、REQ-045）。
+
+## 保存先で守るもの（NFR-006）との対応
+
+NFR-006 の「保存先」は、案 C では「API とデータベースの制約」と読む。画面の確認は改造で破れるので数えない。
+
+| NFR-006 | 守る場所 |
+|---|---|
+| (1) 紐づいたメンバーの「行った」と名前は本人だけ | API（ID トークンの `uid` とメンバーの `uid` を比べる）。「行った」はアカウントにあるので、メンバー経由では書けない |
+| (2) アカウントの「行った」は本人だけが書け、同じグループのメンバーが読める。メールアドレスは本人だけ | API（書くのは自分の `uid` の行だけ。読むのはグループを開くときの結合だけ）。メールアドレスは D1 に持たない |
+| (3) 紐づけの付け替えをさせない | API の条件付き `UPDATE`（`uid IS NULL` のときだけ書く） |
+| (4) 管理できる人を変えるのはログインしている作成者だけ。作成者を勝手に変えられない | 部分 `UNIQUE` インデックス（作成者は1人）と、`is_owner` を後から付ける API を作らないこと。`manage_by` の変更は API で確かめる |
+| (5) 「作成者のみ」のときの操作 | API の `WHERE` |
+| (6) 自分のアカウントは自分しか消せない | API（ID トークンの `uid` の行だけ消す） |
+| (7) グループIDを知らなければ読めない、一覧できない | 推測できないID と、一覧する API を作らないこと |
+| (8) 20人まで、名前の長さ | 20人は参加の SQL の `WHERE`、長さは `CHECK` |
+| (9) 1グループ1アカウント1メンバー | `UNIQUE (group_id, uid)` |
+| (10) 確認待ちのアカウントは、ログインありとして扱わない | API（ID トークンの `email_verified`） |
+| (11) 名前の重複 | `UNIQUE (group_id, name_key)` |
+
+制約を足したら、違反がエラーになるテストを1つ書く（[rules/sql.md](../../.claude/rules/sql.md)）。API で守るものは、Phase 2 の Vitest で、改造した画面を想定したリクエストを送って確かめる。
+
+## 持たないもの
+
+- メールアドレス（上の「メールアドレス」）
+- アカウントの表示名（REQ-007）
+- 参加中のグループの一覧（`members` を `uid` で引けば分かる。二重に持たない）
+- 最後に使った日時：利用状況の数え方（Q-025）が決まってから足す
+- 問い合わせ（NFR-018）：Phase 2 で表を足す
+
+## 試作からの変更
+
+[spike/migrations/0001_init.sql](../../spike/migrations/0001_init.sql) から変えたところ。
+
+- `groups.owner_member_id` をやめ、`members.is_owner` にした（上の「作成者」）
+- `visits` を、ログインなしの `member_visits` と、アカウントの `account_visits` に分けた（試作はログインなしだけ）
+- `accounts` を足し、`members.uid` をその外部キーにした（退会でメンバーが一緒に消える）
+- `members.color`、`created_at` を足した
 
 ## 読み書きの回数の見積もり
 
-グループの画面を開くたびに、グループ1件と members 最大20件の読み取り（約21回）。無料枠の5万回/日なら、1日に約2,000回開ける。友達グループの規模なら十分に収まる。
+D1 の無料枠の読み取りは1日500万行（[ADR 0003](../adr/0003-backend-selection.md) の「想定規模に収まるか」。書き込みの枠はこの文書では未確認：要確認）。NFR-015 の規模で読み取り約10万行/日（約2%）の見積もりがあり、グループを開くたびに読む行は、メンバー20人が全員30県を付けていても約620行。表を分けても変わらない。
