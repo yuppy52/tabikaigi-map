@@ -82,7 +82,7 @@
 |---|---|
 | 基本設計 | 画面設計のレビューは既存の `design:design-critique` を使う（2026-10-04 に決定。新しい `ui-reviewer` は作らない）。構成図とワイヤーフレームは接続済みの draw.io のツールを試す（`.drawio.svg` で保存できるかは要確認）。技術の比較と ADR（既存の `researcher` と、Skill の `engineering:architecture` を試す）。権限マトリクスは NFR-006 の (1)〜(11) を出発点にする |
 | 保存先で守るものの実装の前 | **`rules-reviewer`**（API とデータベースの制約、または Firestore のルールを、攻撃する側の目で見る）、GitHub Actions でルールのテストを自動実行、サンドボックス（`/sandbox`） |
-| 実装（Phase 2）の前 | コードレビュー（まず既存の `/code-review` を試す）、`test-writer`、Dependabot、**Playwright CLI**（下のメモ） |
+| 実装（Phase 2）の前 | コードレビュー（まず既存の `/code-review` を試す）、`test-writer`、Dependabot、**Playwright CLI**（下のメモ）。API の書き方のルール（`.claude/rules/api.md` など）を作り、「認証や確認に失敗したら、弱い権限に落とさずエラーで止める」を入れる（[learnings](learnings/2026-10-11-permission-matrix-states-and-branches.md)） |
 | 公開（Phase 2 の終わり）の前 | **Strix**（下のメモ） |
 | 要件定義の後 | docs の自動チェック（Markdown の書式、Mermaid の構文、リンク切れ） |
 | βテスト（Phase 4）の前 | GitHub Issues（友達からのフィードバックの受け口） |
