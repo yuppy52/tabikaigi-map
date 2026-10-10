@@ -16,7 +16,7 @@
 erDiagram
   GROUPS ||--|{ MEMBERS : "メンバー（1〜20人）"
   MEMBERS ||--o{ MEMBER_VISITS : "ログインなしのメンバーの「行った」"
-  ACCOUNTS |o--o{ MEMBERS : "紐づけ（uid。1アカウント最大10グループ）"
+  ACCOUNTS |o--o{ MEMBERS : "紐づけ（members.uid の行数で数え、最大10）"
   ACCOUNTS ||--o{ ACCOUNT_VISITS : "アカウントの「行った」"
 
   GROUPS {
@@ -244,7 +244,9 @@ NFR-006 の「保存先」は、案 C では「API とデータベースの制�
 | (10) 確認待ちのアカウントは、ログインありとして扱わない | API（ID トークンの `email_verified`。上の「共通の決まり」） |
 | (11) 名前の重複 | `UNIQUE (group_id, name_key)` |
 
-10グループの上限（Q-032、REQ-060）は NFR-006 には入っていないが、無料枠に響くのでトリガーで守る。
+10グループの上限（Q-032、REQ-060）は NFR-006 には入っていないが、無料枠に響くのでトリガーで守る。数えるのは `members` の `uid` が自分の行の数（`UNIQUE (group_id, uid)` があるので、グループの数と同じになる）で、`members (uid)` の索引で引く。
+
+立場ごと・操作ごとの一覧は [permissions.md](permissions.md)（権限マトリクス）。
 
 制約を足したら、違反がエラーになるテストを1つ書く（[rules/sql.md](../../.claude/rules/sql.md)）。API で守るものは、Phase 2 の Vitest で、改造した画面を想定したリクエストを送って確かめる。
 
