@@ -26,6 +26,9 @@ batch（D1 の `db.batch()`）が取り消すのは、どれかの文が**エラ
 ## 仕組みへの反映
 `.claude/rules/sql.md` に1項目足し、`.claude/agents/doc-reviewer.md` の「実現できるか」に「batch の0行」を足した（2026-10-10、ユーザーの OK）。
 
+## 再発（2026-10-11）
+batch の外でも同じことが起きた。画面が「消されていれば書き込みが 404 になる」前提で書かれていたが、条件付きの書き込みは0行で成功になり、404 は返らなかった。[画面が頼る応答](2026-10-11-screen-relies-on-api-response.md) に書いた。
+
 ## 関連
 - docs/design/data-model.md（考え方、紐づけ、グループを作る）
 - docs/learnings/2026-10-05-insert-or-ignore-swallows-check.md（同じく「黙って通る」型の落とし穴）
