@@ -15,7 +15,7 @@ flowchart LR
   subgraph cf["Cloudflare（Free）tabikaigi-map.com"]
     Assets["静的アセット<br/>トップ・使い方・プライバシーポリシー（素の HTML）<br/>/g/* → app.html（React）"]
     Worker["Worker（Hono）<br/>/api/*"]
-    D1[("D1<br/>groups / members / visits / accounts")]
+    D1[("D1<br/>groups / members / member_visits<br/>accounts / account_visits")]
     Room["Durable Objects<br/>グループごとの部屋（WebSocket）"]
   end
 
@@ -44,20 +44,50 @@ flowchart LR
 |---|---|---|
 | Cloudflare 静的アセット | 画面の配信、`/g/*` のリライト、`_headers` で `noindex` | 無料・無制限。Worker の回数に数えない（2026-10-05 に本番で確認） |
 | Cloudflare Workers | API（Hono） | 1日10万リクエスト、1回の CPU 10ms。超えたらエラーで止まり、日本時間9時に戻る |
-| Cloudflare D1 | データ（SQLite） | 1日に読み取り500万行。書き込みの枠と保存の上限は要確認。超えたらエラーで止まる |
+| Cloudflare D1 | データ（SQLite） | 1日に読み取り500万行・書き込み10万行、1データベース500MB、1回の呼び出しで SQL 50本まで。超えたらエラーで止まり、日本時間9時に戻る |
 | Cloudflare Durable Objects | リアルタイムの部屋 | Free は SQLite 版だけ。1日10万リクエスト（WebSocket の受信は20通で1）。超えたらエラーで止まる |
 | Firebase Authentication（Spark） | メール＋パスワード、Google。確認メールとパスワードの再設定のメール | 5万 MAU。確認メール 1,000通/日、パスワードの再設定 150通/日 |
+| Cloudflare Turnstile | ボット対策（グループの作成、参加、問い合わせ） | 無料・回数無制限（ADR 0003） |
 | Cloudflare Registrar | ドメイン `tabikaigi-map.com` | 年額の固定費（2027-10-04 まで、自動更新） |
 
 どれも Free のまま使い、有料プランには上げない。Cloudflare で触らない製品と操作（R2 の有効化など）は [ADR 0003](../adr/0003-backend-selection.md) の「C で Cloudflare 側を守る決まり」。
 
-出典：[ADR 0003](../adr/0003-backend-selection.md) の「出典」、https://developers.cloudflare.com/workers/platform/pricing/ 、https://developers.cloudflare.com/d1/platform/pricing/ 、https://developers.cloudflare.com/durable-objects/platform/pricing/ 、https://firebase.google.com/docs/auth/limits
+出典：[ADR 0003](../adr/0003-backend-selection.md) の「出典」、https://developers.cloudflare.com/workers/platform/pricing/ 、https://developers.cloudflare.com/d1/platform/pricing/ 、https://developers.cloudflare.com/d1/platform/limits/ 、https://developers.cloudflare.com/durable-objects/platform/pricing/ 、https://firebase.google.com/docs/auth/limits
 
 ### 無料枠を超えたとき（NFR-009・NFR-012）
 
 API の枠（Workers・D1）が尽きると、その日は「行った」を保存できなくなる。画面は API の応答が JSON の 503 でも、JSON でない応答（Cloudflare のエラー画面）でも「いまは使えない」を出し、付け外しを送らない（2026-10-10 にローカルで確認：[ADR 0003](../adr/0003-backend-selection.md) の決定の基準3）。画面そのもの（静的アセット）は出続ける。
 
 Durable Objects の枠が尽きたら、リアルタイムだけが止まり、開き直したときに反映される形に戻る（NFR-003）。
+
+### 部屋が配るもの（NFR-003）
+
+部屋は、API が D1 に書けた後に知らせを受けて、そのグループの画面を開いている全員に配る。配るのは次の3つだけ（[ADR 0003](../adr/0003-backend-selection.md) の「リアルタイムの共有」）。
+
+| 種類 | 中身 | いつ |
+|---|---|---|
+| 「行った」の付け外し | メンバーの番号、県の番号、付けたか外したか | ログインなしのメンバーの付け外し。ログインしている人の付け外しは、紐づいたメンバーがいる全グループの部屋に、それぞれのグループでのメンバーの番号を付けて配る |
+| 取り直して | なし | 紐づけで、そのメンバーの「行った」がアカウントのものに入れ替わったとき |
+| （配らない） | — | 参加、退出、名前の変更、グループ名の変更。画面は、知らないメンバーの変更が届いたときと、画面に戻ったときに全体を取り直す |
+
+画面が受け取った「取り直して」と、知らないメンバーの変更は、どちらもグループを読み直す（読み取りは1回分）。
+
+## 運用
+
+運営者1人で回せる形にする（NFR-014）。確かめる場所は Cloudflare の管理画面と Firebase のコンソールの2つ。
+
+| 何を | どうやって | 要件・未決 |
+|---|---|---|
+| バックアップ | 新しい版を出す前に `wrangler d1 export` で全データを手元に書き出す。書き出しの間はほかの読み書きが止まる（要確認）ので、使われない時間に行う | NFR-017 |
+| 消したデータの残り方 | D1 の Time Travel は常に有効で、消したデータも7日間は戻せる状態で残る（Free。復元は10分に10回まで）。プライバシーポリシーの保存期間に書く | NFR-008 |
+| 利用状況 | D1 に SQL を流して数える（グループ数、メンバー数）。「最近使われた」の数え方は Q-025 | NFR-010 |
+| 使用量 | 週1回、Cloudflare の管理画面と Firebase のコンソールで見る。Cron Triggers で自動の知らせを作れるかは Phase 2 | NFR-011、Q-026 |
+| エラー | Workers Logs（有効にするか、残す範囲は Q-027） | NFR-013 |
+| 使い切られる対策 | グループの作成と参加の API に Turnstile（無料）。`/api/*` のレート制限、ファイルがない URL の静的な 404、部屋への接続の回数の制限は Phase 2 | Q-031 |
+| 問い合わせ | アプリの中のフォーム（API＋D1＋Turnstile）。表の形は Phase 2 | NFR-018 |
+| D1 の置き場所 | 作るときにアジアを指定する（後から変えられない：要確認） | NFR-016 |
+
+出典：https://developers.cloudflare.com/d1/reference/time-travel/ 、https://developers.cloudflare.com/d1/platform/limits/ 、[ADR 0003](../adr/0003-backend-selection.md) の「運用」
 
 ## 認証の方針
 
