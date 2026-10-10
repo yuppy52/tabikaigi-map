@@ -13,7 +13,7 @@
 | [design/data-model.md](design/data-model.md) | ER図、D1 のテーブル、保存先で守るもの（NFR-006）の対応 | 下書き（2026-10-10：案 C で書き直した） |
 | [design/auth-flow.md](design/auth-flow.md) | 認証の流れ（ログインなしで参加 → ログインして紐づけ → 退会）のシーケンス図 | 下書き（2026-10-10：案 C で書き直した） |
 | [design/permissions.md](design/permissions.md) | 権限マトリクス（誰が何をできるか、どこで守るか） | 下書き（2026-10-11：`/review-docs`（14件）を反映） |
-| [design/screens.md](design/screens.md) | 画面一覧と画面遷移図 | レビュー待ち |
+| [design/screens.md](design/screens.md) | 画面一覧と画面遷移図、確認ダイアログ、知らせ | 下書き（2026-10-11：Q-020 を反映） |
 | [adr/](adr/) | 技術選定などの決定の記録（ADR） | — |
 | [../spike/](../spike/README.md) | 案 C を小さく試した試作と結果（docs の外。ADR 0003 の根拠） | — |
 | [learnings/](learnings/) | 学びの記録（ハマったこと、レビューの指摘）。`/compound` で書く | — |
