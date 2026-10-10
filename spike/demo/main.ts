@@ -29,10 +29,27 @@ function setStatus(text: string) {
   $("#status").textContent = text;
 }
 
+// 「いまは使えない」：通信できない、JSON で返らない（Cloudflare の枠切れの画面など）、5xx のどれか
+class Unavailable extends Error {}
+
 async function api<T>(path: string, body: unknown): Promise<T> {
-  const res = await fetch(`/api/${path}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+  let res: Response;
+  try {
+    res = await fetch(`/api/${path}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+  } catch {
+    throw new Unavailable(path);
+  }
+  const isJson = (res.headers.get("Content-Type") ?? "").includes("application/json");
+  if (res.status >= 500 || !isJson) throw new Unavailable(`${path}: ${res.status}`);
   if (!res.ok) throw new Error(`${path}: ${res.status}`);
+  setOutage(false);
   return res.json() as Promise<T>;
+}
+
+// 止まっている間の表示。見えている画面は最後に取れた内容のまま、変更は送らずに知らせる
+function setOutage(on: boolean) {
+  $("#outage").hidden = !on;
+  document.querySelectorAll<HTMLButtonElement>("#prefs button").forEach((btn) => (btn.disabled = on));
 }
 
 async function roomKey(id: string) {
@@ -42,7 +59,14 @@ async function roomKey(id: string) {
 
 // ---- 全体を取り直す ----
 async function refetch(reason: string) {
-  state = await api<State>("groups/state", { groupId });
+  try {
+    state = await api<State>("groups/state", { groupId });
+  } catch (err) {
+    if (!(err instanceof Unavailable)) throw err;
+    log(`取り直せなかった（${reason}）：いまは使えない`);
+    setOutage(true);
+    return;
+  }
   log(`全体を取り直した（${reason}）`);
   render();
 }
@@ -139,8 +163,15 @@ function render() {
 
 async function toggle(pref: number, visited: boolean) {
   if (!me) return alert("先に「自分」を選ぶか、参加してください");
-  const r = await api<{ notified: number }>("visits", { groupId, memberId: me, pref, visited });
-  log(`送った：${PREFS[pref - 1]} を${visited ? "付けた" : "外した"}（${r.notified}人に配った）`);
+  try {
+    const r = await api<{ notified: number }>("visits", { groupId, memberId: me, pref, visited });
+    log(`送った：${PREFS[pref - 1]} を${visited ? "付けた" : "外した"}（${r.notified}人に配った）`);
+  } catch (err) {
+    if (!(err instanceof Unavailable)) throw err;
+    // 保存されていないので、画面は変えない（届いていない変更を表示しない）
+    log(`送れなかった：${PREFS[pref - 1]}（いまは使えない）`);
+    setOutage(true);
+  }
 }
 
 function escape(s: string) {
