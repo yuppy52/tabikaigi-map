@@ -57,7 +57,8 @@ export class GroupRoom extends DurableObject<Env> {
   }
 
   async webSocketClose(ws: WebSocket, code: number): Promise<void> {
-    ws.close(code, "bye");
+    // 1005・1006 は「理由なし」「異常に切れた」を表す印で、送り返せない（送ると例外になる）。送れるものだけ返す
+    if (code !== 1005 && code !== 1006) ws.close(code, "bye");
   }
 
   /** API から呼ぶ：確かめ済みの接続にだけ配る。配った数を返す */
