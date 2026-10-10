@@ -2,7 +2,7 @@
 
 状態：レビュー待ち（2026-10-02：名前の入力、作成者の引き継ぎ、ログアウト、退会を、要件定義の決定に合わせた。2026-10-03：同じアカウントのメンバーがすでにいるときは片方しか紐づけない（REQ-039）、他のグループは開いたときに端末の記憶で紐づける（REQ-040）に合わせた）
 
-> **注意（2026-10-04）**：この文書は Firebase 一式（[ADR 0003](../adr/0003-backend-selection.md) の案 A）を前提にした版。ADR 0003 では、Cloudflare Workers＋D1 に認証だけ Firebase Authentication を組み合わせる案 C を推奨にしていて、小さく試して C に決まったら書き直す（[roadmap](../roadmap.md) の「次にやること」5.）。画面は React＋TypeScript（[ADR 0004](../adr/0004-frontend-react-typescript.md)）
+> **注意（2026-10-04）**：この文書は Firebase 一式（[ADR 0003](../adr/0003-backend-selection.md) の案 A）を前提にした版。ADR 0003 では、Cloudflare Workers＋D1 に認証だけ Firebase Authentication を組み合わせる案 C を推奨にしていて、2026-10-10 に C に決まった。書き直しは [roadmap](../roadmap.md) の「次にやること」7.。画面は React＋TypeScript（[ADR 0004](../adr/0004-frontend-react-typescript.md)）
 
 関係する要件：[requirements.md](../requirements.md) の REQ-022〜REQ-043（ログインなしで使う、アカウントとログイン、ログインしたとき、グループに入るとき）、REQ-028（同じメールなら同じアカウント）、REQ-056（メンバーを変更する）、REQ-057〜REQ-059（確認メール、登録済みのとき、パスワード）、NFR-006 (9)(10)。各節と要件IDの細かい対応は基本設計で付ける。
 
