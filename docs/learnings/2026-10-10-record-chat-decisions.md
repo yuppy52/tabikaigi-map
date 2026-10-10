@@ -21,6 +21,9 @@ requirements・use-cases・open-questions（Q-008）・git の履歴を探した
 - 数字や方針を提案するときは、出どころを添える：「決定済み（REQ-xxx）」「モックの値」「仮に置いた値」「推奨（理由）」
 - ユーザーが「〜って決めてなかった？」と言ったら、まず文書と git の履歴を探し、見つからなければ「記録がない」と正直に伝えてから聞き直す
 
+## 仕組みへの反映
+`.claude/rules/docs.md` の「決めたことの反映」に1項目足した（2026-10-10、ユーザーの OK）。
+
 ## 関連
 - docs/requirements.md（REQ-021）
 - docs/design/data-model.md（色）

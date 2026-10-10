@@ -24,7 +24,7 @@ batch（D1 の `db.batch()`）が取り消すのは、どれかの文が**エラ
 - テストに「条件付きの文が0行のとき、batch の残りが何もしない」を入れる
 
 ## 仕組みへの反映
-`.claude/rules/sql.md` に1項目足す案をユーザーに出した（2026-10-10）。
+`.claude/rules/sql.md` に1項目足し、`.claude/agents/doc-reviewer.md` の「実現できるか」に「batch の0行」を足した（2026-10-10、ユーザーの OK）。
 
 ## 関連
 - docs/design/data-model.md（考え方、紐づけ、グループを作る）
