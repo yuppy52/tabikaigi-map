@@ -1,6 +1,6 @@
 # システム構成
 
-状態：下書き（2026-10-12：Q-016・Q-017 の `/review-docs`（18件）を受けて、`noindex` と `Referrer-Policy: no-referrer` を付けるパスを並べた。2026-10-12：Q-016 を決めて、アプリの画面の URL を `app.html` へのリライトに足した。2026-10-11：Q-020 の `/review-docs`（21件）を受けて、メンバーとグループの削除も部屋から「取り直して」を配ることにし、503 の理由の分け方を足した。2026-10-10：[ADR 0003](../adr/0003-backend-selection.md) が案 C に決まったので、Firebase 一式の版から書き直した。元の版は git の履歴にある。画面の作り方は [ADR 0004](../adr/0004-frontend-react-typescript.md)。システム構成図の清書（draw.io）は roadmap の Phase 1 で作る）
+状態：下書き（2026-10-12：Q-025・Q-026・Q-027・Q-031 を推奨案で決めて、「運用」、「無料枠を使い切られないために」、「エラーの送り方」、ログに残るもの、使うサービス（WAF のレート制限、Sentry）を書いた。構成図の清書（draw.io）を足した。2026-10-12：Q-016・Q-017 の `/review-docs`（18件）を受けて、`noindex` と `Referrer-Policy: no-referrer` を付けるパスを並べた。2026-10-12：Q-016 を決めて、アプリの画面の URL を `app.html` へのリライトに足した。2026-10-11：Q-020 の `/review-docs`（21件）を受けて、メンバーとグループの削除も部屋から「取り直して」を配ることにし、503 の理由の分け方を足した。2026-10-10：[ADR 0003](../adr/0003-backend-selection.md) が案 C に決まったので、Firebase 一式の版から書き直した。元の版は git の履歴にある。画面の作り方は [ADR 0004](../adr/0004-frontend-react-typescript.md)。システム構成図の清書（draw.io）は roadmap の Phase 1 で作る）
 
 ## 構成図
 
@@ -23,6 +23,8 @@ flowchart LR
     Auth["Authentication<br/>メール+パスワード / Google"]
   end
 
+  Sentry["Sentry（Developer・無料）<br/>エラーの把握"]
+
   Browser -- "HTML / JS / 地図データ<br/>（Worker を通らない）" --> Assets
   Browser -- "API（ログインしている人は ID トークン付き）" --> Worker
   Worker -- "SQL" --> D1
@@ -30,7 +32,11 @@ flowchart LR
   Room -- "WebSocket で配る" --> Browser
   Browser -- "ログイン・ID トークン" --> Auth
   Worker -. "公開鍵を取って ID トークンを確かめる" .-> Auth
+  Browser -. "エラー（グループIDを伏せる）" .-> Sentry
+  Worker -. "エラー（グループIDを伏せる）" .-> Sentry
 ```
+
+清書（draw.io）：[architecture.drawio.svg](architecture.drawio.svg)（正本はこの Mermaid）
 
 - 画面は静的なファイルとして Cloudflare から配る。**`/api/*` だけを Worker が受ける**（`run_worker_first`）。招待URL `/g/*` とアプリの画面の URL（`/new`、`/account`、`/login`、`/groups`、`/me`、`/contact`。[screens.md](screens.md) の「トップと URL」）は `_redirects` の 200 リライトで `app.html` を返し、Worker を通らない（Worker の枠が尽きても画面は出る。2026-10-05 に本番で確認：[ADR 0003](../adr/0003-backend-selection.md) の決定の基準1）
 - データの正本は D1 の1か所。読み書きはすべて API を通す。画面から D1 に直接は触れない。データの形は [data-model.md](data-model.md)
@@ -46,19 +52,23 @@ flowchart LR
 | Cloudflare Workers | API（Hono） | 1日10万リクエスト、1回の CPU 10ms。超えたらエラーで止まり、日本時間9時に戻る |
 | Cloudflare D1 | データ（SQLite） | 1日に読み取り500万行・書き込み10万行、1データベース500MB、1回の呼び出しで SQL 50本まで。超えたらエラーで止まり、日本時間9時に戻る |
 | Cloudflare Durable Objects | リアルタイムの部屋 | Free は SQLite 版だけ。1日10万リクエスト（WebSocket の受信は20通で1）。超えたらエラーで止まる |
-| Firebase Authentication（Spark） | メール＋パスワード、Google。確認メールとパスワードの再設定のメール | 5万 MAU。確認メール 1,000通/日、パスワードの再設定 150通/日 |
-| Cloudflare Turnstile | ボット対策（グループの作成、参加、問い合わせ） | 無料・回数無制限（ADR 0003） |
+| Firebase Authentication（Spark） | メール＋パスワード、Google。確認メールとパスワードの再設定のメール | 5万 MAU（公式の制限のページには MAU の上限が書かれていない：要確認）。確認メール 1,000通/日、パスワードの再設定 150通/日 |
+| Cloudflare Turnstile | ボット対策（グループの作成、参加、問い合わせ） | 無料・回数無制限。ウィジェットは20個まで。検証（siteverify）は API の中で1回呼ぶだけで、Workers の回数は増えない |
+| Cloudflare WAF のレート制限 | `/api/*` への連続アクセスを止める（Q-031） | Free で1本（IP ごと、10秒の窓、止めるのも10秒）。止めたアクセスは Worker に届かないので、Workers の回数を使わない |
+| Sentry（Developer） | 画面と API のエラーの把握（NFR-013、Q-027） | 無料、1人、月5,000件。超えたら受け付けなくなる（請求は来ない）。有料プランと従量課金（Pay-as-you-go）は有効にしない |
 | Cloudflare Registrar | ドメイン `tabikaigi-map.com` | 年額の固定費（2027-10-04 まで、自動更新） |
 
 どれも Free のまま使い、有料プランには上げない。Cloudflare で触らない製品と操作（R2 の有効化など）は [ADR 0003](../adr/0003-backend-selection.md) の「C で Cloudflare 側を守る決まり」。
 
-出典：[ADR 0003](../adr/0003-backend-selection.md) の「出典」、https://developers.cloudflare.com/workers/platform/pricing/ 、https://developers.cloudflare.com/d1/platform/pricing/ 、https://developers.cloudflare.com/d1/platform/limits/ 、https://developers.cloudflare.com/durable-objects/platform/pricing/ 、https://firebase.google.com/docs/auth/limits
+出典：[ADR 0003](../adr/0003-backend-selection.md) の「出典」、https://developers.cloudflare.com/turnstile/plans/ 、https://developers.cloudflare.com/waf/rate-limiting-rules/ 、https://sentry.io/pricing/ 、https://docs.sentry.io/pricing/quotas/ 、https://developers.cloudflare.com/workers/platform/pricing/ 、https://developers.cloudflare.com/d1/platform/pricing/ 、https://developers.cloudflare.com/d1/platform/limits/ 、https://developers.cloudflare.com/durable-objects/platform/pricing/ 、https://firebase.google.com/docs/auth/limits
 
 ### 無料枠を超えたとき（NFR-009・NFR-012）
 
 API の枠（Workers・D1）が尽きると、その日は「行った」を保存できなくなる。画面は API の応答が「枠切れ」の理由を付けた JSON の 503 でも、JSON でない応答（Cloudflare のエラー画面）でも「いまは使えない」を出し（「一時的な失敗」の 503 は「もう一度お試しください」。[screens](screens.md) の「知らせ」）、付け外しを送らない（2026-10-10 にローカルで確認：[ADR 0003](../adr/0003-backend-selection.md) の決定の基準3）。画面そのもの（静的アセット）は出続ける。
 
 Durable Objects の枠が尽きたら、リアルタイムだけが止まり、開き直したときに反映される形に戻る（NFR-003）。
+
+Workers の枠が尽きると、`run_worker_first` に当たる `/api/*` は Cloudflare の 429 になり、静的アセットには切り替わらない。画面は JSON でない応答として「いまは使えない」を出す。D1 の枠が尽きたときは、Cloudflare から運営者にメールが届く（2026-09-01 から Free の上限で実際に止まるようになった）。出典：https://developers.cloudflare.com/workers/static-assets/billing-and-limitations/ 、https://developers.cloudflare.com/changelog/post/2026-09-01-d1-free-tier-limit-enforcement/
 
 ### 部屋が配るもの（NFR-003）
 
@@ -74,20 +84,55 @@ Durable Objects の枠が尽きたら、リアルタイムだけが止まり、�
 
 ## 運用
 
-運営者1人で回せる形にする（NFR-014）。確かめる場所は Cloudflare の管理画面と Firebase のコンソールの2つ。
+運営者1人で回せる形にする（NFR-014）。ふだん確かめる場所は Cloudflare の管理画面、Firebase のコンソール、Sentry の3つ（Sentry はメールが来たときだけ開く）。
 
 | 何を | どうやって | 要件・未決 |
 |---|---|---|
 | バックアップ | 新しい版を出す前に `wrangler d1 export` で全データを手元に書き出す。書き出しの間はほかの読み書きが止まる（要確認）ので、使われない時間に行う | NFR-017 |
 | 消したデータの残り方 | D1 の Time Travel は常に有効で、消したデータも7日間は戻せる状態で残る（Free。復元は10分に10回まで）。プライバシーポリシーの保存期間に書く | NFR-008 |
-| 利用状況 | D1 に SQL を流して数える（グループ数、メンバー数）。「最近使われた」の数え方は Q-025 | NFR-010 |
-| 使用量 | 週1回、Cloudflare の管理画面と Firebase のコンソールで見る。Cron Triggers で自動の知らせを作れるかは Phase 2 | NFR-011、Q-026 |
-| エラー | Workers Logs（有効にするか、残す範囲は Q-027） | NFR-013 |
-| 使い切られる対策 | グループの作成と参加の API に Turnstile（無料）。`/api/*` のレート制限、ファイルがない URL の静的な 404、部屋への接続の回数の制限は Phase 2 | Q-031 |
+| 利用状況 | 運営者の PC から `wrangler d1 execute --remote` で集計の SQL を流す（グループ数、メンバー数をログインあり・なし別、直近30日に開かれたグループ数）。「開かれた」は、グループを開く API が `groups.last_opened_on` を日付で残したもの（[data-model](data-model.md)）。集計の SQL も D1 の読み取りの回数に数える（全件を読んでも数千行で、1日の枠の1％未満）。外部のアクセス解析は使わない（Q-025） | NFR-010 |
+| 使用量 | 週1回、Cloudflare の管理画面（Workers・D1・Durable Objects の Metrics）と Firebase のコンソールを見る。どれかが1日の上限の5割を超えた日があったら、自動の知らせ（下）を作るか、構成を考え直す。D1 は上限に達すると Cloudflare からメールが届く。上限に近づいたことを自動で知らせる仕組みは MVP では作らない（Q-026） | NFR-011 |
+| エラー | 画面と API のエラーは Sentry（Developer・無料）に送り、新しいエラーはメールで知らせてもらう。送る前にグループIDを伏せ、利用者の情報（IP など）を送らない（下の「エラーの送り方」）。Workers Logs は、アクセスごとの自動の記録（`invocation_logs`）を切り、自分で書いたログだけを残す（Q-027） | NFR-013 |
+| 使い切られる対策 | 下の「無料枠を使い切られないために」（Q-031） | NFR-004・NFR-012 |
+| 管理画面（MVP の次） | 運営者の PC で動かす画面。D1 の集計と、GraphQL Analytics API の使用量（読み取りだけ・期限付きのトークン）を1画面に出す。インターネットには置かない（Q-030） | NFR-014 |
 | 問い合わせ | アプリの中のフォーム（API＋D1＋Turnstile）。表の形は Phase 2 | NFR-018 |
 | D1 の置き場所 | 作るときにアジアを指定する（後から変えられない：要確認） | NFR-016 |
 
 出典：https://developers.cloudflare.com/d1/reference/time-travel/ 、https://developers.cloudflare.com/d1/platform/limits/ 、[ADR 0003](../adr/0003-backend-selection.md) の「運用」
+
+### 無料枠を使い切られないために（Q-031）
+
+2026-10-12 に決めた（ユーザーが「7. の残りを一気に進めて」と頼んだので、推奨案で決めた。見直すときは open-questions に理由を足して変える）。ふだんの使い方（1日500回開かれる：NFR-015）では、Workers は1日の上限の1割以下の見込みなので、守るのは、悪意のある人や不具合が枠を使い切る場面。
+
+| 手立て | 中身 | 守るもの |
+|---|---|---|
+| 画面は Worker を通さない | `run_worker_first` は `/api/*` と部屋への接続だけ（いまのまま）。互換日付（`compatibility_date`）を 2025-04-01 以降にし、ページの移動はアセットの側で返す。ファイルがない URL は `not_found_handling = "404-page"` で静的な `404.html` を返す（`_redirects` の 200 リライトと合わせた動きは Phase 2 で確かめる：要確認） | Workers の回数 |
+| `/api/*` のレート制限 | Cloudflare WAF のレート制限のルール1本（Free）。IP ごとに10秒で一定の回数を超えたら10秒止める。回数は、会議で1人が続けて「行った」を押す速さより十分多くし、Phase 2 で決める（仮に10秒で50回） | Workers・D1・Durable Objects の回数 |
+| Turnstile | グループの作成、参加、問い合わせの API で確かめる（いまのまま）。地図を開くたびには付けない | D1 の書き込み |
+| 部屋への接続の確かめ | Worker が D1 でそのグループがあることを確かめてから Durable Objects に回す（主キーで引くので読み取り1行程度）。部屋の URL にはグループIDの SHA-256 を入れているので、D1 でハッシュから引けるようにするか、接続の後の最初のメッセージでグループIDを送るかは Phase 3 で決める | Durable Objects の回数 |
+| つなぎ直しの間隔 | だんだん長くする（最大60秒。[screens](screens.md) の「知らせ」） | Durable Objects の回数 |
+| `workers.dev` を切る | 独自ドメインだけで受ける（`workers.dev` の URL も同じ枠を使うため。要確認） | Workers の回数 |
+
+入れないもの：Bot Fight Mode（ドメイン全体に効き、例外を作れない。API や WebSocket を止めることがあるため。困ったら試してから考える）、Workers の Rate Limiting の仕組み（Worker が起動した後に数えるので、Workers の回数は減らない）。
+
+Firebase のメール（確認メール1日1,000通、パスワードの再設定1日150通）は、画面から Firebase に直接頼むので、Turnstile やレート制限で守れない。他人が再設定のメールを頼み続けると、その日はほかの人が再設定できなくなる（requirements の「分かっている限界」）。Firebase の不正利用の守りに任せる（要確認）。メールのリンクでログインする方法（1日5通）は使わない。
+
+出典：https://developers.cloudflare.com/workers/static-assets/routing/worker-script/ 、https://developers.cloudflare.com/workers/static-assets/routing/single-page-application/ 、https://developers.cloudflare.com/durable-objects/best-practices/websockets/ 、https://developers.cloudflare.com/bots/get-started/bot-fight-mode/ 、https://firebase.google.com/docs/auth/limits
+
+### エラーの送り方（Q-027）
+
+2026-10-12 に決めた（ユーザーが「7. の残りを一気に進めて」と頼んだので、推奨案で決めた。見直すときは open-questions に理由を足して変える）。
+
+- 画面（React）と Worker の両方に Sentry の SDK（Worker は `@sentry/cloudflare`）を入れる
+- 利用者の情報を送らない設定にする（`dataCollection` で利用者の情報を切る。Sentry のプロジェクト設定で IP を保存しない。IP から取る場所も消すルールを足す）
+- `beforeSend` で、URL、パンくず（直前の操作の記録）、メッセージの中の `/g/` に続く22文字を `/g/[id]` に置き換えてから送る。名前、メールアドレス、行った都道府県はエラーに入れない（NFR-013）
+- 送る割合は全部（数が少ないため）。月5,000件を超えたら、その月は送れなくなるだけ
+- 有料プラン、従量課金、試用（トライアル）は有効にしない。アカウントを作るときにクレジットカードを求められたら、作らずに相談する（要確認）。そのときの代わりは、画面のエラーを自分の API に送って Workers Logs に残す形（通知はなく、見に行く）
+- 送った中身から本当にグループIDが消えているかは、Phase 2 で実際に送って確かめる（要確認）
+
+Workers Logs の設定（`wrangler.toml` の `[observability]`）：`enabled = true`、`head_sampling_rate = 1`、`[observability.logs] invocation_logs = false`。アクセスごとの自動の記録（URL、IP アドレス、おおよその場所）を残さず、自分で書いたログ（`console.error` など）だけを残す。切ったときに IP などが本当に残らないか、自分のログは残るかは Phase 2 で確かめる（要確認）。Workers Logs の Free は、2026-12-01 から1日0.5GB・7日保存に変わる（それまでは1日20万件・3日保存。超えたら取り込みが止まるだけで請求は来ない）。
+
+出典：https://docs.sentry.io/platforms/javascript/guides/cloudflare/configuration/options/ 、https://docs.sentry.io/security-legal-pii/scrubbing/server-side-scrubbing/ 、https://developers.cloudflare.com/workers/observability/logs/workers-logs/ 、https://developers.cloudflare.com/observability/pricing/
 
 ## 認証の方針
 
@@ -108,7 +153,7 @@ Durable Objects の枠が尽きたら、リアルタイムだけが止まり、�
 |---|---|---|
 | 作り方 | 中身を書いた素の HTML（[ADR 0004](../adr/0004-frontend-react-typescript.md)） | React の画面（`app.html` から動く） |
 | `noindex` | 付けない | **付ける**。`_headers` でレスポンスのヘッダー（`X-Robots-Tag`）に最初から書く。対象のパスを並べる：`/g/*`、`/new`、`/account`、`/login`、`/groups`、`/me`、`/contact`、`/app*`（`app.html` を直接開いたとき）、確認メールのリンク先（自前にするなら。[screens.md](screens.md) の「トップと URL」）（検索エンジンが JavaScript を動かす前に読めるように。2026-10-04 にローカルで確認） |
-| `Referrer-Policy` | 既定のまま | **`no-referrer`**。`_headers` で上と同じパスに付ける。アプリの画面からトップやプライバシーポリシーへ移ったときに、参照元の URL（`/g/{groupId}`）がアクセス解析に渡らないため（NFR-010。Web Analytics が参照元をどこまで集めるかは Q-025 で確かめる：要確認。2026-10-12） |
+| `Referrer-Policy` | 既定のまま | **`no-referrer`**。`_headers` で上と同じパスに付ける。アプリの画面から外のサイトやトップへ移ったときに、参照元の URL（`/g/{groupId}`）を渡さないため（NFR-005・NFR-010。2026-10-12。アクセス解析は使わないことにした：Q-025） |
 | `robots.txt` | 許可 | **禁止しない**。`robots.txt` で読むのを禁止すると、検索エンジンが `noindex` を読めず、URL だけが検索結果に載ることがある（要確認） |
 | sitemap | 載せる | 載せない |
 | OGP | ページごとの説明 | 全グループ共通の固定の OGP（上） |
@@ -119,7 +164,8 @@ Durable Objects の枠が尽きたら、リアルタイムだけが止まり、�
 
 - グループIDは API の URL のパスに入れず、リクエストの中身かヘッダーで送る（ログに残さないため）
 - 部屋への WebSocket の URL には、グループIDの代わりにその SHA-256 を入れる
-- Workers Logs を有効にすると、API へのアクセスごとに URL、IP アドレス、おおよその場所が数日残る。有効にするか、残す範囲は Q-027 で決める
+- Workers Logs は有効にするが、アクセスごとの自動の記録（URL、IP アドレス、おおよその場所）は切る（上の「エラーの送り方」。Q-027）。自分で書くログにも、グループID、名前、メールアドレスを書かない
+- Cloudflare Web Analytics は使わない。Free ではアプリの画面（`/g/*`）だけを外す設定がなく、自動で有効になることがあるので、Phase 2 で管理画面を見て切れていることを確かめる（要確認。Q-025）
 
 ## 環境
 
