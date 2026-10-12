@@ -1,6 +1,6 @@
 # システム構成
 
-状態：下書き（2026-10-12：Q-016 を決めて、アプリの画面の URL を `app.html` へのリライトに足した。2026-10-11：Q-020 の `/review-docs`（21件）を受けて、メンバーとグループの削除も部屋から「取り直して」を配ることにし、503 の理由の分け方を足した。2026-10-10：[ADR 0003](../adr/0003-backend-selection.md) が案 C に決まったので、Firebase 一式の版から書き直した。元の版は git の履歴にある。画面の作り方は [ADR 0004](../adr/0004-frontend-react-typescript.md)。システム構成図の清書（draw.io）は roadmap の Phase 1 で作る）
+状態：下書き（2026-10-12：Q-016・Q-017 の `/review-docs`（18件）を受けて、`noindex` と `Referrer-Policy: no-referrer` を付けるパスを並べた。2026-10-12：Q-016 を決めて、アプリの画面の URL を `app.html` へのリライトに足した。2026-10-11：Q-020 の `/review-docs`（21件）を受けて、メンバーとグループの削除も部屋から「取り直して」を配ることにし、503 の理由の分け方を足した。2026-10-10：[ADR 0003](../adr/0003-backend-selection.md) が案 C に決まったので、Firebase 一式の版から書き直した。元の版は git の履歴にある。画面の作り方は [ADR 0004](../adr/0004-frontend-react-typescript.md)。システム構成図の清書（draw.io）は roadmap の Phase 1 で作る）
 
 ## 構成図
 
@@ -107,7 +107,8 @@ Durable Objects の枠が尽きたら、リアルタイムだけが止まり、�
 | | 検索に出すページ（トップ、使い方、プライバシーポリシー） | アプリの画面（`/g/*` など） |
 |---|---|---|
 | 作り方 | 中身を書いた素の HTML（[ADR 0004](../adr/0004-frontend-react-typescript.md)） | React の画面（`app.html` から動く） |
-| `noindex` | 付けない | **付ける**。`_headers` でレスポンスのヘッダー（`X-Robots-Tag`）に最初から書く（検索エンジンが JavaScript を動かす前に読めるように。2026-10-04 にローカルで確認） |
+| `noindex` | 付けない | **付ける**。`_headers` でレスポンスのヘッダー（`X-Robots-Tag`）に最初から書く。対象のパスを並べる：`/g/*`、`/new`、`/account`、`/login`、`/groups`、`/me`、`/contact`、`/app*`（`app.html` を直接開いたとき）、確認メールのリンク先（自前にするなら。[screens.md](screens.md) の「トップと URL」）（検索エンジンが JavaScript を動かす前に読めるように。2026-10-04 にローカルで確認） |
+| `Referrer-Policy` | 既定のまま | **`no-referrer`**。`_headers` で上と同じパスに付ける。アプリの画面からトップやプライバシーポリシーへ移ったときに、参照元の URL（`/g/{groupId}`）がアクセス解析に渡らないため（NFR-010。Web Analytics が参照元をどこまで集めるかは Q-025 で確かめる：要確認。2026-10-12） |
 | `robots.txt` | 許可 | **禁止しない**。`robots.txt` で読むのを禁止すると、検索エンジンが `noindex` を読めず、URL だけが検索結果に載ることがある（要確認） |
 | sitemap | 載せる | 載せない |
 | OGP | ページごとの説明 | 全グループ共通の固定の OGP（上） |
