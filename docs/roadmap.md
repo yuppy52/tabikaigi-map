@@ -30,7 +30,7 @@
    4. ~~確認メールの流れ（REQ-057）~~（2026-10-10 に推奨どおり決定：確認前は紐づけを断る、確認後は元の端末でトークンを取り直して紐づける。断る処理の試しは紐づけの API を作る Phase 3 で → ADR 0003 の基準4）
    - 本番で試すときは、Cloudflare のトークンを作り直す（いまのものは 2026-10-12 に切れる。D1 の権限を足す）
 6. ~~結果で ADR 0003 を「決定」にし、ADR 0001 を置き換える~~（2026-10-10 に済んだ）
-7. **次はここ**：選んだ構成に合わせて ~~architecture・data-model・auth-flow を書き直し（ER 図などのデータの形はユーザーと一緒に確かめる）~~（2026-10-10 に下書きと `/review-docs`（26件）の反映。作成者の持ち方は [ADR 0005](adr/0005-owner-flag-on-member.md)、Q-018 決定、REQ-060（10グループまで）を追加、色は10色、ログインなしでも同じ名前の確認を出す）、要件IDの対応を付け、基本設計の Q を決める。~~権限マトリクス~~（2026-10-10 に下書き、2026-10-11 に `/review-docs`（14件）を反映：[permissions.md](design/permissions.md)）、~~Q-020（画面遷移の抜け）~~（2026-10-11 に決定：[screens.md](design/screens.md)）、~~Q-017（端末に覚える内容）~~（2026-10-12 に決定：[auth-flow.md](design/auth-flow.md)）、~~Q-016（トップの中身と URL）~~（2026-10-12 に決定：[screens.md](design/screens.md)）、構成図とワイヤーフレーム
+7. **次はここ**：選んだ構成に合わせて ~~architecture・data-model・auth-flow を書き直し（ER 図などのデータの形はユーザーと一緒に確かめる）~~（2026-10-10 に下書きと `/review-docs`（26件）の反映。作成者の持ち方は [ADR 0005](adr/0005-owner-flag-on-member.md)、Q-018 決定、REQ-060（10グループまで）を追加、色は10色、ログインなしでも同じ名前の確認を出す）、要件IDの対応を付け、基本設計の Q を決める。~~権限マトリクス~~（2026-10-10 に下書き、2026-10-11 に `/review-docs`（14件）を反映：[permissions.md](design/permissions.md)）、~~Q-020（画面遷移の抜け）~~（2026-10-11 に決定：[screens.md](design/screens.md)）、~~Q-017（端末に覚える内容）~~（2026-10-12 に決定：[auth-flow.md](design/auth-flow.md)）、~~Q-016（トップの中身と URL）~~（2026-10-12 に決定：[screens.md](design/screens.md)）、~~残りの基本設計の Q（Q-014・Q-022・Q-025〜Q-028・Q-030・Q-031）~~（2026-10-12 に推奨案で決定：[architecture](design/architecture.md)、[privacy](design/privacy.md)）、~~要件IDの対応~~（2026-10-12：[traceability](design/traceability.md)）、~~構成図とワイヤーフレーム~~（2026-10-12：[architecture.drawio.svg](design/architecture.drawio.svg)、[wireframes.drawio.svg](design/wireframes.drawio.svg)）。次は、この変更の `/review-docs` → `/compound`。その後、Phase 1 の残り（開発環境、保存先で守るもののテスト、OGP、LICENSE）
 
 各ステップは「作る → `/review-docs` → 直す → `/compound`」で進める。
 
@@ -54,8 +54,8 @@
 - [x] Firebase の調査と、それを踏まえた設計の見直し
 - [x] 設計書を分けて書く（要件、構成、データ、認証、画面）
 - [x] **最初に**：技術選定（Q-023）を比べて決め、新しい ADR を書く（2026-10-10：[ADR 0003](adr/0003-backend-selection.md) で案 C に決定）
-- [ ] 設計書に要件IDの対応を付ける（あわせて、基本設計の段階の未決事項 Q-010・Q-011・Q-014・Q-016〜Q-022・Q-025〜Q-028・Q-030・Q-031 を決める）
-- [ ] **システム構成図とワイヤーフレーム**を draw.io で作る（`*.drawio.svg`）
+- [x] 設計書に要件IDの対応を付ける（2026-10-12：[design/traceability.md](design/traceability.md)）。基本設計の段階の未決事項も決めた（2026-10-12。Q-010・Q-014・Q-019 は本番で確かめるまで暫定）
+- [x] **システム構成図とワイヤーフレーム**を draw.io で作る（2026-10-12：[architecture.drawio.svg](design/architecture.drawio.svg)、[wireframes.drawio.svg](design/wireframes.drawio.svg)）
 - [x] **権限マトリクス**（誰が何をできるか）を表で作る（2026-10-10、[design/permissions.md](design/permissions.md)。下書き）
 - [ ] `/review-docs` でレビュー → 直す
 - [x] 画面の作り方を決める（2026-10-04：React＋TypeScript＋Vite、検索に出すページは素の HTML。[ADR 0004](adr/0004-frontend-react-typescript.md)）
@@ -71,8 +71,8 @@
 - [x] Claude の権限（deny / ask）と作業ログ（成功・失敗の両方を記録）
 - [x] プルリクエストの運用と main のブランチ保護
 - [ ] LICENSE を決める（MIT にするか、置かないか）
-- [ ] 利用状況の把握（何グループが使っているか）：方法の選定（[NFR-010](requirements.md)、Q-025）と、プライバシーポリシーへの記載（NFR-008、Q-028）
-- [ ] 無料枠の監視（NFR-011・NFR-012、Q-026）、エラーの把握（NFR-013、Q-027）
+- [x] 利用状況の把握（何グループが使っているか）：方法の選定（[NFR-010](requirements.md)、Q-025）と、プライバシーポリシーへの記載（NFR-008、Q-028）（2026-10-12：D1 から数える。書く項目は [privacy](design/privacy.md)。運営者の氏名・住所の出し方は公開の前に決め直す）
+- [x] 無料枠の監視（NFR-011・NFR-012、Q-026）、エラーの把握（NFR-013、Q-027）（2026-10-12：週1回の確認、Sentry の無料プラン）
 
 ## 工程ごとの道具の見直し
 
