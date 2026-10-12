@@ -1,6 +1,6 @@
 # システム構成
 
-状態：下書き（2026-10-12：`/review-docs`（24件）を受けて、Mermaid の構成図を清書にそろえ（WAF、Turnstile、運営者の PC、部屋への接続）、部屋の URL を `/api/rooms/{room_key}` にし、429 の扱い、Sentry に送る前に消すもの・作る前に確かめること・DSN と CPU の注意、集計の鍵、問い合わせの確かめ方と保存期間、Durable Objects の枠を直した。2026-10-12：Q-025・Q-026・Q-027・Q-031 を推奨案で決めて、「運用」、「無料枠を使い切られないために」、「エラーの送り方」、ログに残るもの、使うサービス（WAF のレート制限、Sentry）を書いた。構成図の清書（draw.io）を足した。2026-10-12：Q-016・Q-017 の `/review-docs`（18件）を受けて、`noindex` と `Referrer-Policy: no-referrer` を付けるパスを並べた。2026-10-12：Q-016 を決めて、アプリの画面の URL を `app.html` へのリライトに足した。2026-10-11：Q-020 の `/review-docs`（21件）を受けて、メンバーとグループの削除も部屋から「取り直して」を配ることにし、503 の理由の分け方を足した。2026-10-10：[ADR 0003](../adr/0003-backend-selection.md) が案 C に決まったので、Firebase 一式の版から書き直した。元の版は git の履歴にある。画面の作り方は [ADR 0004](../adr/0004-frontend-react-typescript.md)。システム構成図の清書（draw.io）は roadmap の Phase 1 で作る）
+状態：下書き（2026-10-12：開発環境を用意して、Node.js の版とリポジトリの構成（1つの `package.json`）を決め、テストの道具の名前を `@cloudflare/vitest-plugin` に直した。2026-10-12：`/review-docs`（24件）を受けて、Mermaid の構成図を清書にそろえ（WAF、Turnstile、運営者の PC、部屋への接続）、部屋の URL を `/api/rooms/{room_key}` にし、429 の扱い、Sentry に送る前に消すもの・作る前に確かめること・DSN と CPU の注意、集計の鍵、問い合わせの確かめ方と保存期間、Durable Objects の枠を直した。2026-10-12：Q-025・Q-026・Q-027・Q-031 を推奨案で決めて、「運用」、「無料枠を使い切られないために」、「エラーの送り方」、ログに残るもの、使うサービス（WAF のレート制限、Sentry）を書いた。構成図の清書（draw.io）を足した。2026-10-12：Q-016・Q-017 の `/review-docs`（18件）を受けて、`noindex` と `Referrer-Policy: no-referrer` を付けるパスを並べた。2026-10-12：Q-016 を決めて、アプリの画面の URL を `app.html` へのリライトに足した。2026-10-11：Q-020 の `/review-docs`（21件）を受けて、メンバーとグループの削除も部屋から「取り直して」を配ることにし、503 の理由の分け方を足した。2026-10-10：[ADR 0003](../adr/0003-backend-selection.md) が案 C に決まったので、Firebase 一式の版から書き直した。元の版は git の履歴にある。画面の作り方は [ADR 0004](../adr/0004-frontend-react-typescript.md)。システム構成図の清書（draw.io）は roadmap の Phase 1 で作る）
 
 ## 構成図
 
@@ -188,18 +188,18 @@ Workers Logs の設定（`wrangler.jsonc` の `observability`）：`"enabled": t
 
 ## 開発環境
 
-- Node.js（版は Phase 2 で決める）
+- Node.js 22（`.node-version`。2027-04 まで保守される版。2026-10-12）
 - `wrangler`（ローカルの実行、D1 のマイグレーション、デプロイ）
-- Vitest と `@cloudflare/vitest-pool-workers`（API と D1 の制約のテスト）
+- Vitest と `@cloudflare/vitest-plugin`（API と D1 の制約のテスト。2026-10 に `@cloudflare/vitest-pool-workers` から名前が変わった）。プルリクエストごとに GitHub Actions で動かす（`.github/workflows/test.yml`）
 - Hono（API）、`jose`（ID トークンの確かめ）
 - Firebase JS SDK（画面の Authentication だけ）
 - Vite＋React＋TypeScript（画面）
 
-## リポジトリの構成（予定）
+## リポジトリの構成
 
 ```
 docs/                設計書
-tools/               地図データの生成（既存）
+tools/               地図データの生成（既存。package.json は別）
 spike/               案 C を小さく試した試作（Phase 2 で本番のコードに移したら消すか残すかを決める）
 web/                 画面（Vite＋React＋TypeScript）  ← Phase 2 で追加
   pages/             検索に出すページ（素の HTML：トップ、使い方、プライバシーポリシー）
@@ -208,7 +208,8 @@ api/                 API（Hono、TypeScript）
   src/
   test/              API と D1 の制約のテスト（Vitest）
 migrations/          D1 のテーブル定義
+package.json         画面と API で1つ（2026-10-12）
 wrangler.jsonc       Cloudflare の設定
 ```
 
-フォルダーの分け方（1つの `package.json` にするか分けるか）は Phase 2 で決める。
+`package.json` は、画面と API で1つにする（2026-10-12。ユーザーが「次の作業」を頼んだので、推奨案で決めた）。理由：Worker と画面は1つの `wrangler.jsonc` で配るので、設定と道具の版を1か所にそろえられ、入れる手間も1回で済む。分けると、画面と API で TypeScript などの版がずれる。Phase 2 で Vite を足すときに、Cloudflare の Vite のプラグインで1つにまとまらないと分かったら見直す。

@@ -1,0 +1,29 @@
+// 旅会議マップの Cloudflare の設定（Phase 1：API と D1 だけ。画面の配信と部屋は Phase 2 で足す）
+{
+  "name": "tabikaigi-map",
+  "main": "api/src/index.ts",
+  // Q-031：2025-04-01 以降（静的アセットの扱いが今の形になった日付）
+  "compatibility_date": "2026-08-15",
+  // Q-031：workers.dev とプレビューの URL は出さない（独自ドメインだけで公開する）
+  "workers_dev": false,
+  "preview_urls": false,
+  "vars": {
+    // Firebase のプロジェクトID（秘密の値ではない）
+    "FIREBASE_PROJECT_ID": "tabikaigi-map"
+  },
+  // Q-027：自分で書いたログだけ残す。アクセスごとの記録（IP・場所・URL）は切る
+  "observability": {
+    "enabled": true,
+    "head_sampling_rate": 1,
+    "logs": { "invocation_logs": false }
+  },
+  // D1（データベース）。本番のデータベースはまだ作っていない。作ったら database_id を差し替える
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "tabikaigi-map",
+      "database_id": "00000000-0000-0000-0000-000000000000",
+      "migrations_dir": "migrations"
+    }
+  ]
+}

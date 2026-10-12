@@ -4,7 +4,8 @@
 
 ## いまどこ？
 
-**Phase 1（基本設計）。7. まで済んだ：画面（Q-016・Q-017・Q-020）、運用（Q-025〜Q-031）、要件IDの対応表、構成図とワイヤーフレーム（draw.io）。次は Phase 1 の残り（開発環境、保存先で守るもののテスト、OGP、LICENSE）と、運営者の氏名・住所の出し方（[privacy](design/privacy.md)）**（2026-10-12。次のセッションへの引き継ぎ）。
+**Phase 1（基本設計）。7. まで済み、実装の前の道具の見直しと開発環境を用意し、D1 のテーブル定義とその制約のテストを作った（2026-10-12）。次は、保存先で守るもの（NFR-006）のうち API で守るものを、Hono の API とテストで作る。そのほかの残りは OGP、LICENSE と、運営者の氏名・住所の出し方（[privacy](design/privacy.md)）**（2026-10-12。次のセッションへの引き継ぎ）。
+- 2026-10-12（終わり）：実装の前の道具の見直し（下の「工程ごとの道具の見直し」）。足したもの：`.claude/rules/api.md`、`access-reviewer`、GitHub Actions のテスト。開発環境はリポジトリの直下に1つの `package.json` で作った（[architecture](design/architecture.md) の「リポジトリの構成」）
 - 要件定義は 2026-10-04 に一度確定したが、その後に足したもの（検索 NFR-019、独自ドメイン NFR-020、リアルタイム NFR-003 の見直し、名前の重複を保存先で守る NFR-006 (11)、確認メールの流れなど）があるので、requirements・use-cases・用語集は「レビュー待ち」に戻っている。小さく試した後にまとめて見直して「確定」にする
 - 技術の方向：
   - 画面は React＋TypeScript＋Vite、検索に出すページは素の HTML（[ADR 0004](adr/0004-frontend-react-typescript.md)、決定）
@@ -29,7 +30,7 @@
    4. ~~確認メールの流れ（REQ-057）~~（2026-10-10 に推奨どおり決定：確認前は紐づけを断る、確認後は元の端末でトークンを取り直して紐づける。断る処理の試しは紐づけの API を作る Phase 3 で → ADR 0003 の基準4）
    - 本番で試すときは、Cloudflare のトークンを作り直す（いまのものは 2026-10-12 に切れる。D1 の権限を足す）
 6. ~~結果で ADR 0003 を「決定」にし、ADR 0001 を置き換える~~（2026-10-10 に済んだ）
-7. **次はここ**：選んだ構成に合わせて ~~architecture・data-model・auth-flow を書き直し（ER 図などのデータの形はユーザーと一緒に確かめる）~~（2026-10-10 に下書きと `/review-docs`（26件）の反映。作成者の持ち方は [ADR 0005](adr/0005-owner-flag-on-member.md)、Q-018 決定、REQ-060（10グループまで）を追加、色は10色、ログインなしでも同じ名前の確認を出す）、要件IDの対応を付け、基本設計の Q を決める。~~権限マトリクス~~（2026-10-10 に下書き、2026-10-11 に `/review-docs`（14件）を反映：[permissions.md](design/permissions.md)）、~~Q-020（画面遷移の抜け）~~（2026-10-11 に決定：[screens.md](design/screens.md)）、~~Q-017（端末に覚える内容）~~（2026-10-12 に決定：[auth-flow.md](design/auth-flow.md)）、~~Q-016（トップの中身と URL）~~（2026-10-12 に決定：[screens.md](design/screens.md)）、~~残りの基本設計の Q（Q-014・Q-022・Q-025〜Q-028・Q-030・Q-031）~~（2026-10-12 に推奨案で決定：[architecture](design/architecture.md)、[privacy](design/privacy.md)）、~~要件IDの対応~~（2026-10-12：[traceability](design/traceability.md)）、~~構成図とワイヤーフレーム~~（2026-10-12：[architecture.drawio.svg](design/architecture.drawio.svg)、[wireframes.drawio.svg](design/wireframes.drawio.svg)）。次は、この変更の `/review-docs` → `/compound`。その後、Phase 1 の残り（開発環境、保存先で守るもののテスト、OGP、LICENSE）
+7. **次はここ**：選んだ構成に合わせて ~~architecture・data-model・auth-flow を書き直し（ER 図などのデータの形はユーザーと一緒に確かめる）~~（2026-10-10 に下書きと `/review-docs`（26件）の反映。作成者の持ち方は [ADR 0005](adr/0005-owner-flag-on-member.md)、Q-018 決定、REQ-060（10グループまで）を追加、色は10色、ログインなしでも同じ名前の確認を出す）、要件IDの対応を付け、基本設計の Q を決める。~~権限マトリクス~~（2026-10-10 に下書き、2026-10-11 に `/review-docs`（14件）を反映：[permissions.md](design/permissions.md)）、~~Q-020（画面遷移の抜け）~~（2026-10-11 に決定：[screens.md](design/screens.md)）、~~Q-017（端末に覚える内容）~~（2026-10-12 に決定：[auth-flow.md](design/auth-flow.md)）、~~Q-016（トップの中身と URL）~~（2026-10-12 に決定：[screens.md](design/screens.md)）、~~残りの基本設計の Q（Q-014・Q-022・Q-025〜Q-028・Q-030・Q-031）~~（2026-10-12 に推奨案で決定：[architecture](design/architecture.md)、[privacy](design/privacy.md)）、~~要件IDの対応~~（2026-10-12：[traceability](design/traceability.md)）、~~構成図とワイヤーフレーム~~（2026-10-12：[architecture.drawio.svg](design/architecture.drawio.svg)、[wireframes.drawio.svg](design/wireframes.drawio.svg)）。~~この変更の `/review-docs` → `/compound`~~（2026-10-12 に済んだ）。続けて Phase 1 の残り（~~開発環境~~、保存先で守るもののテスト、OGP、LICENSE）
 
 各ステップは「作る → `/review-docs` → 直す → `/compound`」で進める。
 
@@ -59,8 +60,10 @@
 - [ ] `/review-docs` でレビュー → 直す
 - [x] 画面の作り方を決める（2026-10-04：React＋TypeScript＋Vite、検索に出すページは素の HTML。[ADR 0004](adr/0004-frontend-react-typescript.md)）
 - [x] **技術選定を確定する**（[ADR 0003](adr/0003-backend-selection.md)、2026-10-10 に案 C で決定）：Cloudflare の課金の道を調べて決まりを書く → ドメインを取る → 小さく試す → 決定。Firebase が前提の設計書と Q（Q-011〜Q-014・Q-019・Q-021・Q-022）は、決めてから書き直す
-- [ ] 開発環境を用意する（Node.js、wrangler）
+- [x] 開発環境を用意する（2026-10-12：Node.js 22、wrangler、Vitest。リポジトリの直下の `package.json`、`api/`、`migrations/`。`npm test` で API と D1 のテストが動く）
 - [ ] 保存先で守るもの（NFR-006 の (1)〜(13)）を実装してテストする（API と D1 の制約を Vitest で。[権限マトリクス](design/permissions.md)の × の欄）
+  - [x] D1 の制約（2026-10-12：[migrations/0001_init.sql](../migrations/0001_init.sql)、[api/test/schema.test.ts](../api/test/schema.test.ts)。トリガーと部分 `UNIQUE` はローカルで通った。本物の D1 では Phase 2 の最初に確かめる〔未〕）
+  - [ ] API で守るもの（ID トークンの確かめ、メンバーの番号と `uid`、「作成者のみ」、0行のときの理由。終わったら `access-reviewer` でレビューする）
 - [x] 追加する画面を決める → [design/screens.md](design/screens.md)（2026-10-12：Q-016・Q-020 で、検索に出すページとアプリの画面、URL を決めた）
 - [ ] 固定の OGP 画像と文言を用意する
 
@@ -80,8 +83,8 @@
 | 工程 | 追加を検討するもの |
 |---|---|
 | 基本設計 | 画面設計のレビューは既存の `design:design-critique` を使う（2026-10-04 に決定。新しい `ui-reviewer` は作らない）。構成図とワイヤーフレームは接続済みの draw.io のツールを試す（`.drawio.svg` で保存できるかは要確認）。技術の比較と ADR（既存の `researcher` と、Skill の `engineering:architecture` を試す）。権限マトリクスは NFR-006 の (1)〜(13) を出発点にする |
-| 保存先で守るものの実装の前 | **`rules-reviewer`**（API とデータベースの制約、または Firestore のルールを、攻撃する側の目で見る）、GitHub Actions でルールのテストを自動実行、サンドボックス（`/sandbox`） |
-| 実装（Phase 2）の前 | コードレビュー（まず既存の `/code-review` を試す）、`test-writer`、Dependabot、**Playwright CLI**（下のメモ）。API の書き方のルール（`.claude/rules/api.md` など）を作り、「認証や確認に失敗したら、弱い権限に落とさずエラーで止める」を入れる（[learnings](learnings/2026-10-11-permission-matrix-states-and-branches.md)） |
+| 保存先で守るものの実装の前 | 2026-10-12 に見直した。**足した**：`access-reviewer`（API と D1 の制約を、攻撃する側の目で見る。Firestore をやめたので `rules-reviewer` から名前を変えた）、`.claude/rules/api.md`（下の行から前倒し）、GitHub Actions でプルリクエストごとに型の確かめとテストを動かす（公開リポジトリは無料。外の部品はコミットの番号で固定）。**足さない**：サンドボックス（`/sandbox`）は、いまの deny／ask と作業ログで足りており、ローカルのテストしか動かさないため。困ったら見直す |
+| 実装（Phase 2）の前 | コードレビュー（まず既存の `/code-review` を試す）、`test-writer`、Dependabot、**Playwright CLI**（下のメモ）。API の書き方のルールは 2026-10-12 に作った（`.claude/rules/api.md`） |
 | 公開（Phase 2 の終わり）の前 | **Strix**（下のメモ） |
 | 要件定義の後 | docs の自動チェック（Markdown の書式、Mermaid の構文、リンク切れ） |
 | βテスト（Phase 4）の前 | GitHub Issues（友達からのフィードバックの受け口） |
