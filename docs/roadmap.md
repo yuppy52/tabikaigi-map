@@ -4,14 +4,13 @@
 
 ## いまどこ？
 
-**Phase 1（基本設計）。ADR 0003 を案 C で「決定」にし、architecture・data-model・auth-flow を案 C で書き直し、`/review-docs`（26件）を反映した（下書き）。権限マトリクスを下書きした。次は 7. の残り（要件IDの対応、基本設計の Q、構成図とワイヤーフレーム）**（2026-10-10。次のセッションへの引き継ぎ）。
+**Phase 1（基本設計）。7. まで済んだ：画面（Q-016・Q-017・Q-020）、運用（Q-025〜Q-031）、要件IDの対応表、構成図とワイヤーフレーム（draw.io）。次は Phase 1 の残り（開発環境、保存先で守るもののテスト、OGP、LICENSE）と、運営者の氏名・住所の出し方（[privacy](design/privacy.md)）**（2026-10-12。次のセッションへの引き継ぎ）。
 - 要件定義は 2026-10-04 に一度確定したが、その後に足したもの（検索 NFR-019、独自ドメイン NFR-020、リアルタイム NFR-003 の見直し、名前の重複を保存先で守る NFR-006 (11)、確認メールの流れなど）があるので、requirements・use-cases・用語集は「レビュー待ち」に戻っている。小さく試した後にまとめて見直して「確定」にする
 - 技術の方向：
   - 画面は React＋TypeScript＋Vite、検索に出すページは素の HTML（[ADR 0004](adr/0004-frontend-react-typescript.md)、決定）
   - バックエンドは案 C：Cloudflare Workers（API は Hono）＋D1、リアルタイムは Durable Objects＋WebSocket で「変わったこと」を配る、認証はログインする人だけ Firebase Authentication（ログインなしの人の匿名ログインはやめる）、ドメインは Cloudflare Registrar の `.com`（[ADR 0003](adr/0003-backend-selection.md)、2026-10-10 に決定。ADR 0001 を置き換え）
   - 費用：有料プランには上げない。無料枠を超えたらその日は止まるのを受け入れる。Cloudflare で有料にしない決まり（R2 を有効にしない等）は ADR 0003 にある
 - 2026-10-04 に決めたこと（ユーザー）：リアルタイムは「行った」の付け外しだけ（数秒の遅れは可）、名前の重複は保存先でも防ぐ、問い合わせはアプリの中のフォーム（API＋D1＋Turnstile）、匿名ログインはやめる
-- 設計書（architecture・data-model・auth-flow）は案 A（Firebase 一式）前提の古い版で、冒頭に注記がある。書き直しの方針は ADR 0003 の「C で書き直すときの方針」と「決めたら直すもの」
 - 2026-10-10（終わり）：必須の6つの残り（2：本物の証明書、4：確認メール）も済み、ADR 0003 を「決定」にした。続けて architecture・data-model・auth-flow を案 C で書き直した。ユーザーと決めたこと：作成者はメンバーの印 `is_owner` で持つ（試作の `owner_member_id` から変更）、メールアドレスは D1 に持たない。用語集の匿名・認証済み・昇格・枠は「使わない言葉」にした
 - 2026-10-04（後半）：小さく試すのをローカルで始めた（[spike/](../spike/README.md)）。「通らなければ考え直す2つ」はローカルでは通った。同じ日にユーザーがドメイン `tabikaigi-map.com` を Cloudflare で取った（アカウントもできた）。Firebase のプロジェクト（ID `tabikaigi-map`）もできた。2026-10-05 に試作を `tabikaigi-spike.tabikaigi.workers.dev` に置いて測り、「通らなければ考え直す2つ」は本番でも通った（Worker を通らない招待URL、CPU は最大 7ms）。同じ日に D1 の決まり（20人、名前の重複、1アカウント1メンバー、最後の退出）もローカルで守れた。2026-10-09 にリアルタイム（Durable Objects＋WebSocket）もローカルで動いた（2つのタブで確認）。残りは ADR 0003 の「そのほか」（本物の証明書、スマホと無料枠の消費は本番で、止まったときの応答など）
 - 2026-10-10（後半）：ADR 0003 の必須の6つのうち、3（止まったときの応答）と5（無料枠の見積もり）をローカルと見積もりで済ませた（試作は `feat/pre-decision-checks-1-2`）。残りは 2（本物の証明書）と 4（確認メール）で、どちらも Firebase の利用者を作るユーザーの作業が要る
@@ -80,7 +79,7 @@
 
 | 工程 | 追加を検討するもの |
 |---|---|
-| 基本設計 | 画面設計のレビューは既存の `design:design-critique` を使う（2026-10-04 に決定。新しい `ui-reviewer` は作らない）。構成図とワイヤーフレームは接続済みの draw.io のツールを試す（`.drawio.svg` で保存できるかは要確認）。技術の比較と ADR（既存の `researcher` と、Skill の `engineering:architecture` を試す）。権限マトリクスは NFR-006 の (1)〜(11) を出発点にする |
+| 基本設計 | 画面設計のレビューは既存の `design:design-critique` を使う（2026-10-04 に決定。新しい `ui-reviewer` は作らない）。構成図とワイヤーフレームは接続済みの draw.io のツールを試す（`.drawio.svg` で保存できるかは要確認）。技術の比較と ADR（既存の `researcher` と、Skill の `engineering:architecture` を試す）。権限マトリクスは NFR-006 の (1)〜(13) を出発点にする |
 | 保存先で守るものの実装の前 | **`rules-reviewer`**（API とデータベースの制約、または Firestore のルールを、攻撃する側の目で見る）、GitHub Actions でルールのテストを自動実行、サンドボックス（`/sandbox`） |
 | 実装（Phase 2）の前 | コードレビュー（まず既存の `/code-review` を試す）、`test-writer`、Dependabot、**Playwright CLI**（下のメモ）。API の書き方のルール（`.claude/rules/api.md` など）を作り、「認証や確認に失敗したら、弱い権限に落とさずエラーで止める」を入れる（[learnings](learnings/2026-10-11-permission-matrix-states-and-branches.md)） |
 | 公開（Phase 2 の終わり）の前 | **Strix**（下のメモ） |
@@ -110,7 +109,18 @@
 - [ ] iPhone の Safari と Chrome で、しばらく開かないと `localStorage` とログインの状態が消えるかを実機で確かめる（Q-017）
 - [ ] 本物の招待URL（匿名認証は使わない：ADR 0003）
 - [ ] グループ設定：グループ名の変更、管理できる人、メンバーの削除、グループの削除、退出（最後の1人ならグループも削除）
-- [ ] 検索に出すページ（トップ、使い方、プライバシーポリシー）を素の HTML で作る。アプリの画面に `noindex`、sitemap、Google Search Console への登録（NFR-019、[architecture](design/architecture.md) の「検索に出すページと出さないページ」）
+- [ ] 検索に出すページ（トップ、使い方、プライバシーポリシー）を素の HTML で作る。アプリの画面に `noindex`、sitemap（Google Search Console は、検索から来る人の数を知りたくなったら登録する：Q-025）（NFR-019、[architecture](design/architecture.md) の「検索に出すページと出さないページ」）
+- [ ] 基本設計で Phase 2 に回した確かめ（〔未〕。どれも公開の前に必須）：
+  - 〔未〕Cloudflare Web Analytics と、Firebase の Google アナリティクスの連携が切れているか（Q-025）
+  - 〔未〕グループを開くときの `last_opened_on` の0行の更新が書き込みに数えられないか（`meta.rows_written`。Q-025）
+  - 〔未〕Workers Logs の `invocation_logs` を切ると IP・場所・URL が残らず、自分のログは残るか（Q-027）
+  - 〔未〕Sentry：アカウントを作る前の確認（試用、組織の名前、カード）、送った中身にグループID・ID トークン・ヘッダーがないか、SDK を入れた CPU 時間（Q-027・[ADR 0006](adr/0006-error-tracking-sentry.md)）
+  - 〔未〕WAF のレート制限の回数と、止めたときの 429 を画面が見分けられるか（Q-031）
+  - 〔未〕`not_found_handling` と `_redirects` の 200 リライトを合わせた動き、`workers.dev` を切る（Q-031）
+  - 〔未〕集計用の D1 の読み取りだけの API トークンを作れるか（Q-025）
+  - 〔未〕Durable Objects の動いている時間（GB 秒）と眠れる書き方の効き方
+  - 〔未〕無料枠を超えたときに API が実際に返すエラー（D1・Workers・Durable Objects）
+- [ ] 公開の前に、試作の Worker（`tabikaigi-spike.tabikaigi.workers.dev`）と試作の D1 を消す（本番と同じアカウントの無料枠を使い、公開されたままのため）
 - [ ] 独自ドメインで公開し（NFR-020）、友達グループで使ってもらう
 
 ## Phase 3：MVP②（ログインあり）
