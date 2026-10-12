@@ -14,11 +14,13 @@
 - `index.html`：ビルド結果。直接編集しない
 - `tools/template.html`：モックの画面のソース
 - `tools/`：地図データの生成とビルド（`npm run build` で `index.html` を作り直す）
+- `api/`：API（Hono）とそのテスト。`migrations/`：D1 のテーブル定義。リポジトリの直下で `npm test`（API と D1 の制約のテスト）、`npm run typecheck`。プルリクエストごとに GitHub Actions でも動く
 - `docs/`：要件、設計、ADR、ロードマップ
 - `docs/learnings/`：過去の失敗や判断の記録（tags 付き）。設計やレビューの前に、関係するものを探して読む
 - `.claude/rules/docs.md`：ドキュメントの書き方（要件ID、状態、図の使い分け）
 - `.claude/rules/sql.md`：SQL（D1）の書き方
-- `.claude/agents/`：`researcher`（調査）、`doc-reviewer`（設計書のレビュー）
+- `.claude/rules/api.md`：API（Hono）の書き方
+- `.claude/agents/`：`researcher`（調査）、`doc-reviewer`（設計書のレビュー）、`access-reviewer`（API と D1 の制約を攻撃する側の目でレビュー）
 - `.claude/skills/`：`/review-docs`（設計書のレビュー）、`/compound`（学びを残す）
 
 ## 技術の前提
@@ -36,6 +38,7 @@
 - 調査を頼む前に、結論を左右する前提（お金を得るか、規模、扱う情報、ユーザーの経験や好み）をユーザーに確かめる。確かめられないものは、依頼文と記録の両方に「仮定」と書く
 - ユーザーに論点を決めてもらうときは、関係の深い論点をまとめ、前提の仕組みと具体的な場面を説明し、推奨案と理由を添えてから聞く
 - 計画 → 作業 → レビュー（`/review-docs`）→ 学びを残す（`/compound`）の順で回す。作業の区切りでは `/compound` を提案する
+- API や D1 の制約を変えたら、push の前に `access-reviewer` にレビューを頼む
 - 工程（ロードマップの Phase）を始める前に、サブエージェント・Skill・ルールが足りているかを見直す
 
 ## Git の運用

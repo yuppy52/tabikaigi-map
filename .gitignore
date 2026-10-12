@@ -14,3 +14,6 @@ tools/japan.topojson
 *firebase-adminsdk*.json
 *serviceAccount*.json
 *service-account*.json
+
+# wrangler のローカルの D1 など
+.wrangler/
