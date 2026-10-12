@@ -30,7 +30,7 @@
    4. ~~確認メールの流れ（REQ-057）~~（2026-10-10 に推奨どおり決定：確認前は紐づけを断る、確認後は元の端末でトークンを取り直して紐づける。断る処理の試しは紐づけの API を作る Phase 3 で → ADR 0003 の基準4）
    - 本番で試すときは、Cloudflare のトークンを作り直す（いまのものは 2026-10-12 に切れる。D1 の権限を足す）
 6. ~~結果で ADR 0003 を「決定」にし、ADR 0001 を置き換える~~（2026-10-10 に済んだ）
-7. **次はここ**：選んだ構成に合わせて ~~architecture・data-model・auth-flow を書き直し（ER 図などのデータの形はユーザーと一緒に確かめる）~~（2026-10-10 に下書きと `/review-docs`（26件）の反映。作成者の持ち方は [ADR 0005](adr/0005-owner-flag-on-member.md)、Q-018 決定、REQ-060（10グループまで）を追加、色は10色、ログインなしでも同じ名前の確認を出す）、要件IDの対応を付け、基本設計の Q を決める。~~権限マトリクス~~（2026-10-10 に下書き、2026-10-11 に `/review-docs`（14件）を反映：[permissions.md](design/permissions.md)）、~~Q-020（画面遷移の抜け）~~（2026-10-11 に決定：[screens.md](design/screens.md)）、構成図とワイヤーフレーム
+7. **次はここ**：選んだ構成に合わせて ~~architecture・data-model・auth-flow を書き直し（ER 図などのデータの形はユーザーと一緒に確かめる）~~（2026-10-10 に下書きと `/review-docs`（26件）の反映。作成者の持ち方は [ADR 0005](adr/0005-owner-flag-on-member.md)、Q-018 決定、REQ-060（10グループまで）を追加、色は10色、ログインなしでも同じ名前の確認を出す）、要件IDの対応を付け、基本設計の Q を決める。~~権限マトリクス~~（2026-10-10 に下書き、2026-10-11 に `/review-docs`（14件）を反映：[permissions.md](design/permissions.md)）、~~Q-020（画面遷移の抜け）~~（2026-10-11 に決定：[screens.md](design/screens.md)）、~~Q-017（端末に覚える内容）~~（2026-10-12 に決定：[auth-flow.md](design/auth-flow.md)）、構成図とワイヤーフレーム
 
 各ステップは「作る → `/review-docs` → 直す → `/compound`」で進める。
 
@@ -106,7 +106,8 @@
 - [ ] 始める前に「デプロイとテーブル定義の変更（マイグレーション）の手順書」を作る（テーブル定義の変更は戻せないため。ADR 0003 の「C で書き直すときの方針」）
 - [ ] Vite＋React＋TypeScript の構成を作り、モックの画面を React の部品に書き直す（ADR 0004）
 - [ ] リアルタイムの共有（NFR-003）：Durable Objects ＋ WebSocket で「行った」の変更を配る
-- [ ] `localStorage` の読み書きを API（Hono＋D1）に置き換える
+- [ ] `localStorage` の読み書きを API（Hono＋D1）に置き換える（端末が覚えるメンバーだけは `localStorage` に残す：Q-017）
+- [ ] iPhone の Safari と Chrome で、しばらく開かないと `localStorage` とログインの状態が消えるかを実機で確かめる（Q-017）
 - [ ] 本物の招待URL（匿名認証は使わない：ADR 0003）
 - [ ] グループ設定：グループ名の変更、管理できる人、メンバーの削除、グループの削除、退出（最後の1人ならグループも削除）
 - [ ] 検索に出すページ（トップ、使い方、プライバシーポリシー）を素の HTML で作る。アプリの画面に `noindex`、sitemap、Google Search Console への登録（NFR-019、[architecture](design/architecture.md) の「検索に出すページと出さないページ」）
