@@ -1,6 +1,6 @@
 # データモデル
 
-状態：下書き（2026-10-12：Q-025 を決めて、`groups.last_opened_on` と、グループを開くときの更新を足した。2026-10-11：Q-020 の `/review-docs`（21件）を受けて、「行った」の付け外しなどが0行のときに読み直して 404・403 を返す決まりと、503 の理由を足した。2026-10-11：権限マトリクスの `/review-docs`（14件）を受けて、「作成者のみ」は紐づいた作成者だけが通る形にし、別の名前で紐づけたときの戻し方、10グループのトリガーの条件、ID トークンを確かめられないときのエラー、NFR-006 (12)(13) を足した。2026-10-10：[ADR 0003](../adr/0003-backend-selection.md) が案 C（Cloudflare Workers＋Hono＋D1、認証だけ Firebase Authentication）に決まったので、Firestore の版から D1 の版に書き直した。元の版は git の履歴にある。形は [spike/migrations/0001_init.sql](../../spike/migrations/0001_init.sql) の試作をもとにし、試作から変えたところは「試作からの変更」に書いた。2026-10-10 にユーザーと決めた：作成者はメンバーの印 `is_owner` で持つ（[ADR 0005](../adr/0005-owner-flag-on-member.md)）、メールアドレスは D1 に持たない、色は10色、紐づいたメンバーは本人だけが操作できる（Q-018）。同じ日の `/review-docs`（26件）を反映）
+状態：下書き（2026-10-12：`/review-docs`（24件）を受けて、最後に開かれた日の書き込みを読み取りと分けて失敗を無視する形にし、空にしない形にした。部屋の確かめに使う `room_key` を足し、ER図に2列を足した。問い合わせの保存期間を足した。2026-10-12：Q-025 を決めて、`groups.last_opened_on` と、グループを開くときの更新を足した。2026-10-11：Q-020 の `/review-docs`（21件）を受けて、「行った」の付け外しなどが0行のときに読み直して 404・403 を返す決まりと、503 の理由を足した。2026-10-11：権限マトリクスの `/review-docs`（14件）を受けて、「作成者のみ」は紐づいた作成者だけが通る形にし、別の名前で紐づけたときの戻し方、10グループのトリガーの条件、ID トークンを確かめられないときのエラー、NFR-006 (12)(13) を足した。2026-10-10：[ADR 0003](../adr/0003-backend-selection.md) が案 C（Cloudflare Workers＋Hono＋D1、認証だけ Firebase Authentication）に決まったので、Firestore の版から D1 の版に書き直した。元の版は git の履歴にある。形は [spike/migrations/0001_init.sql](../../spike/migrations/0001_init.sql) の試作をもとにし、試作から変えたところは「試作からの変更」に書いた。2026-10-10 にユーザーと決めた：作成者はメンバーの印 `is_owner` で持つ（[ADR 0005](../adr/0005-owner-flag-on-member.md)）、メールアドレスは D1 に持たない、色は10色、紐づいたメンバーは本人だけが操作できる（Q-018）。同じ日の `/review-docs`（26件）を反映）
 
 ## 考え方
 
@@ -24,6 +24,8 @@ erDiagram
     text name "グループ名（REQ-010）"
     text manage_by "everyone または owner（REQ-044）"
     text created_at
+    text last_opened_on "最後に開かれた日（NFR-010）"
+    text room_key UK "部屋の URL に使う、グループIDの SHA-256"
   }
   MEMBERS {
     integer id PK "使い回さない番号（AUTOINCREMENT）"
@@ -63,7 +65,8 @@ erDiagram
 | `name` | TEXT | `CHECK (length(name) BETWEEN 1 AND 400)`。見た目の1〜20文字は API で数える。ここは大量のデータを書かれないための、余裕のある上限 | REQ-010、NFR-006 (8) |
 | `manage_by` | TEXT | `DEFAULT 'everyone' CHECK (manage_by IN ('everyone', 'owner'))` | REQ-044 |
 | `created_at` | TEXT | 作った日時（UTC の ISO 8601） | NFR-010 |
-| `last_opened_on` | TEXT | 最後に開かれた日（日本時間の日付 `YYYY-MM-DD`。時刻は持たない）。直近30日に開かれたグループを数えるため（2026-10-12：Q-025） | NFR-010 |
+| `last_opened_on` | TEXT | 最後に開かれた日（日本時間の日付 `YYYY-MM-DD`。時刻は持たない）。作るときにその日の日付を入れる（空にしない）。直近30日に開かれたグループを数えるため（2026-10-12：Q-025） | NFR-010 |
+| `room_key` | TEXT | `UNIQUE`。グループIDの SHA-256（16進）。部屋の URL に入れ、Worker が部屋につなぐ前に、この列で引いてグループがあることを確かめる（グループIDを URL に出さないため。2026-10-12：Q-031 の `/review-docs` #3） | NFR-005・NFR-003 |
 
 作成者はこの表に持たない（下の「作成者」）。
 
@@ -158,7 +161,7 @@ erDiagram
 
 **D1 にはメールアドレスを持たない**（2026-10-10 にユーザーと決めた）。Firebase Authentication がすでに持っていて、マイページ（REQ-033）は画面が Firebase の SDK から読める。API が要るときは ID トークンの `email` と `email_verified` を見る。D1 に写すと、変えたときや退会のときに2か所を直す必要が出て、漏れたときの影響も広がる。
 
-問い合わせのフォーム（NFR-018）の返信先は、フォームに入れてもらう（ログインしていない人も使うため。表の形は Phase 2 で決める）。
+問い合わせのフォーム（NFR-018）の返信先は、フォームに入れてもらう（ログインしていない人も使うため。表の形は Phase 2 で決める）。返信先と本文は、対応が済んでから3か月で消す（2026-10-12：`/review-docs` #5。推奨の仮の値）。
 
 ### ログインしている人の扱い（API の共通の決まり）
 
@@ -199,7 +202,7 @@ erDiagram
 1つの batch：
 
 1. ログイン済みなら `accounts` に行を作る（`ON CONFLICT DO NOTHING`）
-2. `groups` を入れる
+2. `groups` を入れる（`last_opened_on` は今日の日付、`room_key` はグループIDの SHA-256 を API で計算して入れる）
 3. `members` に最初のメンバーを `is_owner = 1`、色 0、ログイン済みなら `uid` 付きで入れる。10グループに達していれば、トリガーでエラーになり、2. も取り消される（REQ-060）
 
 ### 参加する
@@ -216,7 +219,7 @@ erDiagram
 
 - 応答には、ほかのメンバーの `uid` を入れない。メンバーごとに「紐づいているか」と「自分か」だけを返す（`uid` を返すと、グループIDを知っている人が、別のグループにいる同じ人を照らし合わせられる：NFR-007）
 - グループIDを知っている人なら、ログインなしでも読める（NFR-005 と同じ強さ。ログインなしの人は証明書を持たないので、API ではメンバーかどうかを見分けられない）
-- 同じ batch で `UPDATE groups SET last_opened_on = ?今日 WHERE id = ? AND (last_opened_on IS NULL OR last_opened_on < ?今日)` を流す。同じ日の2回目からは0行で、書き込みはグループごとに1日1回まで（NFR-010。0行のときに書き込みに数えられないかは `meta.rows_written` で確かめる：要確認）。誰が開いたかは残さない
+- 読み取りの batch とは**別に**、応答を返した後（`ctx.waitUntil`）で `UPDATE groups SET last_opened_on = ?今日 WHERE id = ? AND last_opened_on < ?今日` を流す。失敗しても無視する（記録のための書き込みで、D1 の書き込みの枠だけが尽きた日も、地図を開けるようにするため。同じ batch に入れると、1文の失敗で読み取りも取り消される。2026-10-12：`/review-docs` #1）。同じ日の2回目からは0行で、書き込みはグループごとに1日1回まで（NFR-010。0行のときに書き込みに数えられないかは `meta.rows_written` で確かめる：要確認）。誰が開いたかは残さない。テストに「この書き込みが失敗しても開ける」を入れる
 
 ### 退出・削除・退会
 
