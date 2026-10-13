@@ -12,6 +12,7 @@
 | [design/architecture.md](design/architecture.md) | システム構成図（清書：[architecture.drawio.svg](design/architecture.drawio.svg)）、使うサービスと無料枠、運用（監視、エラー、使い切られる対策）、開発環境 | 下書き（2026-10-12：Q-025〜Q-027・Q-030・Q-031 を決め、構成図の清書を足した） |
 | [design/data-model.md](design/data-model.md) | ER図、D1 のテーブル、保存先で守るもの（NFR-006）の対応 | 下書き（2026-10-12：最後に開かれた日を足した） |
 | [design/auth-flow.md](design/auth-flow.md) | 認証の流れ（ログインなしで参加 → ログインして紐づけ → 退会）のシーケンス図 | 下書き（2026-10-12：「端末が覚えるもの」を足した） |
+| [design/api.md](design/api.md) | API の一覧（URL、本文、応答、断るときの理由） | 下書き（2026-10-13：作成・参加・開く・「行った」） |
 | [design/permissions.md](design/permissions.md) | 権限マトリクス（誰が何をできるか、どこで守るか） | 下書き（2026-10-12：共用の端末の行を足した） |
 | [design/screens.md](design/screens.md) | 画面一覧と画面遷移図、グループの画面の中身、確認ダイアログ、知らせ（ワイヤーフレーム：[wireframes.drawio.svg](design/wireframes.drawio.svg)） | 下書き（2026-10-12：グループの画面の中身とワイヤーフレームを足した） |
 | [design/privacy.md](design/privacy.md) | プライバシーポリシーに書くこと（法律の調べた結果とチェックリスト） | 下書き（2026-10-12：Q-028 で作った） |

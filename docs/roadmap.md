@@ -4,7 +4,7 @@
 
 ## いまどこ？
 
-**Phase 1（基本設計）。7. まで済み、実装の前の道具の見直しと開発環境を用意し、D1 のテーブル定義とその制約のテストを作った（2026-10-12）。次は、保存先で守るもの（NFR-006）のうち API で守るものを、Hono の API とテストで作る。そのほかの残りは OGP、LICENSE と、運営者の氏名・住所の出し方（[privacy](design/privacy.md)）**（2026-10-12。次のセッションへの引き継ぎ）。
+**Phase 1（基本設計）。7. まで済み、実装の前の道具の見直しと開発環境を用意し、D1 のテーブル定義とその制約のテストを作った（2026-10-12）。API で守るもののうち、グループの作成・参加・開く・「行った」を作った（2026-10-13：[api](design/api.md)）。次は、紐づけ・名前の変更・退出・管理・退会の API とテスト。そのほかの残りは OGP、LICENSE と、運営者の氏名・住所の出し方（[privacy](design/privacy.md)）**（2026-10-12。次のセッションへの引き継ぎ）。
 - 2026-10-12（終わり）：実装の前の道具の見直し（下の「工程ごとの道具の見直し」）。足したもの：`.claude/rules/api.md`、`access-reviewer`、GitHub Actions のテスト。開発環境はリポジトリの直下に1つの `package.json` で作った（[architecture](design/architecture.md) の「リポジトリの構成」）
 - 要件定義は 2026-10-04 に一度確定したが、その後に足したもの（検索 NFR-019、独自ドメイン NFR-020、リアルタイム NFR-003 の見直し、名前の重複を保存先で守る NFR-006 (11)、確認メールの流れなど）があるので、requirements・use-cases・用語集は「レビュー待ち」に戻っている。小さく試した後にまとめて見直して「確定」にする
 - 技術の方向：
@@ -64,6 +64,8 @@
 - [ ] 保存先で守るもの（NFR-006 の (1)〜(13)）を実装してテストする（API と D1 の制約を Vitest で。[権限マトリクス](design/permissions.md)の × の欄）
   - [x] D1 の制約（2026-10-12：[migrations/0001_init.sql](../migrations/0001_init.sql)、[api/test/schema.test.ts](../api/test/schema.test.ts)。トリガーと部分 `UNIQUE` はローカルで通った。本物の D1 では Phase 2 の最初に確かめる〔未〕）
   - [ ] API で守るもの（ID トークンの確かめ、メンバーの番号と `uid`、「作成者のみ」、0行のときの理由。終わったら `access-reviewer` でレビューする）
+    - [x] ID トークンの確かめ、グループの作成・参加・開く・「行った」（2026-10-13：[api](design/api.md)、`api/test/groups-api.test.ts`）
+    - [ ] 紐づけ、名前の変更、退出、メンバーの削除・グループ名の変更・グループの削除・管理できる人の変更、退会、グループ一覧
 - [x] 追加する画面を決める → [design/screens.md](design/screens.md)（2026-10-12：Q-016・Q-020 で、検索に出すページとアプリの画面、URL を決めた）
 - [ ] 固定の OGP 画像と文言を用意する
 
@@ -121,8 +123,10 @@
   - 〔未〕WAF のレート制限の回数と、止めたときの 429 を画面が見分けられるか（Q-031）
   - 〔未〕`not_found_handling` と `_redirects` の 200 リライトを合わせた動き、`workers.dev` を切る（Q-031）
   - 〔未〕集計用の D1 の読み取りだけの API トークンを作れるか（Q-025）
+  - 〔未〕グループを開く・「行った」の付け外しで、本物の D1 が数える `rows_read`・`rows_written`。使い切られる見積もり（[architecture](design/architecture.md) の「無料枠を使い切られないために」）を測り直し、レート制限の回数と、応答を数秒キャッシュするかを決める
+  - 〔未〕Turnstile のウィジェットのドメインの制限と、応答の `hostname` を確かめるか（[api](design/api.md)）
   - 〔未〕Durable Objects の動いている時間（GB 秒）と眠れる書き方の効き方
-  - 〔未〕無料枠を超えたときに API が実際に返すエラー（D1・Workers・Durable Objects）
+  - 〔未〕無料枠を超えたときに API が実際に返すエラー（D1・Workers・Durable Objects）。D1 の枠切れのエラーの文が分かったら、API の 503 に `reason: "quota"` を付けて「一時的な失敗」と分ける（いまは全部 `temporary`：[api](design/api.md)）
 - [ ] 公開の前に、試作の Worker（`tabikaigi-spike.tabikaigi.workers.dev`）と試作の D1 を消す（本番と同じアカウントの無料枠を使い、公開されたままのため）
 - [ ] 独自ドメインで公開し（NFR-020）、友達グループで使ってもらう
 
