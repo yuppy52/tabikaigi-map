@@ -22,9 +22,13 @@ export function nameKey(name: string): string {
 /**
  * 見えない文字・向きを変える文字（制御文字、幅のない空白など）。見た目が空の名前や、
  * 「ゆう」と見た目が同じ別の名前（なりすまし）を作れてしまうので断る。
- * ただし絵文字に使う ZWJ（U+200D、👨‍👩‍👧 をつなぐ）と、旗の絵文字に使うタグ文字（U+E0020〜U+E007F）は通す
+ * ただし絵文字に使う ZWJ（U+200D、👨‍👩‍👧 をつなぐ）と、旗の絵文字に使うタグ文字（U+E0020〜U+E007F）は通す。
+ * 結合文字の仲間（NFKC でも消えない）で見えないもの：組み合わせを表す記号（U+034F）、モンゴル文字の切り替え（U+180B〜U+180F）、
+ * 異体字の切り替え（U+FE00〜U+FE0F、U+E0100〜U+E01EF）。記号の仲間で見えないもの：点字の空白（U+2800）。
+ * 異体字の切り替えのうち、絵文字の形を選ぶ U+FE0E・U+FE0F（❤️ など）だけは、絵文字の直後なら通す
  */
-const INVISIBLE = /(?![\u200D\u{E0020}-\u{E007F}])[\p{Cc}\p{Cf}\p{Cs}\p{Co}\p{Zl}\p{Zp}\u3164\u115F\u1160\uFFA0]/u;
+const INVISIBLE =
+  /(?![\u200D\u{E0020}-\u{E007F}])[\p{Cc}\p{Cf}\p{Cs}\p{Co}\p{Zl}\p{Zp}\u3164\u115F\u1160\uFFA0\u034F\u180B-\u180F\u2800\uFE00-\uFE0D\u{E0100}-\u{E01EF}]|(?<!\p{Emoji})[\uFE0E\uFE0F]/u;
 
 export type NameCheck = { ok: true; name: string } | { ok: false };
 

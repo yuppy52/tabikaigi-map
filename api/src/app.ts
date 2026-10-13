@@ -10,8 +10,10 @@ import {
   type KeyProvider,
   type VerifiedUser,
 } from "./firebase-auth";
-import { createGroup, joinGroup, readGroup, setAccountVisit, setMemberVisit, touchGroup, type WriteResult } from "./groups";
+import { createGroup, joinGroup, readGroup, setAccountVisit, setMemberVisit, touchGroup } from "./groups";
 import { isGroupId } from "./ids";
+import { deleteGroup, deleteMember, leaveMember, linkMember, renameGroup, renameMember, setManageBy, type Refused } from "./manage";
+import { listMyGroups, listMyVisits, withdraw } from "./account";
 import { checkName, GROUP_NAME, MEMBER_NAME } from "./names";
 import { TurnstileUnavailableError, type TurnstileVerifier } from "./turnstile";
 
@@ -32,11 +34,29 @@ function requireUser(c: C): { user: VerifiedUser; error?: undefined } | { user?:
   return user ? { user } : { error: fail(c, 401, "login_required") };
 }
 
-/** 書き込みの結果を応答にする（0行だったときの理由は、groups.ts で読み直して分けてある） */
-function writeResponse(c: C, r: WriteResult) {
-  if (r.ok) return c.json({ ok: true });
-  return fail(c, r.reason === "member_linked" ? 403 : 404, r.reason);
+/** 断った理由（groups.ts・manage.ts が返すもの） */
+type Reason = Refused | "already_member" | "group_limit" | "group_full" | "name_taken";
+
+/** 断った理由ごとの状態コード（「ない」は 404、「権限がない」は 403、「ほかと重なる・上限」は 409）。理由を足したら型の確かめで漏れに気づく */
+const STATUS: Record<Reason, ContentfulStatusCode> = {
+  group_not_found: 404,
+  member_not_found: 404,
+  member_linked: 403,
+  not_allowed: 403,
+  already_member: 409,
+  group_limit: 409,
+  group_full: 409,
+  name_taken: 409,
+};
+
+/** 書き込みの結果を応答にする（0行だったときの理由は、groups.ts・manage.ts で読み直して分けてある） */
+function writeResponse(c: C, r: { ok: true } | { ok: false; reason: Reason }, body: Record<string, unknown> = { ok: true }) {
+  if (r.ok) return c.json(body);
+  return fail(c, STATUS[r.reason], r.reason);
 }
+
+/** 退会の直前にログインし直したとみなす時間（秒）。ID トークンの auth_time がこれより古ければ断る（NFR-006 (6)） */
+export const REAUTH_SECONDS = 5 * 60;
 
 /** URL の県の番号（1〜47 の整数だけ） */
 function parsePref(s: string): number | null {
@@ -179,6 +199,90 @@ export function createApp(deps: Deps) {
   };
   app.put("/groups/:groupId/my-visits/:pref", myVisit(true));
   app.delete("/groups/:groupId/my-visits/:pref", myVisit(false));
+
+  /** URL のメンバーの番号を読む。形が違えば null */
+  const memberIdOf = (c: C) => parseMemberId(c.req.param("memberId") ?? "");
+
+  // メンバーをアカウントに紐づける（REQ-037〜REQ-040・REQ-043）。visits：merge（合算）か discard（アカウントのデータを使う）
+  app.post("/groups/:groupId/members/:memberId/link", async (c) => {
+    const { user, error } = requireUser(c);
+    if (error) return error;
+    const memberId = memberIdOf(c);
+    const body = await readBody(c);
+    if (memberId === null || (body.visits !== "merge" && body.visits !== "discard")) return fail(c, 400, "bad_request");
+    return writeResponse(c, await linkMember(c.env.DB, c.req.param("groupId")!, memberId, user.uid, body.visits === "merge"));
+  });
+
+  // 自分に紐づいたメンバーの名前を変える（REQ-014・REQ-015）
+  app.put("/groups/:groupId/members/:memberId/name", async (c) => {
+    const { user, error } = requireUser(c);
+    if (error) return error;
+    const memberId = memberIdOf(c);
+    if (memberId === null) return fail(c, 400, "bad_request");
+    const name = checkName((await readBody(c)).name, MEMBER_NAME);
+    if (!name.ok) return fail(c, 400, "bad_name");
+    return writeResponse(c, await renameMember(c.env.DB, c.req.param("groupId")!, memberId, user.uid, name.name));
+  });
+
+  // 自分で退出する（REQ-049・REQ-050）。最後の1人ならグループも消え、groupDeleted: true を返す
+  app.post("/groups/:groupId/members/:memberId/leave", async (c) => {
+    const memberId = memberIdOf(c);
+    if (memberId === null) return fail(c, 400, "bad_request");
+    const r = await leaveMember(c.env.DB, c.req.param("groupId")!, memberId, c.get("user")?.uid ?? null);
+    return writeResponse(c, r, r.ok ? { ok: true, groupDeleted: r.groupDeleted } : undefined);
+  });
+
+  // 管理できる人がメンバーを削除する（REQ-048）
+  app.delete("/groups/:groupId/members/:memberId", async (c) => {
+    const memberId = memberIdOf(c);
+    if (memberId === null) return fail(c, 400, "bad_request");
+    const r = await deleteMember(c.env.DB, c.req.param("groupId")!, memberId, c.get("user")?.uid ?? null);
+    return writeResponse(c, r, r.ok ? { ok: true, groupDeleted: r.groupDeleted } : undefined);
+  });
+
+  // グループ名を変える（REQ-046）
+  app.put("/groups/:groupId/name", async (c) => {
+    const name = checkName((await readBody(c)).name, GROUP_NAME);
+    if (!name.ok) return fail(c, 400, "bad_name");
+    return writeResponse(c, await renameGroup(c.env.DB, c.req.param("groupId")!, c.get("user")?.uid ?? null, name.name));
+  });
+
+  // 管理できる人を変える（REQ-045）。ログイン済みの作成者だけ
+  app.put("/groups/:groupId/manage-by", async (c) => {
+    const { user, error } = requireUser(c);
+    if (error) return error;
+    const manageBy = (await readBody(c)).manageBy;
+    if (manageBy !== "everyone" && manageBy !== "owner") return fail(c, 400, "bad_request");
+    return writeResponse(c, await setManageBy(c.env.DB, c.req.param("groupId")!, user.uid, manageBy));
+  });
+
+  // グループを削除する（REQ-047）
+  app.delete("/groups/:groupId", async (c) => {
+    return writeResponse(c, await deleteGroup(c.env.DB, c.req.param("groupId")!, c.get("user")?.uid ?? null));
+  });
+
+  // グループ一覧（REQ-032）
+  app.get("/me/groups", async (c) => {
+    const { user, error } = requireUser(c);
+    if (error) return error;
+    return c.json({ groups: await listMyGroups(c.env.DB, user.uid) });
+  });
+
+  // マイページのアカウントの「行った」（REQ-033）
+  app.get("/me/visits", async (c) => {
+    const { user, error } = requireUser(c);
+    if (error) return error;
+    return c.json({ prefs: await listMyVisits(c.env.DB, user.uid) });
+  });
+
+  // 退会する（REQ-036）。直前にログインし直していなければ断る（改造した画面から、ログインし直さずに呼ばせない）
+  app.delete("/me", async (c) => {
+    const { user, error } = requireUser(c);
+    if (error) return error;
+    if (Date.now() / 1000 - user.authTime > REAUTH_SECONDS) return fail(c, 403, "reauth_required");
+    await withdraw(c.env.DB, user.uid);
+    return c.json({ ok: true });
+  });
 
   // 知らない API は JSON で 404
   app.notFound((c) => c.json({ error: "not_found" }, 404));
