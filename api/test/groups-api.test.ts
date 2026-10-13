@@ -227,12 +227,18 @@ describe("参加する（REQ-004・REQ-005・REQ-008）", () => {
 
   it("見えない文字・向きを変える文字の名前は 400（なりすましと見た目が空の名前を防ぐ）", async () => {
     const { groupId } = await create("ゆう");
-    for (const name of ["ゆう\u200B", "\u3164", "\u2060", "ゆ\u202Eう", "ゆ\nう", "ゆ\u0000う"]) {
+    const invisible = ["ゆう\u200B", "\u3164", "\u2060", "ゆ\u202Eう", "ゆ\nう", "ゆ\u0000う"];
+    // 結合文字・記号の仲間で見えないもの（異体字の切り替え、組み合わせの記号、モンゴル文字の切り替え、点字の空白）
+    invisible.push("ゆう\uFE00", "ゆう\uFE0F", "ゆう\u{E0100}", "ゆ\u034Fう", "ゆう\u180B", "\u2800");
+    for (const name of invisible) {
       expect((await join(groupId, name)).json).toEqual({ error: "bad_name" });
     }
     // 絵文字の家族（ZWJ でつなぐ）と、旗の絵文字（タグ文字）は通す
     expect((await join(groupId, "👨‍👩‍👧")).status).toBe(201);
     expect((await join(groupId, "🏴󠁧󠁢󠁳󠁣󠁴󠁿")).status).toBe(201);
+    // 絵文字の直後の、絵文字の形を選ぶ文字（❤️、1️⃣）は通す
+    expect((await join(groupId, "ゆう\u2764\uFE0F")).status).toBe(201);
+    expect((await join(groupId, "1\uFE0F\u20E3")).status).toBe(201);
   });
 
   it("同じ名前（全角半角・大文字小文字の違いも同じ）は 409 name_taken と、その人の番号と紐づいているか（REQ-011・REQ-012）", async () => {

@@ -8,7 +8,7 @@ import { nameKey } from "./names";
 export const MAX_MEMBERS = 20;
 
 /** D1 の制約のエラーを見分ける（どの制約かはエラーの文で分かる） */
-function constraintError(e: unknown): "name_taken" | "already_member" | "group_limit" | "group_full" | null {
+export function constraintError(e: unknown): "name_taken" | "already_member" | "group_limit" | "group_full" | null {
   const msg = e instanceof Error ? e.message : "";
   if (/UNIQUE constraint failed: members\.group_id, members\.name_key/.test(msg)) return "name_taken";
   if (/UNIQUE constraint failed: members\.group_id, members\.uid/.test(msg)) return "already_member";

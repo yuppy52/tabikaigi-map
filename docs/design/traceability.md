@@ -1,6 +1,6 @@
 # 要件IDの対応表
 
-状態：下書き（2026-10-13：[api](api.md) を足して作り直した。2026-10-12：`/review-docs`（24件）を受けて、見出しの要件IDを数え、冒頭で名前を挙げただけのものを外し、「要件に対応しない設計」を足した。2026-10-12：要件IDの対応を付けるために作った）
+状態：下書き（2026-10-13：[api](api.md) に紐づけ・管理・退会などを足したので作り直した。2026-10-13：[api](api.md) を足して作り直した。2026-10-12：`/review-docs`（24件）を受けて、見出しの要件IDを数え、冒頭で名前を挙げただけのものを外し、「要件に対応しない設計」を足した。2026-10-12：要件IDの対応を付けるために作った）
 
 各要件（[requirements](../requirements.md) の REQ・NFR）を、設計書と ADR のどこで扱っているかの一覧。設計書の本文に書いた要件ID（`（REQ-012）` の形）を集めて作った。括弧の中は節の名前。画面の配置は [ワイヤーフレーム](wireframes.drawio.svg)、構成は [構成図](architecture.drawio.svg) も見る。
 
@@ -29,8 +29,8 @@
 | REQ-011 | 「同じ名前」かどうかは、全角と半角（英数字・記号・空白・カタカナ）、英字の大… | [data-model](data-model.md)（ER図、members（メンバー））<br/>[0003-backend-selection](../adr/0003-backend-selection.md)（保存先で守るもの（NFR-006）、C で書き直すときの方針（2026-10-04 の `doc-reviewer` の指摘から）） |
 | REQ-012 | 参加するときに、紐づいていないメンバーと同じ名前を入れたら、ログインしていな… | [api](api.md)（一覧、参加で同じ名前がいたとき）<br/>[auth-flow](auth-flow.md)（端末が覚えるもの（Q-017）、1. ログインなしで参加する）<br/>[permissions](permissions.md)（グループの中の操作）<br/>[screens](screens.md)（参加の画面、確認ダイアログ） |
 | REQ-013 | アカウントに紐づいたメンバーと同じ名前では、ほかの人は参加できない（紐づいた… | [api](api.md)（一覧、参加で同じ名前がいたとき）<br/>[auth-flow](auth-flow.md)（1. ログインなしで参加する）<br/>[data-model](data-model.md)（作成者）<br/>[permissions](permissions.md)（グループの中の操作、作成者の別の入口）<br/>[screens](screens.md)（参加の画面） |
-| REQ-014 | 名前を変えられるのは、ログインしている本人だけ | [api](api.md)（まだ作っていないもの）<br/>[data-model](data-model.md)（members（メンバー）、ログインしている人の扱い（API の共通の決まり））<br/>[permissions](permissions.md)（グループの中の操作）<br/>[screens](screens.md)（グループ設定の中身） |
-| REQ-015 | ログインせずに参加した人の名前は、誰も変えられない（本人を区別できないため） | [data-model](data-model.md)（ログインしている人の扱い（API の共通の決まり））<br/>[permissions](permissions.md)（グループの中の操作）<br/>[screens](screens.md)（グループ設定の中身） |
+| REQ-014 | 名前を変えられるのは、ログインしている本人だけ | [api](api.md)（一覧）<br/>[data-model](data-model.md)（members（メンバー）、ログインしている人の扱い（API の共通の決まり））<br/>[permissions](permissions.md)（グループの中の操作）<br/>[screens](screens.md)（グループ設定の中身） |
+| REQ-015 | ログインせずに参加した人の名前は、誰も変えられない（本人を区別できないため） | [api](api.md)（一覧、誰が通るか）<br/>[data-model](data-model.md)（ログインしている人の扱い（API の共通の決まり））<br/>[permissions](permissions.md)（グループの中の操作）<br/>[screens](screens.md)（グループ設定の中身） |
 
 ## 地図
 
@@ -70,20 +70,20 @@
 | REQ-060 | アカウントに紐づけられるメンバーは、10グループまで（グループを作る、参加す… | [api](api.md)（一覧）<br/>[auth-flow](auth-flow.md)（2. ログインして、いまのグループのメンバーを紐づける、3. ログインした状態でグループに入る）<br/>[data-model](data-model.md)（members（メンバー）、グループを作る、参加する ほか1か所）<br/>[permissions](permissions.md)（グループの外の操作、グループの中の操作）<br/>[screens](screens.md)（知らせ） |
 | REQ-030 | ログインしている人の「行った」はアカウントに保存され、参加している全グループ… | [api](api.md)（一覧）<br/>[auth-flow](auth-flow.md)（3. ログインした状態でグループに入る）<br/>[data-model](data-model.md)（account_visits（アカウントの「行った」））<br/>[permissions](permissions.md)（グループの外の操作） |
 | REQ-031 | 紐づいたメンバーの「行った」と名前は、本人しか編集できない（信頼ベースの例外… | [permissions](permissions.md)（グループの中の操作） |
-| REQ-032 | グループ一覧：参加しているグループの一覧から、別のグループを開ける | [api](api.md)（まだ作っていないもの）<br/>[permissions](permissions.md)（グループの外の操作）<br/>[screens](screens.md)（画面一覧、グループの画面の中身） |
-| REQ-033 | マイページ：アカウントの「行った」とメールアドレスを見られる | [data-model](data-model.md)（メールアドレス）<br/>[permissions](permissions.md)（グループの外の操作） |
+| REQ-032 | グループ一覧：参加しているグループの一覧から、別のグループを開ける | [api](api.md)（一覧）<br/>[permissions](permissions.md)（グループの外の操作）<br/>[screens](screens.md)（画面一覧、グループの画面の中身） |
+| REQ-033 | マイページ：アカウントの「行った」とメールアドレスを見られる | [api](api.md)（一覧）<br/>[data-model](data-model.md)（メールアドレス）<br/>[permissions](permissions.md)（グループの外の操作） |
 | REQ-034 | ログアウトすると、トップを開く | [auth-flow](auth-flow.md)（4. ログアウトする）<br/>[permissions](permissions.md)（グループの外の操作）<br/>[screens](screens.md)（操作の後に開く画面） |
 | REQ-035 | ログアウトした後にグループを開くと、名前の入力から入る（ログインし直して入る… | [auth-flow](auth-flow.md)（端末が覚えるもの（Q-017）、4. ログアウトする）<br/>[data-model](data-model.md)（作成者）<br/>[permissions](permissions.md)（グループの中の操作、作成者の別の入口）<br/>[screens](screens.md)（参加の画面） |
-| REQ-036 | 退会できる | [api](api.md)（まだ作っていないもの）<br/>[data-model](data-model.md)（members（メンバー）、退出・削除・退会）<br/>[permissions](permissions.md)（グループの外の操作）<br/>[screens](screens.md)（確認ダイアログ、操作の後に開く画面）<br/>[0003-backend-selection](../adr/0003-backend-selection.md)（招待URLとドメイン、決定の前に確かめること） |
+| REQ-036 | 退会できる | [api](api.md)（一覧）<br/>[data-model](data-model.md)（members（メンバー）、退出・削除・退会）<br/>[permissions](permissions.md)（グループの外の操作）<br/>[screens](screens.md)（確認ダイアログ、操作の後に開く画面）<br/>[0003-backend-selection](../adr/0003-backend-selection.md)（招待URLとドメイン、決定の前に確かめること） |
 
 ## ログインなしで参加していた人がログインしたとき
 
 | ID | 要件（要約） | 設計での扱い |
 |---|---|---|
-| REQ-037 | ログインなしでグループに参加していた人が、そのグループを開いたままアカウント… | [api](api.md)（まだ作っていないもの）<br/>[auth-flow](auth-flow.md)（端末が覚えるもの（Q-017）、2. ログインして、いまのグループのメンバーを紐づける、確認メールが済んだ後（REQ-057・NFR-006 (10)））<br/>[data-model](data-model.md)（members（メンバー）、作成者、紐づけ）<br/>[permissions](permissions.md)（人の区別、グループの中の操作）<br/>[screens](screens.md)（画面遷移図）<br/>[0003-backend-selection](../adr/0003-backend-selection.md)（匿名からログインへ（REQ-037〜REQ-043）） |
-| REQ-038 | 紐づけるときの「行った」は、下の表のように扱う | [api](api.md)（まだ作っていないもの）<br/>[auth-flow](auth-flow.md)（2. ログインして、いまのグループのメンバーを紐づける）<br/>[data-model](data-model.md)（紐づけ）<br/>[permissions](permissions.md)（グループの中の操作）<br/>[screens](screens.md)（確認ダイアログ）<br/>[0003-backend-selection](../adr/0003-backend-selection.md)（匿名からログインへ（REQ-037〜REQ-043）） |
-| REQ-039 | 開いていたグループに、自分のアカウントに紐づいたメンバーがすでにいる（別の端… | [api](api.md)（一覧、まだ作っていないもの）<br/>[auth-flow](auth-flow.md)（端末が覚えるもの（Q-017）、2. ログインして、いまのグループのメンバーを紐づける、3. ログインした状態でグループに入る）<br/>[data-model](data-model.md)（作成者、紐づけ）<br/>[permissions](permissions.md)（グループの中の操作、作成者の別の入口）<br/>[screens](screens.md)（画面一覧、画面遷移図、確認ダイアログ ほか1か所）<br/>[0003-backend-selection](../adr/0003-backend-selection.md)（匿名からログインへ（REQ-037〜REQ-043）、保存先で守るもの（NFR-006）、2026-10-03 の推奨（案 A） ほか1か所） |
-| REQ-040 | 同じ端末からログインなしで参加していた他のグループは、ログインしたときには何… | [api](api.md)（まだ作っていないもの）<br/>[auth-flow](auth-flow.md)（端末が覚えるもの（Q-017）、2. ログインして、いまのグループのメンバーを紐づける、確認メールが済んだ後（REQ-057・NFR-006 (10)） ほか1か所）<br/>[data-model](data-model.md)（紐づけ）<br/>[permissions](permissions.md)（人の区別、グループの中の操作、作成者の別の入口）<br/>[screens](screens.md)（画面遷移図、操作の後に開く画面）<br/>[0003-backend-selection](../adr/0003-backend-selection.md)（匿名からログインへ（REQ-037〜REQ-043）） |
+| REQ-037 | ログインなしでグループに参加していた人が、そのグループを開いたままアカウント… | [api](api.md)（一覧）<br/>[auth-flow](auth-flow.md)（端末が覚えるもの（Q-017）、2. ログインして、いまのグループのメンバーを紐づける、確認メールが済んだ後（REQ-057・NFR-006 (10)））<br/>[data-model](data-model.md)（members（メンバー）、作成者、紐づけ）<br/>[permissions](permissions.md)（人の区別、グループの中の操作）<br/>[screens](screens.md)（画面遷移図）<br/>[0003-backend-selection](../adr/0003-backend-selection.md)（匿名からログインへ（REQ-037〜REQ-043）） |
+| REQ-038 | 紐づけるときの「行った」は、下の表のように扱う | [api](api.md)（一覧）<br/>[auth-flow](auth-flow.md)（2. ログインして、いまのグループのメンバーを紐づける）<br/>[data-model](data-model.md)（紐づけ）<br/>[permissions](permissions.md)（グループの中の操作）<br/>[screens](screens.md)（確認ダイアログ）<br/>[0003-backend-selection](../adr/0003-backend-selection.md)（匿名からログインへ（REQ-037〜REQ-043）） |
+| REQ-039 | 開いていたグループに、自分のアカウントに紐づいたメンバーがすでにいる（別の端… | [api](api.md)（一覧）<br/>[auth-flow](auth-flow.md)（端末が覚えるもの（Q-017）、2. ログインして、いまのグループのメンバーを紐づける、3. ログインした状態でグループに入る）<br/>[data-model](data-model.md)（作成者、紐づけ）<br/>[permissions](permissions.md)（グループの中の操作、作成者の別の入口）<br/>[screens](screens.md)（画面一覧、画面遷移図、確認ダイアログ ほか1か所）<br/>[0003-backend-selection](../adr/0003-backend-selection.md)（匿名からログインへ（REQ-037〜REQ-043）、保存先で守るもの（NFR-006）、2026-10-03 の推奨（案 A） ほか1か所） |
+| REQ-040 | 同じ端末からログインなしで参加していた他のグループは、ログインしたときには何… | [api](api.md)（一覧）<br/>[auth-flow](auth-flow.md)（端末が覚えるもの（Q-017）、2. ログインして、いまのグループのメンバーを紐づける、確認メールが済んだ後（REQ-057・NFR-006 (10)） ほか1か所）<br/>[data-model](data-model.md)（紐づけ）<br/>[permissions](permissions.md)（人の区別、グループの中の操作、作成者の別の入口）<br/>[screens](screens.md)（画面遷移図、操作の後に開く画面）<br/>[0003-backend-selection](../adr/0003-backend-selection.md)（匿名からログインへ（REQ-037〜REQ-043）） |
 
 ## ログインした人がグループに入るとき
 
@@ -91,20 +91,20 @@
 |---|---|---|
 | REQ-041 | 自分のアカウントに紐づいたメンバーがいれば、名前を入れずにそのまま開く | [auth-flow](auth-flow.md)（端末が覚えるもの（Q-017）、3. ログインした状態でグループに入る）<br/>[permissions](permissions.md)（グループの中の操作）<br/>[screens](screens.md)（画面遷移図）<br/>[0003-backend-selection](../adr/0003-backend-selection.md)（匿名からログインへ（REQ-037〜REQ-043）） |
 | REQ-042 | まだそのグループのメンバーでなく、端末が覚えているメンバーもいなければ（RE… | [auth-flow](auth-flow.md)（3. ログインした状態でグループに入る）<br/>[data-model](data-model.md)（ログインしている人の扱い（API の共通の決まり））<br/>[permissions](permissions.md)（グループの中の操作）<br/>[screens](screens.md)（画面遷移図）<br/>[0003-backend-selection](../adr/0003-backend-selection.md)（匿名からログインへ（REQ-037〜REQ-043）） |
-| REQ-043 | 本人確認：入れた名前と同じ名前の、紐づいていないメンバーがいれば「この人はあ… | [api](api.md)（参加で同じ名前がいたとき、まだ作っていないもの）<br/>[auth-flow](auth-flow.md)（端末が覚えるもの（Q-017）、3. ログインした状態でグループに入る）<br/>[data-model](data-model.md)（作成者）<br/>[permissions](permissions.md)（グループの中の操作、作成者の別の入口）<br/>[screens](screens.md)（参加の画面、確認ダイアログ）<br/>[0003-backend-selection](../adr/0003-backend-selection.md)（匿名からログインへ（REQ-037〜REQ-043）） |
+| REQ-043 | 本人確認：入れた名前と同じ名前の、紐づいていないメンバーがいれば「この人はあ… | [api](api.md)（一覧、参加で同じ名前がいたとき）<br/>[auth-flow](auth-flow.md)（端末が覚えるもの（Q-017）、3. ログインした状態でグループに入る）<br/>[data-model](data-model.md)（作成者）<br/>[permissions](permissions.md)（グループの中の操作、作成者の別の入口）<br/>[screens](screens.md)（参加の画面、確認ダイアログ）<br/>[0003-backend-selection](../adr/0003-backend-selection.md)（匿名からログインへ（REQ-037〜REQ-043）） |
 
 ## メンバーとグループの管理
 
 | ID | 要件（要約） | 設計での扱い |
 |---|---|---|
-| REQ-044 | 管理できる人（メンバーの削除、グループ名の変更、グループの削除ができる人）を… | [api](api.md)（まだ作っていないもの）<br/>[data-model](data-model.md)（ER図、groups（グループ））<br/>[permissions](permissions.md)（管理の操作） |
-| REQ-045 | 管理できる人を変えられるのは、ログインしている作成者だけ（ログインなしでは、… | [api](api.md)（まだ作っていないもの）<br/>[data-model](data-model.md)（作成者、管理できる人の操作）<br/>[permissions](permissions.md)（管理の操作）<br/>[screens](screens.md)（グループ設定の中身） |
-| REQ-046 | 管理できる人は、グループ名を変えられる | [api](api.md)（まだ作っていないもの）<br/>[permissions](permissions.md)（管理の操作） |
-| REQ-047 | 管理できる人は、グループを削除できる | [api](api.md)（まだ作っていないもの）<br/>[data-model](data-model.md)（members（メンバー）、退出・削除・退会）<br/>[permissions](permissions.md)（管理の操作）<br/>[screens](screens.md)（確認ダイアログ） |
-| REQ-048 | 管理できる人は、ほかのメンバーをグループから削除できる | [api](api.md)（まだ作っていないもの）<br/>[data-model](data-model.md)（退出・削除・退会）<br/>[permissions](permissions.md)（管理の操作）<br/>[screens](screens.md)（確認ダイアログ、知らせ） |
-| REQ-049 | メンバーは、管理できる人の設定に関係なく、自分でグループから退出できる | [api](api.md)（まだ作っていないもの）<br/>[data-model](data-model.md)（退出・削除・退会）<br/>[permissions](permissions.md)（グループの中の操作、管理の操作）<br/>[screens](screens.md)（確認ダイアログ） |
-| REQ-050 | 最後の1人が退出するときは、「グループも削除されます」と確認し、グループも削… | [api](api.md)（まだ作っていないもの）<br/>[data-model](data-model.md)（退出・削除・退会）<br/>[permissions](permissions.md)（グループの中の操作）<br/>[screens](screens.md)（確認ダイアログ） |
-| REQ-051 | 作成者のメンバーがいなくなったら（退出、削除、退会）、そのグループの作成者は… | [api](api.md)（グループを開いたときの応答）<br/>[auth-flow](auth-flow.md)（5. 退会する）<br/>[data-model](data-model.md)（members（メンバー）、作成者）<br/>[permissions](permissions.md)（管理の操作）<br/>[screens](screens.md)（グループ設定の中身、確認ダイアログ）<br/>[0005-owner-flag-on-member](../adr/0005-owner-flag-on-member.md)（結果） |
+| REQ-044 | 管理できる人（メンバーの削除、グループ名の変更、グループの削除ができる人）を… | [data-model](data-model.md)（ER図、groups（グループ））<br/>[permissions](permissions.md)（管理の操作） |
+| REQ-045 | 管理できる人を変えられるのは、ログインしている作成者だけ（ログインなしでは、… | [api](api.md)（一覧）<br/>[data-model](data-model.md)（作成者、管理できる人の操作）<br/>[permissions](permissions.md)（管理の操作）<br/>[screens](screens.md)（グループ設定の中身） |
+| REQ-046 | 管理できる人は、グループ名を変えられる | [api](api.md)（一覧）<br/>[permissions](permissions.md)（管理の操作） |
+| REQ-047 | 管理できる人は、グループを削除できる | [api](api.md)（一覧）<br/>[data-model](data-model.md)（members（メンバー）、退出・削除・退会）<br/>[permissions](permissions.md)（管理の操作）<br/>[screens](screens.md)（確認ダイアログ） |
+| REQ-048 | 管理できる人は、ほかのメンバーをグループから削除できる | [api](api.md)（一覧）<br/>[data-model](data-model.md)（退出・削除・退会）<br/>[permissions](permissions.md)（管理の操作）<br/>[screens](screens.md)（確認ダイアログ、知らせ） |
+| REQ-049 | メンバーは、管理できる人の設定に関係なく、自分でグループから退出できる | [api](api.md)（一覧）<br/>[data-model](data-model.md)（退出・削除・退会）<br/>[permissions](permissions.md)（グループの中の操作、管理の操作）<br/>[screens](screens.md)（確認ダイアログ） |
+| REQ-050 | 最後の1人が退出するときは、「グループも削除されます」と確認し、グループも削… | [api](api.md)（一覧）<br/>[data-model](data-model.md)（退出・削除・退会）<br/>[permissions](permissions.md)（グループの中の操作）<br/>[screens](screens.md)（確認ダイアログ） |
+| REQ-051 | 作成者のメンバーがいなくなったら（退出、削除、退会）、そのグループの作成者は… | [api](api.md)（一覧、誰が通るか、グループを開いたときの応答）<br/>[auth-flow](auth-flow.md)（5. 退会する）<br/>[data-model](data-model.md)（members（メンバー）、作成者）<br/>[permissions](permissions.md)（管理の操作）<br/>[screens](screens.md)（グループ設定の中身、確認ダイアログ）<br/>[0005-owner-flag-on-member](../adr/0005-owner-flag-on-member.md)（結果） |
 | REQ-052 | 作成者は「作成者のメンバー」で決まる（名前やアカウントでは決まらない） | [data-model](data-model.md)（members（メンバー）、作成者）<br/>[permissions](permissions.md)（人の区別、管理の操作、作成者の別の入口） |
 
 ## 使う環境と規模
