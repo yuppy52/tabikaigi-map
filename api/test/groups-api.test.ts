@@ -210,6 +210,34 @@ describe("参加する（REQ-004・REQ-005・REQ-008）", () => {
     expect(await join(groupId, "21人目")).toEqual({ status: 409, json: { error: "group_full" } });
   });
 
+  it("満員でも、すでにいる名前なら group_full でなく name_taken を返す（戻ってくる人：REQ-005・REQ-012）", async () => {
+    const uid = `uid-full-${Date.now()}`;
+    const t = await token(uid);
+    const { groupId, memberId } = await create("ゆう", { token: t });
+    for (let i = 2; i <= 20; i++) expect((await join(groupId, `メンバー${i}`)).status).toBe(201);
+    expect(await join(groupId, "メンバー2")).toMatchObject({ status: 409, json: { error: "name_taken", linked: false } });
+    expect(await join(groupId, "ゆう")).toEqual({
+      status: 409,
+      json: { error: "name_taken", memberId, linked: true },
+    });
+    // 全角半角だけが違う名前も、同じ名前として扱う
+    expect(await join(groupId, "ﾒﾝﾊﾞｰ2")).toMatchObject({ status: 409, json: { error: "name_taken" } });
+    // 自分のメンバーがいる人が別の名前で入ろうとしたら already_member（満員より先に）
+    expect(await join(groupId, "べつの名前", t)).toEqual({ status: 409, json: { error: "already_member" } });
+    const count = await env.DB.prepare("SELECT count(*) AS n FROM members WHERE group_id = ?").bind(groupId).first<{ n: number }>();
+    expect(count!.n).toBe(20);
+  });
+
+  it("満員のとき、よそのグループの同じ名前・よそのグループの自分のメンバーでは group_full（グループの範囲で読み直す）", async () => {
+    const t = await token(`uid-full-other-${Date.now()}`);
+    const other = await create("たろう", { token: t });
+    const { groupId } = await create("ゆう");
+    for (let i = 2; i <= 20; i++) expect((await join(groupId, `メンバー${i}`)).status).toBe(201);
+    expect(await join(groupId, "たろう")).toEqual({ status: 409, json: { error: "group_full" } });
+    expect(await join(groupId, "じろう", t)).toEqual({ status: 409, json: { error: "group_full" } });
+    expect(other.memberId).toBeGreaterThan(0);
+  });
+
   it("ないグループは 404", async () => {
     expect((await join("A".repeat(22), "たろう")).json).toEqual({ error: "group_not_found" });
   });
@@ -230,6 +258,15 @@ describe("参加する（REQ-004・REQ-005・REQ-008）", () => {
     const invisible = ["ゆう\u200B", "\u3164", "\u2060", "ゆ\u202Eう", "ゆ\nう", "ゆ\u0000う"];
     // 結合文字・記号の仲間で見えないもの（異体字の切り替え、組み合わせの記号、モンゴル文字の切り替え、点字の空白）
     invisible.push("ゆう\uFE00", "ゆう\uFE0F", "ゆう\u{E0100}", "ゆ\u034Fう", "ゆう\u180B", "\u2800");
+    // 絵文字の部品（ZWJ、タグ文字、U+FE0F）も、絵文字の外にあれば断る
+    invisible.push("ゆ\u200Dう", "ゆう\u200D", "ゆう\u{E0061}", "ゆう\u{E007F}", "ゆう1\uFE0F");
+    // 絵文字の部品の並びの境目（2つ続く、頭や終わりにある、🏴 でない絵文字の後ろのタグ、決まりのない旗）
+    invisible.push("😀\uFE0F\uFE0F", "\u200D😀", "😀\u200D", "😀\u200D\u200D😀", "\u{1F3F4}\u{E0067}", "😀\u{E0067}\u{E007F}");
+    invisible.push("ゆう\u{1F3F4}\u{E0061}\u{E007F}");
+    // Unicode が「表示しない」と決めている文字のうち、分類（Cf など）の外にあるもの（クメール文字、割り当てのない場所）
+    invisible.push("ゆ\u17B4う", "ゆう\u2065", "ゆう\u{E0080}", "ゆう\uFFF0");
+    // 見た目の1文字に部品を重ねすぎたもの（ZWJ でつないだ絵文字67個、肌の色の記号150個）
+    invisible.push("😀\u200D".repeat(66) + "😀", "👍" + "🏻".repeat(150));
     for (const name of invisible) {
       expect((await join(groupId, name)).json).toEqual({ error: "bad_name" });
     }
@@ -239,6 +276,22 @@ describe("参加する（REQ-004・REQ-005・REQ-008）", () => {
     // 絵文字の直後の、絵文字の形を選ぶ文字（❤️、1️⃣）は通す
     expect((await join(groupId, "ゆう\u2764\uFE0F")).status).toBe(201);
     expect((await join(groupId, "1\uFE0F\u20E3")).status).toBe(201);
+    expect((await join(groupId, "🏳️‍🌈")).status).toBe(201);
+    expect((await join(groupId, "👩🏽‍💻")).status).toBe(201);
+  });
+
+  it("見た目が同じ名前（絵文字の形の切り替え・ZWJ・旗のタグ・続いた空白だけが違う）は、同じ名前とみなす（REQ-011）", async () => {
+    const { groupId } = await create("ゆう");
+    const same = [
+      ["\u2764", "\u2764\uFE0F"],
+      ["たろう😀😀", "たろう😀\u200D😀"],
+      ["🏴", "🏴\u{E0067}\u{E0062}\u{E0065}\u{E006E}\u{E0067}\u{E007F}"],
+      ["ゆ う", "ゆ  う"],
+    ];
+    for (const [first, second] of same) {
+      expect((await join(groupId, first)).status).toBe(201);
+      expect(await join(groupId, second)).toMatchObject({ status: 409, json: { error: "name_taken" } });
+    }
   });
 
   it("同じ名前（全角半角・大文字小文字の違いも同じ）は 409 name_taken と、その人の番号と紐づいているか（REQ-011・REQ-012）", async () => {

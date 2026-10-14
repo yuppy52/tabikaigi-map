@@ -185,6 +185,9 @@ describe("名前の変更（REQ-014・REQ-015・NFR-006 (1)）", () => {
     await join(groupId, "たろう");
     expect(await rename(groupId, memberId, t, "タロウ")).toEqual({ status: 200, json: { ok: true } });
     expect(await rename(groupId, memberId, t, "たろう")).toEqual({ status: 409, json: { error: "name_taken" } });
+    // 見た目が同じ名前（絵文字の形の切り替えだけが違う）にも変えられない
+    await join(groupId, "\u2764");
+    expect(await rename(groupId, memberId, t, "\u2764\uFE0F")).toEqual({ status: 409, json: { error: "name_taken" } });
   });
 
   it("10グループに入っている人も名前を変えられる（10グループのトリガーが自分を数えない）", async () => {
@@ -444,8 +447,20 @@ describe("グループ一覧とマイページ（REQ-032・REQ-033）", () => {
     const notLinked = await create("ゆう", { groupName: "ログインなしで入った" });
     await create("ゆう", { token: await token(newUid()), groupName: "ほかの人の" });
     const r = await call("GET", "/api/me/groups", { token: t });
-    expect(r).toEqual({ status: 200, json: { groups: [{ groupId: mine.groupId, name: "自分の", memberId: mine.memberId }] } });
+    expect(r).toEqual({
+      status: 200,
+      json: { groups: [{ groupId: mine.groupId, name: "自分の", memberId: mine.memberId, memberCount: 1, isOwner: true }] },
+    });
     expect(JSON.stringify(r.json)).not.toContain(notLinked.groupId);
+  });
+
+  it("一覧に人数と、自分が作成者かを返す（退会の確認に使う：screens の「確認ダイアログ」）", async () => {
+    const t = await token(newUid());
+    const other = await create("ゆう");
+    await join(other.groupId, "たろう");
+    const j = await join(other.groupId, "わたし", t);
+    const r = await call("GET", "/api/me/groups", { token: t });
+    expect(r.json.groups).toEqual([{ groupId: other.groupId, name: "旅行部", memberId: j.json.memberId, memberCount: 3, isOwner: false }]);
   });
 
   it("マイページは自分のアカウントの「行った」だけ（NFR-006 (2)）", async () => {

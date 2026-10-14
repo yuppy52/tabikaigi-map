@@ -123,7 +123,7 @@
   - 〔未〕WAF のレート制限の回数と、止めたときの 429 を画面が見分けられるか（Q-031）
   - 〔未〕`not_found_handling` と `_redirects` の 200 リライトを合わせた動き、`workers.dev` を切る（Q-031）
   - 〔未〕集計用の D1 の読み取りだけの API トークンを作れるか（Q-025）
-  - 〔未〕グループを開く・「行った」の付け外し・名前の変更（グループ名・メンバー）で、本物の D1 が数える `rows_read`・`rows_written`。使い切られる見積もり（[architecture](design/architecture.md) の「無料枠を使い切られないために」）を測り直し、レート制限の回数と、応答を数秒キャッシュするかを決める
+  - 〔未〕グループを開く・グループ一覧・「行った」の付け外し・名前の変更（グループ名・メンバー）で、本物の D1 が数える `rows_read`・`rows_written`。使い切られる見積もり（[architecture](design/architecture.md) の「無料枠を使い切られないために」）を測り直し、レート制限の回数と、応答を数秒キャッシュするかを決める
   - 〔未〕Turnstile のウィジェットのドメインの制限と、応答の `hostname` を確かめるか（[api](design/api.md)）
   - 〔未〕Durable Objects の動いている時間（GB 秒）と眠れる書き方の効き方
   - 〔未〕無料枠を超えたときに API が実際に返すエラー（D1・Workers・Durable Objects）。D1 の枠切れのエラーの文が分かったら、API の 503 に `reason: "quota"` を付けて「一時的な失敗」と分ける（いまは全部 `temporary`：[api](design/api.md)）
