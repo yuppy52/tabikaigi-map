@@ -1,7 +1,8 @@
 // ログイン済みの人の、グループの外の操作（グループ一覧、マイページの「行った」、退会）の SQL。
 // どれも ID トークンの uid の行だけを読み書きする（NFR-006 (2)(6)(7)）
 
-export type MyGroup = { groupId: string; name: string; memberId: number };
+/** memberCount と isOwner は、退会の確認（最後の1人のグループ、作成者のグループ）を出すため（screens の「確認ダイアログ」） */
+export type MyGroup = { groupId: string; name: string; memberId: number; memberCount: number; isOwner: boolean };
 
 /**
  * 自分に紐づいたメンバーがいるグループの一覧（REQ-032）。members (uid) の索引で引く。
@@ -10,12 +11,20 @@ export type MyGroup = { groupId: string; name: string; memberId: number };
 export async function listMyGroups(db: D1Database, uid: string): Promise<MyGroup[]> {
   const { results } = await db
     .prepare(
-      `SELECT g.id AS group_id, g.name, m.id AS member_id FROM members m JOIN groups g ON g.id = m.group_id
+      `SELECT g.id AS group_id, g.name, m.id AS member_id, m.is_owner,
+         (SELECT count(*) FROM members c WHERE c.group_id = g.id) AS member_count
+       FROM members m JOIN groups g ON g.id = m.group_id
        WHERE m.uid = ? ORDER BY g.last_opened_on DESC, g.created_at DESC, g.id`,
     )
     .bind(uid)
-    .all<{ group_id: string; name: string; member_id: number }>();
-  return results.map((r) => ({ groupId: r.group_id, name: r.name, memberId: r.member_id }));
+    .all<{ group_id: string; name: string; member_id: number; is_owner: number; member_count: number }>();
+  return results.map((r) => ({
+    groupId: r.group_id,
+    name: r.name,
+    memberId: r.member_id,
+    memberCount: r.member_count,
+    isOwner: r.is_owner === 1,
+  }));
 }
 
 /** アカウントの「行った」（マイページ：REQ-033） */

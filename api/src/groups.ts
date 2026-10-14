@@ -96,9 +96,19 @@ export async function joinGroup(db: D1Database, groupId: string, name: string, u
     if (reason === "already_member" || reason === "group_limit" || reason === "group_full") return { ok: false, reason };
     throw e;
   }
-  // 0行：グループがないか、満員か（判断は済んでいるので、ここは理由を返すためだけに読む）
-  const g = await db.prepare("SELECT 1 FROM groups WHERE id = ?").bind(groupId).first();
-  return { ok: false, reason: g ? "group_full" : "group_not_found" };
+  // 0行：グループがないか、満員か（判断は済んでいるので、ここは理由を返すためだけに読む）。
+  // 満員のときは、人数の確かめで止まり、同じ名前や自分のメンバーの確かめ（UNIQUE）まで進まない。
+  // すでにいる人が戻ってくる場面（REQ-012・REQ-041）を「満員」で断らないよう、先にそれを見る（人数は増えないので REQ-005 に反しない）
+  const [g, same, mine] = await db.batch([
+    db.prepare("SELECT 1 FROM groups WHERE id = ?").bind(groupId),
+    db.prepare("SELECT id, uid IS NOT NULL AS linked FROM members WHERE group_id = ? AND name_key = ?").bind(groupId, key),
+    db.prepare("SELECT 1 FROM members WHERE group_id = ? AND uid = ?").bind(groupId, uid),
+  ]);
+  if (g.results.length === 0) return { ok: false, reason: "group_not_found" };
+  const s = same.results[0] as { id: number; linked: number } | undefined;
+  if (s) return { ok: false, reason: "name_taken", memberId: s.id, linked: s.linked === 1 };
+  if (mine.results.length > 0) return { ok: false, reason: "already_member" };
+  return { ok: false, reason: "group_full" };
 }
 
 export type GroupView = {

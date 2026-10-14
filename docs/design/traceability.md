@@ -1,6 +1,6 @@
 # 要件IDの対応表
 
-状態：下書き（2026-10-13：[api](api.md) に紐づけ・管理・退会などを足したので作り直した。2026-10-13：[api](api.md) を足して作り直した。2026-10-12：`/review-docs`（24件）を受けて、見出しの要件IDを数え、冒頭で名前を挙げただけのものを外し、「要件に対応しない設計」を足した。2026-10-12：要件IDの対応を付けるために作った）
+状態：下書き（2026-10-15：`/review-docs` を受けて作り直し、要件に対応しない設計に目印のヘッダー・health・Turnstile を足した。2026-10-13：[api](api.md) に紐づけ・管理・退会などを足したので作り直した。2026-10-13：[api](api.md) を足して作り直した。2026-10-12：`/review-docs`（24件）を受けて、見出しの要件IDを数え、冒頭で名前を挙げただけのものを外し、「要件に対応しない設計」を足した。2026-10-12：要件IDの対応を付けるために作った）
 
 各要件（[requirements](../requirements.md) の REQ・NFR）を、設計書と ADR のどこで扱っているかの一覧。設計書の本文に書いた要件ID（`（REQ-012）` の形）を集めて作った。括弧の中は節の名前。画面の配置は [ワイヤーフレーム](wireframes.drawio.svg)、構成は [構成図](architecture.drawio.svg) も見る。
 
@@ -15,7 +15,7 @@
 | REQ-002 | グループを作ると招待URLが発行される | [api](api.md)（一覧）<br/>[permissions](permissions.md)（グループの中の操作、画面だけで止めているもの）<br/>[screens](screens.md)（画面一覧、グループの画面の中身、参加の画面） |
 | REQ-003 | メンバーは、招待URLをコピー（またはシェア）して、LINE などで友達に送… | [permissions](permissions.md)（グループの中の操作）<br/>[screens](screens.md)（グループの画面の中身） |
 | REQ-004 | 招待URLを開いて名前を入れると、会員登録なしでグループに参加できる | [api](api.md)（一覧）<br/>[permissions](permissions.md)（グループの中の操作） |
-| REQ-005 | 1グループのメンバーは20人まで | [api](api.md)（一覧）<br/>[data-model](data-model.md)（参加する）<br/>[permissions](permissions.md)（グループの中の操作） |
+| REQ-005 | 1グループのメンバーは20人まで | [api](api.md)（一覧、参加で同じ名前がいたとき）<br/>[data-model](data-model.md)（参加する）<br/>[permissions](permissions.md)（グループの中の操作）<br/>[screens](screens.md)（参加の画面） |
 | REQ-006 | 招待URLのグループが見つからない（削除された、URLが間違っている）ときは… | [auth-flow](auth-flow.md)（1. ログインなしで参加する）<br/>[screens](screens.md)（知らせ） |
 
 ## メンバーの名前（全員に共通）
@@ -26,9 +26,9 @@
 | REQ-008 | 1つのグループの中で、名前は重複させない | [api](api.md)（一覧）<br/>[permissions](permissions.md)（グループの中の操作） |
 | REQ-009 | 名前の決まり：前後の空白を取り除いてから数えて、1〜10文字 | [api](api.md)（共通の決まり）<br/>[data-model](data-model.md)（members（メンバー）） |
 | REQ-010 | グループ名の決まり：前後の空白を取り除いてから数えて、1〜20文字 | [api](api.md)（共通の決まり）<br/>[data-model](data-model.md)（ER図、groups（グループ）） |
-| REQ-011 | 「同じ名前」かどうかは、全角と半角（英数字・記号・空白・カタカナ）、英字の大… | [data-model](data-model.md)（ER図、members（メンバー））<br/>[0003-backend-selection](../adr/0003-backend-selection.md)（保存先で守るもの（NFR-006）、C で書き直すときの方針（2026-10-04 の `doc-reviewer` の指摘から）） |
-| REQ-012 | 参加するときに、紐づいていないメンバーと同じ名前を入れたら、ログインしていな… | [api](api.md)（一覧、参加で同じ名前がいたとき）<br/>[auth-flow](auth-flow.md)（端末が覚えるもの（Q-017）、1. ログインなしで参加する）<br/>[permissions](permissions.md)（グループの中の操作）<br/>[screens](screens.md)（参加の画面、確認ダイアログ） |
-| REQ-013 | アカウントに紐づいたメンバーと同じ名前では、ほかの人は参加できない（紐づいた… | [api](api.md)（一覧、参加で同じ名前がいたとき）<br/>[auth-flow](auth-flow.md)（1. ログインなしで参加する）<br/>[data-model](data-model.md)（作成者）<br/>[permissions](permissions.md)（グループの中の操作、作成者の別の入口）<br/>[screens](screens.md)（参加の画面） |
+| REQ-011 | 「同じ名前」かどうかは、全角と半角（英数字・記号・空白・カタカナ）、英字の大… | [api](api.md)（共通の決まり）<br/>[data-model](data-model.md)（ER図、members（メンバー））<br/>[0003-backend-selection](../adr/0003-backend-selection.md)（保存先で守るもの（NFR-006）、C で書き直すときの方針（2026-10-04 の `doc-reviewer` の指摘から）） |
+| REQ-012 | 参加するときに、紐づいていないメンバーと同じ名前を入れたら、ログインしていな… | [api](api.md)（一覧、参加で同じ名前がいたとき）<br/>[auth-flow](auth-flow.md)（端末が覚えるもの（Q-017）、1. ログインなしで参加する）<br/>[permissions](permissions.md)（グループの中の操作）<br/>[screens](screens.md)（参加の画面、確認ダイアログ、API の応答と画面の動き） |
+| REQ-013 | アカウントに紐づいたメンバーと同じ名前では、ほかの人は参加できない（紐づいた… | [api](api.md)（一覧、参加で同じ名前がいたとき）<br/>[auth-flow](auth-flow.md)（1. ログインなしで参加する）<br/>[data-model](data-model.md)（作成者）<br/>[permissions](permissions.md)（グループの中の操作、作成者の別の入口）<br/>[screens](screens.md)（参加の画面、API の応答と画面の動き） |
 | REQ-014 | 名前を変えられるのは、ログインしている本人だけ | [api](api.md)（一覧）<br/>[data-model](data-model.md)（members（メンバー）、ログインしている人の扱い（API の共通の決まり））<br/>[permissions](permissions.md)（グループの中の操作）<br/>[screens](screens.md)（グループ設定の中身） |
 | REQ-015 | ログインせずに参加した人の名前は、誰も変えられない（本人を区別できないため） | [api](api.md)（一覧、誰が通るか）<br/>[data-model](data-model.md)（ログインしている人の扱い（API の共通の決まり））<br/>[permissions](permissions.md)（グループの中の操作）<br/>[screens](screens.md)（グループ設定の中身） |
 
@@ -53,7 +53,7 @@
 | REQ-022 | 名前がそのまま本人になる | [auth-flow](auth-flow.md)（前提）<br/>[permissions](permissions.md)（グループの中の操作、画面だけで止めているもの） |
 | REQ-023 | 「行った」はグループのメンバーごとに持ち、そのグループの誰でも編集できる | [api](api.md)（一覧）<br/>[permissions](permissions.md)（グループの中の操作、画面だけで止めているもの） |
 | REQ-024 | 端末に前回の名前が残っていて、グループの今のメンバーと合い、アカウントに紐づ… | [auth-flow](auth-flow.md)（1. ログインなしで参加する）<br/>[screens](screens.md)（画面遷移図） |
-| REQ-025 | 端末に残っていた名前がグループの今の状態と合わない（その人が削除された、など… | [auth-flow](auth-flow.md)（端末が覚えるもの（Q-017）、1. ログインなしで参加する、2. ログインして、いまのグループのメンバーを紐づける）<br/>[data-model](data-model.md)（members（メンバー））<br/>[screens](screens.md)（参加の画面、操作の後に開く画面） |
+| REQ-025 | 端末に残っていた名前がグループの今の状態と合わない（その人が削除された、など… | [auth-flow](auth-flow.md)（端末が覚えるもの（Q-017）、1. ログインなしで参加する、2. ログインして、いまのグループのメンバーを紐づける）<br/>[data-model](data-model.md)（members（メンバー））<br/>[screens](screens.md)（参加の画面、操作の後に開く画面、API の応答と画面の動き） |
 | REQ-056 | メンバーを変更する：端末が覚えている名前を忘れて、名前の入力に戻れる | [auth-flow](auth-flow.md)（端末が覚えるもの（Q-017））<br/>[screens](screens.md)（グループ設定の中身、確認ダイアログ、操作の後に開く画面） |
 | REQ-026 | グループの切り替えはない | [screens](screens.md)（グループの画面の中身） |
 
@@ -82,16 +82,16 @@
 |---|---|---|
 | REQ-037 | ログインなしでグループに参加していた人が、そのグループを開いたままアカウント… | [api](api.md)（一覧）<br/>[auth-flow](auth-flow.md)（端末が覚えるもの（Q-017）、2. ログインして、いまのグループのメンバーを紐づける、確認メールが済んだ後（REQ-057・NFR-006 (10)））<br/>[data-model](data-model.md)（members（メンバー）、作成者、紐づけ）<br/>[permissions](permissions.md)（人の区別、グループの中の操作）<br/>[screens](screens.md)（画面遷移図）<br/>[0003-backend-selection](../adr/0003-backend-selection.md)（匿名からログインへ（REQ-037〜REQ-043）） |
 | REQ-038 | 紐づけるときの「行った」は、下の表のように扱う | [api](api.md)（一覧）<br/>[auth-flow](auth-flow.md)（2. ログインして、いまのグループのメンバーを紐づける）<br/>[data-model](data-model.md)（紐づけ）<br/>[permissions](permissions.md)（グループの中の操作）<br/>[screens](screens.md)（確認ダイアログ）<br/>[0003-backend-selection](../adr/0003-backend-selection.md)（匿名からログインへ（REQ-037〜REQ-043）） |
-| REQ-039 | 開いていたグループに、自分のアカウントに紐づいたメンバーがすでにいる（別の端… | [api](api.md)（一覧）<br/>[auth-flow](auth-flow.md)（端末が覚えるもの（Q-017）、2. ログインして、いまのグループのメンバーを紐づける、3. ログインした状態でグループに入る）<br/>[data-model](data-model.md)（作成者、紐づけ）<br/>[permissions](permissions.md)（グループの中の操作、作成者の別の入口）<br/>[screens](screens.md)（画面一覧、画面遷移図、確認ダイアログ ほか1か所）<br/>[0003-backend-selection](../adr/0003-backend-selection.md)（匿名からログインへ（REQ-037〜REQ-043）、保存先で守るもの（NFR-006）、2026-10-03 の推奨（案 A） ほか1か所） |
+| REQ-039 | 開いていたグループに、自分のアカウントに紐づいたメンバーがすでにいる（別の端… | [api](api.md)（一覧）<br/>[auth-flow](auth-flow.md)（端末が覚えるもの（Q-017）、2. ログインして、いまのグループのメンバーを紐づける、3. ログインした状態でグループに入る）<br/>[data-model](data-model.md)（作成者、紐づけ）<br/>[permissions](permissions.md)（グループの中の操作、作成者の別の入口）<br/>[screens](screens.md)（画面一覧、画面遷移図、確認ダイアログ ほか2か所）<br/>[0003-backend-selection](../adr/0003-backend-selection.md)（匿名からログインへ（REQ-037〜REQ-043）、保存先で守るもの（NFR-006）、2026-10-03 の推奨（案 A） ほか1か所） |
 | REQ-040 | 同じ端末からログインなしで参加していた他のグループは、ログインしたときには何… | [api](api.md)（一覧）<br/>[auth-flow](auth-flow.md)（端末が覚えるもの（Q-017）、2. ログインして、いまのグループのメンバーを紐づける、確認メールが済んだ後（REQ-057・NFR-006 (10)） ほか1か所）<br/>[data-model](data-model.md)（紐づけ）<br/>[permissions](permissions.md)（人の区別、グループの中の操作、作成者の別の入口）<br/>[screens](screens.md)（画面遷移図、操作の後に開く画面）<br/>[0003-backend-selection](../adr/0003-backend-selection.md)（匿名からログインへ（REQ-037〜REQ-043）） |
 
 ## ログインした人がグループに入るとき
 
 | ID | 要件（要約） | 設計での扱い |
 |---|---|---|
-| REQ-041 | 自分のアカウントに紐づいたメンバーがいれば、名前を入れずにそのまま開く | [auth-flow](auth-flow.md)（端末が覚えるもの（Q-017）、3. ログインした状態でグループに入る）<br/>[permissions](permissions.md)（グループの中の操作）<br/>[screens](screens.md)（画面遷移図）<br/>[0003-backend-selection](../adr/0003-backend-selection.md)（匿名からログインへ（REQ-037〜REQ-043）） |
+| REQ-041 | 自分のアカウントに紐づいたメンバーがいれば、名前を入れずにそのまま開く | [auth-flow](auth-flow.md)（端末が覚えるもの（Q-017）、3. ログインした状態でグループに入る）<br/>[permissions](permissions.md)（グループの中の操作）<br/>[screens](screens.md)（画面遷移図、API の応答と画面の動き）<br/>[0003-backend-selection](../adr/0003-backend-selection.md)（匿名からログインへ（REQ-037〜REQ-043）） |
 | REQ-042 | まだそのグループのメンバーでなく、端末が覚えているメンバーもいなければ（RE… | [auth-flow](auth-flow.md)（3. ログインした状態でグループに入る）<br/>[data-model](data-model.md)（ログインしている人の扱い（API の共通の決まり））<br/>[permissions](permissions.md)（グループの中の操作）<br/>[screens](screens.md)（画面遷移図）<br/>[0003-backend-selection](../adr/0003-backend-selection.md)（匿名からログインへ（REQ-037〜REQ-043）） |
-| REQ-043 | 本人確認：入れた名前と同じ名前の、紐づいていないメンバーがいれば「この人はあ… | [api](api.md)（一覧、参加で同じ名前がいたとき）<br/>[auth-flow](auth-flow.md)（端末が覚えるもの（Q-017）、3. ログインした状態でグループに入る）<br/>[data-model](data-model.md)（作成者）<br/>[permissions](permissions.md)（グループの中の操作、作成者の別の入口）<br/>[screens](screens.md)（参加の画面、確認ダイアログ）<br/>[0003-backend-selection](../adr/0003-backend-selection.md)（匿名からログインへ（REQ-037〜REQ-043）） |
+| REQ-043 | 本人確認：入れた名前と同じ名前の、紐づいていないメンバーがいれば「この人はあ… | [api](api.md)（一覧、参加で同じ名前がいたとき）<br/>[auth-flow](auth-flow.md)（端末が覚えるもの（Q-017）、3. ログインした状態でグループに入る）<br/>[data-model](data-model.md)（作成者）<br/>[permissions](permissions.md)（グループの中の操作、作成者の別の入口）<br/>[screens](screens.md)（参加の画面、確認ダイアログ、API の応答と画面の動き）<br/>[0003-backend-selection](../adr/0003-backend-selection.md)（匿名からログインへ（REQ-037〜REQ-043）） |
 
 ## メンバーとグループの管理
 
@@ -165,4 +165,7 @@
 | リアルタイムが切れたときの帯 | [screens](screens.md)（知らせ） | Q-020（会議の場で、自動で変わる前提で見ているため） |
 | 部屋の URL の `room_key`、WAF のレート制限 | [architecture](architecture.md)（無料枠を使い切られないために）、[data-model](data-model.md) | Q-031 |
 | 最後に開かれた日（`last_opened_on`） | [data-model](data-model.md)（groups） | Q-025（NFR-010 を支える） |
+| 目印のヘッダー（`X-Tabikaigi`） | [api](api.md)（共通の決まり）、[architecture](architecture.md)（無料枠を使い切られないために） | 2026-10-13：`access-reviewer`（よそのサイトから利用者のブラウザで API を呼ばせて、D1 の枠を使わせないため。NFR-012 を支える） |
+| 動いているかの確かめ（`/api/health`） | [api](api.md)（共通の決まり） | 目印のヘッダーなしで呼べる、D1 を使わない入口（NFR-011 の監視を支える） |
+| ボット対策（Turnstile） | [api](api.md)（Turnstile）、[screens](screens.md)（参加の画面）、[architecture](architecture.md)（無料枠を使い切られないために） | Q-031（作成と参加を大量に送られて、D1 の書き込みの枠を使わせないため。NFR-012 を支える） |
 
