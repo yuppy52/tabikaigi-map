@@ -27,6 +27,7 @@ tools/template.html   # 画面のソース（HTML/CSS/JS）。編集するのは
 tools/paths.json      # 都道府県のSVGパス（gen-map.mjs で生成）
 tools/gen-map.mjs     # TopoJSON から SVG パスを作るスクリプト
 tools/build.mjs       # template.html に paths.json を埋め込んで index.html を作る
+tools/gen-ogp.mjs     # OGP の画像（assets/ogp.png）を作る
 ```
 
 画面を直したら:
@@ -39,7 +40,13 @@ npm run build        # index.html を作り直す
 
 地図データを作り直すときだけ `npm run fetch-geo && npm run gen-map` を先に実行する。
 
-地図データ: [dataofjapan/land](https://github.com/dataofjapan/land)
+OGP の画像（招待URLを送ったときのカード）を作り直すときは、`tools/` で `npm run ogp`（Mac の Chrome とヒラギノを使う）。
+
+## ライセンス
+
+[MIT License](LICENSE)（ドキュメントを含む）。地図データは対象外で、配布元の条件に従う（[NOTICE.md](NOTICE.md)）。
+
+地図データ：地球地図日本（国土地理院）を加工して作成。[dataofjapan/land](https://github.com/dataofjapan/land) が変換したものを使用。
 
 ## 今後
 

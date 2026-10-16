@@ -4,13 +4,11 @@
 
 ## いまどこ？
 
-**Phase 1（基本設計）の終わり。7. まで済み、実装の前の道具の見直しと開発環境、D1 のテーブル定義と制約のテスト（2026-10-12）、API で守るもの（グループの作成・参加・開く・「行った」、紐づけ・名前の変更・退出・管理・グループ一覧・退会。2026-10-13：[api](design/api.md)）、設計書のレビュー（2026-10-15：`/review-docs` 23件を反映）まで済んだ。画面はまだで、インターネットには何も出していない**（2026-10-16。次のセッションへの引き継ぎ）。
+**Phase 1（基本設計）が終わった（2026-10-16）。7. まで済み、実装の前の道具の見直しと開発環境、D1 のテーブル定義と制約のテスト（2026-10-12）、API で守るもの（グループの作成・参加・開く・「行った」、紐づけ・名前の変更・退出・管理・グループ一覧・退会。2026-10-13：[api](design/api.md)）、設計書のレビュー（2026-10-15：`/review-docs` 23件を反映）、LICENSE（MIT）・OGP の文言と画像・運営者の氏名・住所の出し方（2026-10-16）まで済んだ。画面はまだで、インターネットには何も出していない**。
 
 次にやること（上から順に。推奨の順番）：
-1. LICENSE を決める（MIT にするか、置かないか。下の「運用ルール」）
-2. 固定の OGP 画像と文言を用意する（LINE などで招待URLを送ったときに出るカード）
-3. 運営者の氏名・住所の出し方を決める（[privacy](design/privacy.md)）
-4. Phase 2 を始める前に、道具（サブエージェント・Skill・ルール）を見直す（CLAUDE.md の「進め方」、下の「工程ごとの道具の見直し」）。あわせて「デプロイとテーブル定義の変更の手順書」を作る（Phase 2 の最初の項目）
+1. Phase 2 を始める前に、道具（サブエージェント・Skill・ルール）を見直す（CLAUDE.md の「進め方」、下の「工程ごとの道具の見直し」）
+2. 「デプロイとテーブル定義の変更の手順書」を作る（Phase 2 の最初の項目）
 
 あとでやってよいこと：要件IDの対応表を作り直すスクリプトを `tools/` に置き、手で書いた部分（状態の行、要件に対応しない設計）を残す作りにする（いまはリポジトリにない：[learnings](learnings/2026-10-15-regenerated-doc-drops-manual-parts.md)）。それまでは対応表を手で直す。
 
@@ -39,7 +37,7 @@
    4. ~~確認メールの流れ（REQ-057）~~（2026-10-10 に推奨どおり決定：確認前は紐づけを断る、確認後は元の端末でトークンを取り直して紐づける。断る処理の試しは紐づけの API を作る Phase 3 で → ADR 0003 の基準4）
    - 本番で試すときは、Cloudflare のトークンを作り直す（いまのものは 2026-10-12 に切れる。D1 の権限を足す）
 6. ~~結果で ADR 0003 を「決定」にし、ADR 0001 を置き換える~~（2026-10-10 に済んだ）
-7. **次はここ**：選んだ構成に合わせて ~~architecture・data-model・auth-flow を書き直し（ER 図などのデータの形はユーザーと一緒に確かめる）~~（2026-10-10 に下書きと `/review-docs`（26件）の反映。作成者の持ち方は [ADR 0005](adr/0005-owner-flag-on-member.md)、Q-018 決定、REQ-060（10グループまで）を追加、色は10色、ログインなしでも同じ名前の確認を出す）、要件IDの対応を付け、基本設計の Q を決める。~~権限マトリクス~~（2026-10-10 に下書き、2026-10-11 に `/review-docs`（14件）を反映：[permissions.md](design/permissions.md)）、~~Q-020（画面遷移の抜け）~~（2026-10-11 に決定：[screens.md](design/screens.md)）、~~Q-017（端末に覚える内容）~~（2026-10-12 に決定：[auth-flow.md](design/auth-flow.md)）、~~Q-016（トップの中身と URL）~~（2026-10-12 に決定：[screens.md](design/screens.md)）、~~残りの基本設計の Q（Q-014・Q-022・Q-025〜Q-028・Q-030・Q-031）~~（2026-10-12 に推奨案で決定：[architecture](design/architecture.md)、[privacy](design/privacy.md)）、~~要件IDの対応~~（2026-10-12：[traceability](design/traceability.md)）、~~構成図とワイヤーフレーム~~（2026-10-12：[architecture.drawio.svg](design/architecture.drawio.svg)、[wireframes.drawio.svg](design/wireframes.drawio.svg)）。~~この変更の `/review-docs` → `/compound`~~（2026-10-12 に済んだ）。続けて Phase 1 の残り（~~開発環境~~、保存先で守るもののテスト、OGP、LICENSE）
+7. **次はここ**：選んだ構成に合わせて ~~architecture・data-model・auth-flow を書き直し（ER 図などのデータの形はユーザーと一緒に確かめる）~~（2026-10-10 に下書きと `/review-docs`（26件）の反映。作成者の持ち方は [ADR 0005](adr/0005-owner-flag-on-member.md)、Q-018 決定、REQ-060（10グループまで）を追加、色は10色、ログインなしでも同じ名前の確認を出す）、要件IDの対応を付け、基本設計の Q を決める。~~権限マトリクス~~（2026-10-10 に下書き、2026-10-11 に `/review-docs`（14件）を反映：[permissions.md](design/permissions.md)）、~~Q-020（画面遷移の抜け）~~（2026-10-11 に決定：[screens.md](design/screens.md)）、~~Q-017（端末に覚える内容）~~（2026-10-12 に決定：[auth-flow.md](design/auth-flow.md)）、~~Q-016（トップの中身と URL）~~（2026-10-12 に決定：[screens.md](design/screens.md)）、~~残りの基本設計の Q（Q-014・Q-022・Q-025〜Q-028・Q-030・Q-031）~~（2026-10-12 に推奨案で決定：[architecture](design/architecture.md)、[privacy](design/privacy.md)）、~~要件IDの対応~~（2026-10-12：[traceability](design/traceability.md)）、~~構成図とワイヤーフレーム~~（2026-10-12：[architecture.drawio.svg](design/architecture.drawio.svg)、[wireframes.drawio.svg](design/wireframes.drawio.svg)）。~~この変更の `/review-docs` → `/compound`~~（2026-10-12 に済んだ）。続けて Phase 1 の残り（~~開発環境~~、~~保存先で守るもののテスト~~、~~OGP~~、~~LICENSE~~。2026-10-16 に済んだ）
 
 各ステップは「作る → `/review-docs` → 直す → `/compound`」で進める。
 
@@ -70,21 +68,21 @@
 - [x] 画面の作り方を決める（2026-10-04：React＋TypeScript＋Vite、検索に出すページは素の HTML。[ADR 0004](adr/0004-frontend-react-typescript.md)）
 - [x] **技術選定を確定する**（[ADR 0003](adr/0003-backend-selection.md)、2026-10-10 に案 C で決定）：Cloudflare の課金の道を調べて決まりを書く → ドメインを取る → 小さく試す → 決定。Firebase が前提の設計書と Q（Q-011〜Q-014・Q-019・Q-021・Q-022）は、決めてから書き直す
 - [x] 開発環境を用意する（2026-10-12：Node.js 22、wrangler、Vitest。リポジトリの直下の `package.json`、`api/`、`migrations/`。`npm test` で API と D1 のテストが動く）
-- [ ] 保存先で守るもの（NFR-006 の (1)〜(13)）を実装してテストする（API と D1 の制約を Vitest で。[権限マトリクス](design/permissions.md)の × の欄）
+- [x] 保存先で守るもの（NFR-006 の (1)〜(13)）を実装してテストする（ローカルで済んだ。本物の D1 での確かめは Phase 2 の〔未〕。API と D1 の制約を Vitest で。[権限マトリクス](design/permissions.md)の × の欄）
   - [x] D1 の制約（2026-10-12：[migrations/0001_init.sql](../migrations/0001_init.sql)、[api/test/schema.test.ts](../api/test/schema.test.ts)。トリガーと部分 `UNIQUE` はローカルで通った。本物の D1 では Phase 2 の最初に確かめる〔未〕）
   - [x] API で守るもの（ID トークンの確かめ、メンバーの番号と `uid`、「作成者のみ」、0行のときの理由。2026-10-13：[api](design/api.md)、`api/test/groups-api.test.ts`・`manage-api.test.ts`。`access-reviewer` のレビューを2回受けて直した。ローカルで確かめた。本物の D1 での確かめは下の〔未〕）
     - [x] ID トークンの確かめ、グループの作成・参加・開く・「行った」（2026-10-13：[api](design/api.md)、`api/test/groups-api.test.ts`）
-    - [ ] 紐づけ、名前の変更、退出、メンバーの削除・グループ名の変更・グループの削除・管理できる人の変更、退会、グループ一覧
+    - [x] 紐づけ、名前の変更、退出、メンバーの削除・グループ名の変更・グループの削除・管理できる人の変更、退会、グループ一覧（2026-10-13：`api/test/manage-api.test.ts`）
 - [x] 追加する画面を決める → [design/screens.md](design/screens.md)（2026-10-12：Q-016・Q-020 で、検索に出すページとアプリの画面、URL を決めた）
-- [ ] 固定の OGP 画像と文言を用意する
+- [x] 固定の OGP 画像と文言を用意する（2026-10-16：[assets/ogp.png](../assets/ogp.png)、文言は [architecture](design/architecture.md) の「招待URLのプレビュー（OGP）」）
 
 ## 運用ルール（Phase 1 の中で決める）
 
 - [x] 開発の道具（ルール、サブエージェント、Skill、学びの記録）
 - [x] Claude の権限（deny / ask）と作業ログ（成功・失敗の両方を記録）
 - [x] プルリクエストの運用と main のブランチ保護
-- [ ] LICENSE を決める（MIT にするか、置かないか）
-- [x] 利用状況の把握（何グループが使っているか）：方法の選定（[NFR-010](requirements.md)、Q-025）と、プライバシーポリシーへの記載（NFR-008、Q-028）（2026-10-12：D1 から数える。書く項目は [privacy](design/privacy.md)。運営者の氏名・住所の出し方は公開の前に決め直す）
+- [x] LICENSE を決める（2026-10-16：ドキュメントを含めて MIT。地図データは対象外で、出典と条件を [NOTICE.md](../NOTICE.md) に書いた。地図データの出典は画面にも書く：[screens](design/screens.md) の「画面のルール」）
+- [x] 利用状況の把握（何グループが使っているか）：方法の選定（[NFR-010](requirements.md)、Q-025）と、プライバシーポリシーへの記載（NFR-008、Q-028）（2026-10-12：D1 から数える。書く項目は [privacy](design/privacy.md)。運営者の氏名・住所は 2026-10-16 に「請求があれば遅滞なく回答する」に決めた）
 - [x] 無料枠の監視（NFR-011・NFR-012、Q-026）、エラーの把握（NFR-013、Q-027）（2026-10-12：週1回の確認、Sentry の無料プラン）
 
 ## 工程ごとの道具の見直し
@@ -136,6 +134,10 @@
   - 〔未〕Turnstile のウィジェットのドメインの制限と、応答の `hostname` を確かめるか（[api](design/api.md)）
   - 〔未〕Durable Objects の動いている時間（GB 秒）と眠れる書き方の効き方
   - 〔未〕無料枠を超えたときに API が実際に返すエラー（D1・Workers・Durable Objects）。D1 の枠切れのエラーの文が分かったら、API の 503 に `reason: "quota"` を付けて「一時的な失敗」と分ける（いまは全部 `temporary`：[api](design/api.md)）
+- [ ] 公開の前に、相談・確かめ（Phase 1 で決めたことの確かめ）：
+  - 〔未〕個人情報保護法相談ダイヤルに、運営者の氏名・住所を「請求があれば遅滞なく回答する」と書く形でよいかを電話で聞く（ユーザーが行う。[privacy](design/privacy.md)）
+  - 〔未〕招待URLを LINE と X で実際に送り、OGP のカードの表示を確かめる。変えたら LINE の Page Poker で覚えたものを消す（[architecture](design/architecture.md) の「招待URLのプレビュー（OGP）」）
+  - 〔未〕地図データの出典が、グループの画面・トップ・使い方の一番下に出ているか（[screens](design/screens.md)）。地球地図日本の元の利用条件（出典の書き方、加工）は確かめきれていないので、気になれば国土地理院に聞く（要確認。必須ではない）
 - [ ] 公開の前に、試作の Worker（`tabikaigi-spike.tabikaigi.workers.dev`）と試作の D1 を消す（本番と同じアカウントの無料枠を使い、公開されたままのため）
 - [ ] 独自ドメインで公開し（NFR-020）、友達グループで使ってもらう
 
