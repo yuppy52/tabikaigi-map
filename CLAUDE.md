@@ -20,7 +20,7 @@
 - `.claude/rules/docs.md`：ドキュメントの書き方（要件ID、状態、図の使い分け）
 - `.claude/rules/sql.md`：SQL（D1）の書き方
 - `.claude/rules/api.md`：API（Hono）の書き方
-- `.claude/agents/`：`researcher`（調査）、`doc-reviewer`（設計書のレビュー）、`access-reviewer`（API と D1 の制約を攻撃する側の目でレビュー）
+- `.claude/agents/`：`researcher`（調査）、`doc-reviewer`（設計書のレビュー）、`access-reviewer`（API・D1 の制約・部屋・配信の設定を攻撃する側の目でレビュー）
 - `.claude/skills/`：`/review-docs`（設計書のレビュー）、`/compound`（学びを残す）
 
 ## 技術の前提
@@ -29,6 +29,7 @@
 - **鍵と初期設定**：外部サービスの鍵（API トークン、OAuth の許可）は、テンプレートや「おすすめ」を使わず、要る権限だけを選び、期限を付ける。作る前に、お金に関わる権限が入っていないか、自動で付く名前や URL に個人の情報が使われていないかを確かめる（[docs/learnings/2026-10-05-check-service-defaults.md](docs/learnings/2026-10-05-check-service-defaults.md)）
 - **部品（npm）**：入れたり上げたりしたら、警告（非推奨、改名）と `npm audit` を見る。high 以上が残るなら、直った版があるかを確かめてから進む。試作の版はそのまま写さない（[docs/learnings/2026-10-13-check-package-renames-and-audit.md](docs/learnings/2026-10-13-check-package-renames-and-audit.md)）
   - 大きな道具を足す前に、元のデータの中身と、いま入っている部品でできないかを先に見る
+  - 新しい部品を入れる前に、`npm view <名前>` で実在するか、公開者、公開日、リポジトリの URL を見る。AI は存在しない名前を出すことがあり、その名前で偽の部品が置かれることがある（2026-10-16）
 - **借りるデータ**（地図、画像、フォントなど）：入れるときに条件を見る。配布元の README だけでなく、元のデータを出しているところの公式の条件を確かめ、商用でよいか・出典の書き方・報告や申請・加工と再配布の4つで比べる。出典は NOTICE.md と画面に書く（[learnings](docs/learnings/2026-10-16-check-upstream-data-terms.md)）
 - **バックエンド**：2026-10-04 に、第一候補を Firebase 一式から「Cloudflare Workers（API は Hono）＋ D1、認証だけ Firebase Authentication（Spark）」に見直し、小さく試した結果で 2026-10-10 に決定した（[ADR 0003](docs/adr/0003-backend-selection.md)、ADR 0001 を置き換え）。有料プランには上げない。要件は特定のサービスに依存させない
 - コードは TypeScript で書く。アプリの画面は React ＋ Vite、検索に出すページ（トップ、使い方、プライバシーポリシー）は素の HTML（[ADR 0004](docs/adr/0004-frontend-react-typescript.md)、Phase 2 から）。ユーザーは JavaScript／TypeScript に慣れていないので、コードを見せるときは考え方を一言添える
@@ -43,7 +44,8 @@
 - ユーザーに論点を決めてもらうときは、関係の深い論点をまとめ、前提の仕組みと具体的な場面を説明し、推奨案と理由を添えてから聞く
   - 「なぜそうなるか」（判断の順番など）と場面の手順（1. 2. 3.）を最初から書く。推奨しない案は、手間を具体的に（表・SQL・テストがいくつ増えるか）書き、推奨の理由は手間ではなく本当の理由で書く（[learnings](docs/learnings/2026-10-02-explain-context-before-decisions.md)）
 - 計画 → 作業 → レビュー（`/review-docs`）→ 学びを残す（`/compound`）の順で回す。作業の区切りでは `/compound` を提案する
-- API や D1 の制約を変えたら、push の前に `access-reviewer` にレビューを頼む
+- コードを変えたら、push の前に `/code-review` を回す。API・D1 の制約・部屋（WebSocket）・配信の設定（`wrangler.jsonc` のヘッダーやリライト）を変えたら、加えて `access-reviewer` にレビューを頼む
+- テストを変えたら（期待する値を直した、テストを消した・飛ばした）、その差分を先にユーザーに見せる。AI は、コードではなくテストの側を直して通すことがある（2026-10-16）
 - 工程（ロードマップの Phase）を始める前に、サブエージェント・Skill・ルールが足りているかを見直す
 - ロードマップの先の Phase の作業に手を付けるとき（前倒し、項目を広く読むとき）は、始める前に伝えて、理由と推奨を添えて確かめる。作業の報告では、いまどの Phase のどの項目か、何がまだかを一言添える（[learnings](docs/learnings/2026-10-14-say-when-work-jumps-phase.md)）
 - API や D1 の変更を確かめてもらうときは、観点（認可・認証・入力・同時に起きたら・失敗したら・漏れるもの・費用・テスト）を説明しながら1つずつ見せる（ユーザーはフロントの経験だけで、バックエンドのレビューを学びたい）
@@ -55,4 +57,5 @@
 - **確認は push の前に行う**（2026-10-04 に変更。それまではユーザーがプルリクエストを見てマージしていた）。Claude は作業をコミットしたら、push する前に、何を変えたか（コミットの一覧と、変えたファイルごとの要点）をユーザーに見せる。`git push` の許可の確認（`ask`）で OK をもらったら、それを「マージしてよい」の確認として扱い、Claude が push → プルリクエストの作成 → マージ（`gh pr merge --squash --delete-branch`）まで続けて行う
 - push の許可で断られたら、直す点を聞いて、コミットを足してからもう一度見せる
 - ブランチ保護はそのまま使う（main への直接の push はしない。必ずプルリクエストを通す）
-- 秘密情報（`.env`、サービスアカウントの鍵）はリポジトリに置かない
+- デプロイと表の変更（マイグレーション）は、マージした後に運営者の PC から [docs/design/deploy.md](docs/design/deploy.md) の手順で行う（[ADR 0008](docs/adr/0008-deploy-from-pc-no-staging.md)）。`wrangler deploy` などの `ask` の OK は、その1回のデプロイの OK として扱う
+- 秘密情報（`.env`、`.dev.vars`、サービスアカウントの鍵）はリポジトリに置かない
