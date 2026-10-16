@@ -17,3 +17,6 @@ tools/japan.topojson
 
 # wrangler のローカルの D1 など
 .wrangler/
+
+# 国土数値情報 N03 の元データ（約600MB。npm run fetch-n03 で取る）
+tools/n03/

@@ -1,6 +1,6 @@
 # システム構成
 
-状態：下書き（2026-10-15：`/review-docs` を受けて、「ログに残るもの」のグループIDの扱いを実際の API（URL のパスに入れる）に合わせ、部屋が配らないものに管理できる人の変更と退会を足した。2026-10-13：管理の操作の API を作った `access-reviewer` の指摘で、名前の変更を「使い切られうる API」に足した。2026-10-13：API を作った `access-reviewer` の指摘で、目印のヘッダー（よそのサイトから読ませない）を「無料枠を使い切られないために」に足し、Sentry で消す URL に `/api/groups/` を足した。2026-10-12：開発環境を用意して、Node.js の版とリポジトリの構成（1つの `package.json`）を決め、テストの道具の名前を `@cloudflare/vitest-plugin` に直した。2026-10-12：`/review-docs`（24件）を受けて、Mermaid の構成図を清書にそろえ（WAF、Turnstile、運営者の PC、部屋への接続）、部屋の URL を `/api/rooms/{room_key}` にし、429 の扱い、Sentry に送る前に消すもの・作る前に確かめること・DSN と CPU の注意、集計の鍵、問い合わせの確かめ方と保存期間、Durable Objects の枠を直した。2026-10-12：Q-025・Q-026・Q-027・Q-031 を推奨案で決めて、「運用」、「無料枠を使い切られないために」、「エラーの送り方」、ログに残るもの、使うサービス（WAF のレート制限、Sentry）を書いた。構成図の清書（draw.io）を足した。2026-10-12：Q-016・Q-017 の `/review-docs`（18件）を受けて、`noindex` と `Referrer-Policy: no-referrer` を付けるパスを並べた。2026-10-12：Q-016 を決めて、アプリの画面の URL を `app.html` へのリライトに足した。2026-10-11：Q-020 の `/review-docs`（21件）を受けて、メンバーとグループの削除も部屋から「取り直して」を配ることにし、503 の理由の分け方を足した。2026-10-10：[ADR 0003](../adr/0003-backend-selection.md) が案 C に決まったので、Firebase 一式の版から書き直した。元の版は git の履歴にある。画面の作り方は [ADR 0004](../adr/0004-frontend-react-typescript.md)。システム構成図の清書（draw.io）は roadmap の Phase 1 で作る）
+状態：下書き（2026-10-16：OGP の文言と画像を決めた。2026-10-15：`/review-docs` を受けて、「ログに残るもの」のグループIDの扱いを実際の API（URL のパスに入れる）に合わせ、部屋が配らないものに管理できる人の変更と退会を足した。2026-10-13：管理の操作の API を作った `access-reviewer` の指摘で、名前の変更を「使い切られうる API」に足した。2026-10-13：API を作った `access-reviewer` の指摘で、目印のヘッダー（よそのサイトから読ませない）を「無料枠を使い切られないために」に足し、Sentry で消す URL に `/api/groups/` を足した。2026-10-12：開発環境を用意して、Node.js の版とリポジトリの構成（1つの `package.json`）を決め、テストの道具の名前を `@cloudflare/vitest-plugin` に直した。2026-10-12：`/review-docs`（24件）を受けて、Mermaid の構成図を清書にそろえ（WAF、Turnstile、運営者の PC、部屋への接続）、部屋の URL を `/api/rooms/{room_key}` にし、429 の扱い、Sentry に送る前に消すもの・作る前に確かめること・DSN と CPU の注意、集計の鍵、問い合わせの確かめ方と保存期間、Durable Objects の枠を直した。2026-10-12：Q-025・Q-026・Q-027・Q-031 を推奨案で決めて、「運用」、「無料枠を使い切られないために」、「エラーの送り方」、ログに残るもの、使うサービス（WAF のレート制限、Sentry）を書いた。構成図の清書（draw.io）を足した。2026-10-12：Q-016・Q-017 の `/review-docs`（18件）を受けて、`noindex` と `Referrer-Policy: no-referrer` を付けるパスを並べた。2026-10-12：Q-016 を決めて、アプリの画面の URL を `app.html` へのリライトに足した。2026-10-11：Q-020 の `/review-docs`（21件）を受けて、メンバーとグループの削除も部屋から「取り直して」を配ることにし、503 の理由の分け方を足した。2026-10-10：[ADR 0003](../adr/0003-backend-selection.md) が案 C に決まったので、Firebase 一式の版から書き直した。元の版は git の履歴にある。画面の作り方は [ADR 0004](../adr/0004-frontend-react-typescript.md)。システム構成図の清書（draw.io）は roadmap の Phase 1 で作る）
 
 ## 構成図
 
@@ -164,6 +164,12 @@ Workers Logs の設定（`wrangler.jsonc` の `observability`）：`"enabled": t
 ### 招待URLのプレビュー（OGP）
 - 全グループ共通の固定の OGP にする
 - LINE のクローラーは JavaScript を実行しないので、固定の `og:title`・`og:description`・`og:image` を HTML に直接書く
+- 中身（2026-10-16 にユーザーと決めた）：
+  - `og:title`：旅会議マップ
+  - `og:description`：友達と行った都道府県を塗って、次の旅行先を決めよう
+  - `og:image`：[assets/ogp.png](../../assets/ogp.png)（1200×630 の PNG、約96KB。地図データから `tools/gen-ogp.mjs` で作る）。`https` の絶対の URL で書く。X 向けに `twitter:card` を `summary_large_image` にする（ほかは `og:` の値が使われる）
+  - LINE は大きさの決まりを公式に出していない。1200×630・1MB 未満は、よく使われる目安（二次情報：https://postsyncer.com/tips/og-image-size-link-preview ）。公開の前に LINE で実際に送って確かめる（要確認）
+  - LINE はプレビューを長く覚えるので、変えたら LINE の Page Poker で覚えたものを消す（二次情報：https://israynotarray.com/en/misc/2022/03/04/clear-line-link-preview-cache-with-page-poker/ ）
 - グループ名を出すのは MVP ではやらない（requirements の「やらないこと」）
 
 ### 検索に出すページと出さないページ（NFR-019、NFR-005）
@@ -208,7 +214,8 @@ Workers Logs の設定（`wrangler.jsonc` の `observability`）：`"enabled": t
 
 ```
 docs/                設計書
-tools/               地図データの生成（既存。package.json は別）
+tools/               地図データと OGP の画像の生成（既存。package.json は別）
+assets/              OGP の画像（Phase 2 で、公開する静的なファイルに入れる）
 spike/               案 C を小さく試した試作（Phase 2 で本番のコードに移したら消すか残すかを決める）
 web/                 画面（Vite＋React＋TypeScript）  ← Phase 2 で追加
   pages/             検索に出すページ（素の HTML：トップ、使い方、プライバシーポリシー）
