@@ -4,7 +4,16 @@
 
 ## いまどこ？
 
-**Phase 1（基本設計）。7. まで済み、実装の前の道具の見直しと開発環境を用意し、D1 のテーブル定義とその制約のテストを作った（2026-10-12）。API で守るもの（グループの作成・参加・開く・「行った」、紐づけ・名前の変更・退出・管理・グループ一覧・退会）を作った（2026-10-13：[api](design/api.md)）。そのほかの残りは OGP、LICENSE と、運営者の氏名・住所の出し方（[privacy](design/privacy.md)）**（2026-10-12。次のセッションへの引き継ぎ）。
+**Phase 1（基本設計）の終わり。7. まで済み、実装の前の道具の見直しと開発環境、D1 のテーブル定義と制約のテスト（2026-10-12）、API で守るもの（グループの作成・参加・開く・「行った」、紐づけ・名前の変更・退出・管理・グループ一覧・退会。2026-10-13：[api](design/api.md)）、設計書のレビュー（2026-10-15：`/review-docs` 23件を反映）まで済んだ。画面はまだで、インターネットには何も出していない**（2026-10-16。次のセッションへの引き継ぎ）。
+
+次にやること（上から順に。推奨の順番）：
+1. LICENSE を決める（MIT にするか、置かないか。下の「運用ルール」）
+2. 固定の OGP 画像と文言を用意する（LINE などで招待URLを送ったときに出るカード）
+3. 運営者の氏名・住所の出し方を決める（[privacy](design/privacy.md)）
+4. Phase 2 を始める前に、道具（サブエージェント・Skill・ルール）を見直す（CLAUDE.md の「進め方」、下の「工程ごとの道具の見直し」）。あわせて「デプロイとテーブル定義の変更の手順書」を作る（Phase 2 の最初の項目）
+
+あとでやってよいこと：要件IDの対応表を作り直すスクリプトを `tools/` に置き、手で書いた部分（状態の行、要件に対応しない設計）を残す作りにする（いまはリポジトリにない：[learnings](learnings/2026-10-15-regenerated-doc-drops-manual-parts.md)）。それまでは対応表を手で直す。
+
 - 2026-10-12（終わり）：実装の前の道具の見直し（下の「工程ごとの道具の見直し」）。足したもの：`.claude/rules/api.md`、`access-reviewer`、GitHub Actions のテスト。開発環境はリポジトリの直下に1つの `package.json` で作った（[architecture](design/architecture.md) の「リポジトリの構成」）
 - 要件定義は 2026-10-04 に一度確定したが、その後に足したもの（検索 NFR-019、独自ドメイン NFR-020、リアルタイム NFR-003 の見直し、名前の重複を保存先で守る NFR-006 (11)、確認メールの流れなど）があるので、requirements・use-cases・用語集は「レビュー待ち」に戻っている。小さく試した後にまとめて見直して「確定」にする
 - 技術の方向：
@@ -57,7 +66,7 @@
 - [x] 設計書に要件IDの対応を付ける（2026-10-12：[design/traceability.md](design/traceability.md)）。基本設計の段階の未決事項も決めた（2026-10-12。Q-010・Q-014・Q-019 は本番で確かめるまで暫定）
 - [x] **システム構成図とワイヤーフレーム**を draw.io で作る（2026-10-12：[architecture.drawio.svg](design/architecture.drawio.svg)、[wireframes.drawio.svg](design/wireframes.drawio.svg)）
 - [x] **権限マトリクス**（誰が何をできるか）を表で作る（2026-10-10、[design/permissions.md](design/permissions.md)。下書き）
-- [ ] `/review-docs` でレビュー → 直す
+- [x] `/review-docs` でレビュー → 直す（2026-10-15：23件。API の変更は `access-reviewer` にも見てもらった）
 - [x] 画面の作り方を決める（2026-10-04：React＋TypeScript＋Vite、検索に出すページは素の HTML。[ADR 0004](adr/0004-frontend-react-typescript.md)）
 - [x] **技術選定を確定する**（[ADR 0003](adr/0003-backend-selection.md)、2026-10-10 に案 C で決定）：Cloudflare の課金の道を調べて決まりを書く → ドメインを取る → 小さく試す → 決定。Firebase が前提の設計書と Q（Q-011〜Q-014・Q-019・Q-021・Q-022）は、決めてから書き直す
 - [x] 開発環境を用意する（2026-10-12：Node.js 22、wrangler、Vitest。リポジトリの直下の `package.json`、`api/`、`migrations/`。`npm test` で API と D1 のテストが動く）
