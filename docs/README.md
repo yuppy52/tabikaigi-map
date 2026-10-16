@@ -16,8 +16,9 @@
 | [design/permissions.md](design/permissions.md) | 権限マトリクス（誰が何をできるか、どこで守るか） | 下書き（2026-10-15：× の欄のテストがローカルで済み、名前の変更と退出の欄を直した） |
 | [design/screens.md](design/screens.md) | 画面一覧と画面遷移図、グループの画面の中身、確認ダイアログ、知らせ（ワイヤーフレーム：[wireframes.drawio.svg](design/wireframes.drawio.svg)） | 下書き（2026-10-15：API の応答と画面の動きの対応表を足した） |
 | [design/privacy.md](design/privacy.md) | プライバシーポリシーに書くこと（法律の調べた結果とチェックリスト） | 下書き（2026-10-12：Q-028 で作った） |
+| [design/deploy.md](design/deploy.md) | デプロイとテーブル定義の変更（マイグレーション）の手順書。鍵の作り方、バックアップ、戻し方 | 下書き（2026-10-16：作った） |
 | [design/traceability.md](design/traceability.md) | 要件IDの対応表（各 REQ・NFR を設計書のどこで扱うか） | 下書き（2026-10-15：要件に対応しない設計に、目印のヘッダー・health・Turnstile を足した） |
-| [adr/](adr/) | 技術選定などの決定の記録（ADR）。2026-10-12 に 0006（エラーの把握：Sentry）、2026-10-16 に 0007（地図データ：国土数値情報）を足した | — |
+| [adr/](adr/) | 技術選定などの決定の記録（ADR）。2026-10-12 に 0006（エラーの把握：Sentry）、2026-10-16 に 0007（地図データ：国土数値情報）、0008（デプロイとステージング）、0009（lint：ESLint＋Prettier）を足した | — |
 | [../spike/](../spike/README.md) | 案 C を小さく試した試作と結果（docs の外。ADR 0003 の根拠） | — |
 | [learnings/](learnings/) | 学びの記録（ハマったこと、レビューの指摘）。`/compound` で書く | — |
 

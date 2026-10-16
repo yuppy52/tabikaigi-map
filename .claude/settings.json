@@ -37,7 +37,14 @@
       "Bash(wrangler d1 execute * --remote*)",
       "Bash(npx wrangler d1 execute * --remote*)",
       "Bash(wrangler d1 migrations apply * --remote*)",
-      "Bash(npx wrangler d1 migrations apply * --remote*)"
+      "Bash(npx wrangler d1 migrations apply * --remote*)",
+      "Bash(npm run deploy:*)",
+      "Bash(wrangler rollback:*)",
+      "Bash(npx wrangler rollback:*)",
+      "Bash(wrangler d1 time-travel restore:*)",
+      "Bash(npx wrangler d1 time-travel restore:*)",
+      "Bash(wrangler d1 export * --remote*)",
+      "Bash(npx wrangler d1 export * --remote*)"
     ]
   },
   "hooks": {

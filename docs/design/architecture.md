@@ -1,6 +1,6 @@
 # システム構成
 
-状態：下書き（2026-10-16：OGP の文言と画像を決めた。2026-10-15：`/review-docs` を受けて、「ログに残るもの」のグループIDの扱いを実際の API（URL のパスに入れる）に合わせ、部屋が配らないものに管理できる人の変更と退会を足した。2026-10-13：管理の操作の API を作った `access-reviewer` の指摘で、名前の変更を「使い切られうる API」に足した。2026-10-13：API を作った `access-reviewer` の指摘で、目印のヘッダー（よそのサイトから読ませない）を「無料枠を使い切られないために」に足し、Sentry で消す URL に `/api/groups/` を足した。2026-10-12：開発環境を用意して、Node.js の版とリポジトリの構成（1つの `package.json`）を決め、テストの道具の名前を `@cloudflare/vitest-plugin` に直した。2026-10-12：`/review-docs`（24件）を受けて、Mermaid の構成図を清書にそろえ（WAF、Turnstile、運営者の PC、部屋への接続）、部屋の URL を `/api/rooms/{room_key}` にし、429 の扱い、Sentry に送る前に消すもの・作る前に確かめること・DSN と CPU の注意、集計の鍵、問い合わせの確かめ方と保存期間、Durable Objects の枠を直した。2026-10-12：Q-025・Q-026・Q-027・Q-031 を推奨案で決めて、「運用」、「無料枠を使い切られないために」、「エラーの送り方」、ログに残るもの、使うサービス（WAF のレート制限、Sentry）を書いた。構成図の清書（draw.io）を足した。2026-10-12：Q-016・Q-017 の `/review-docs`（18件）を受けて、`noindex` と `Referrer-Policy: no-referrer` を付けるパスを並べた。2026-10-12：Q-016 を決めて、アプリの画面の URL を `app.html` へのリライトに足した。2026-10-11：Q-020 の `/review-docs`（21件）を受けて、メンバーとグループの削除も部屋から「取り直して」を配ることにし、503 の理由の分け方を足した。2026-10-10：[ADR 0003](../adr/0003-backend-selection.md) が案 C に決まったので、Firebase 一式の版から書き直した。元の版は git の履歴にある。画面の作り方は [ADR 0004](../adr/0004-frontend-react-typescript.md)。システム構成図の清書（draw.io）は roadmap の Phase 1 で作る）
+状態：下書き（2026-10-16：開発運用を決め、「環境」と「開発環境」にデプロイ・ステージング・lint・Dependabot を書いた。2026-10-16：OGP の文言と画像を決めた。2026-10-15：`/review-docs` を受けて、「ログに残るもの」のグループIDの扱いを実際の API（URL のパスに入れる）に合わせ、部屋が配らないものに管理できる人の変更と退会を足した。2026-10-13：管理の操作の API を作った `access-reviewer` の指摘で、名前の変更を「使い切られうる API」に足した。2026-10-13：API を作った `access-reviewer` の指摘で、目印のヘッダー（よそのサイトから読ませない）を「無料枠を使い切られないために」に足し、Sentry で消す URL に `/api/groups/` を足した。2026-10-12：開発環境を用意して、Node.js の版とリポジトリの構成（1つの `package.json`）を決め、テストの道具の名前を `@cloudflare/vitest-plugin` に直した。2026-10-12：`/review-docs`（24件）を受けて、Mermaid の構成図を清書にそろえ（WAF、Turnstile、運営者の PC、部屋への接続）、部屋の URL を `/api/rooms/{room_key}` にし、429 の扱い、Sentry に送る前に消すもの・作る前に確かめること・DSN と CPU の注意、集計の鍵、問い合わせの確かめ方と保存期間、Durable Objects の枠を直した。2026-10-12：Q-025・Q-026・Q-027・Q-031 を推奨案で決めて、「運用」、「無料枠を使い切られないために」、「エラーの送り方」、ログに残るもの、使うサービス（WAF のレート制限、Sentry）を書いた。構成図の清書（draw.io）を足した。2026-10-12：Q-016・Q-017 の `/review-docs`（18件）を受けて、`noindex` と `Referrer-Policy: no-referrer` を付けるパスを並べた。2026-10-12：Q-016 を決めて、アプリの画面の URL を `app.html` へのリライトに足した。2026-10-11：Q-020 の `/review-docs`（21件）を受けて、メンバーとグループの削除も部屋から「取り直して」を配ることにし、503 の理由の分け方を足した。2026-10-10：[ADR 0003](../adr/0003-backend-selection.md) が案 C に決まったので、Firebase 一式の版から書き直した。元の版は git の履歴にある。画面の作り方は [ADR 0004](../adr/0004-frontend-react-typescript.md)。システム構成図の清書（draw.io）は roadmap の Phase 1 で作る）
 
 ## 構成図
 
@@ -199,7 +199,7 @@ Workers Logs の設定（`wrangler.jsonc` の `observability`）：`"enabled": t
 | ローカル開発 | `wrangler dev`（Worker、D1、Durable Objects、静的アセットを手元で動かす）。認証のテストは、テスト用の鍵で自分で署名した証明書を使う（「確認を緩める」設定は作らない） |
 | 本番 | Cloudflare の Worker 1つ（`tabikaigi-map.com`）、D1 のデータベース1つ、Firebase のプロジェクト `tabikaigi-map` |
 
-ステージング環境は MVP では作らない。テーブル定義の変更（マイグレーション）は戻せないので、Phase 2 の前に「デプロイとテーブル定義の変更の手順書」を作る。
+ステージング環境は作らない（[ADR 0008](../adr/0008-deploy-from-pc-no-staging.md)、2026-10-16）。公開の前は本番を試す場所にし、公開の後はマイグレーションを本番のデータの写しで手元で試してから当てる。デプロイは運営者の PC から手で行う。手順とマイグレーションの決まりは [deploy](deploy.md)。
 
 ## 開発環境
 
@@ -209,6 +209,10 @@ Workers Logs の設定（`wrangler.jsonc` の `observability`）：`"enabled": t
 - Hono（API）、`jose`（ID トークンの確かめ）
 - Firebase JS SDK（画面の Authentication だけ）
 - Vite＋React＋TypeScript（画面）
+- ESLint（typescript-eslint の型を使うチェック、`eslint-plugin-react-hooks`）と Prettier（[ADR 0009](../adr/0009-lint-eslint-prettier.md)、2026-10-16）。CI で動かし、Claude がファイルを書いたら Claude Code の hooks で Prettier を当てる
+- Dependabot：脆弱性の修正 PR に加え、npm は週1回（開発用のマイナー・パッチはまとめる）、GitHub Actions は月1回、版上げの PR を作る。出てから7日たった版だけを提案させる（2026-10-16）
+- GitHub の設定：main のブランチ保護で CI の `test` を必須のチェックにする（管理者も対象）。secret scanning と push protection は有効（2026-10-16 に確かめた）。CodeQL は公開の前に有効にする
+- E2E（Playwright Test）は、画面の流れ（作成 → 参加 → 塗る → 別の人の画面に出る）ができたら入れるかを決める。それまでは Claude がアプリ内のブラウザでスマホ幅も含めて確かめる（2026-10-16）
 
 ## リポジトリの構成
 

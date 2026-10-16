@@ -4,11 +4,12 @@
 
 ## いまどこ？
 
-**Phase 1（基本設計）が終わった（2026-10-16）。7. まで済み、実装の前の道具の見直しと開発環境、D1 のテーブル定義と制約のテスト（2026-10-12）、API で守るもの（グループの作成・参加・開く・「行った」、紐づけ・名前の変更・退出・管理・グループ一覧・退会。2026-10-13：[api](design/api.md)）、設計書のレビュー（2026-10-15：`/review-docs` 23件を反映）、LICENSE（MIT）と地図データの差し替え（[ADR 0007](adr/0007-map-data-n03.md)）・OGP の文言と画像・運営者の氏名・住所の出し方（2026-10-16）まで済んだ。画面はまだで、インターネットには何も出していない**。
+**Phase 2（MVP①）を始めた（2026-10-16）。開発運用（デプロイの方法、ステージングを作らない、マイグレーションの決まり、Phase 2 の道具）を決め、手順書を作った。Phase 1（基本設計）は 2026-10-16 に終わった。7. まで済み、実装の前の道具の見直しと開発環境、D1 のテーブル定義と制約のテスト（2026-10-12）、API で守るもの（グループの作成・参加・開く・「行った」、紐づけ・名前の変更・退出・管理・グループ一覧・退会。2026-10-13：[api](design/api.md)）、設計書のレビュー（2026-10-15：`/review-docs` 23件を反映）、LICENSE（MIT）と地図データの差し替え（[ADR 0007](adr/0007-map-data-n03.md)）・OGP の文言と画像・運営者の氏名・住所の出し方（2026-10-16）まで済んだ。画面はまだで、インターネットには何も出していない**。
 
 次にやること（上から順に。推奨の順番）：
-1. Phase 2 を始める前に、道具（サブエージェント・Skill・ルール）を見直す（CLAUDE.md の「進め方」、下の「工程ごとの道具の見直し」）
-2. 「デプロイとテーブル定義の変更の手順書」を作る（Phase 2 の最初の項目）
+1. ~~Phase 2 を始める前に、道具を見直す~~（2026-10-16 に決めた：下の「工程ごとの道具の見直し」）。~~「デプロイとテーブル定義の変更の手順書」を作る~~（2026-10-16：[deploy](design/deploy.md)、[ADR 0008](adr/0008-deploy-from-pc-no-staging.md)）
+2. 決めた道具を入れる（`chore/…`）：ESLint＋Prettier（[ADR 0009](adr/0009-lint-eslint-prettier.md)）と CI、Claude Code の hooks で Prettier、Dependabot（`.github/dependabot.yml`）、`.gitignore` に `.dev.vars*`、`npm run deploy`。GitHub の設定（`test` を必須のチェックに、Dependabot の修正 PR を有効に）は、1つずつユーザーに確かめてから
+3. Vite＋React＋TypeScript の構成を作る（Phase 2 の2つ目の項目）
 
 あとでやってよいこと：要件IDの対応表を作り直すスクリプトを `tools/` に置き、手で書いた部分（状態の行、要件に対応しない設計）を残す作りにする（いまはリポジトリにない：[learnings](learnings/2026-10-15-regenerated-doc-drops-manual-parts.md)）。それまでは対応表を手で直す。
 
@@ -93,7 +94,7 @@
 |---|---|
 | 基本設計 | 画面設計のレビューは既存の `design:design-critique` を使う（2026-10-04 に決定。新しい `ui-reviewer` は作らない）。構成図とワイヤーフレームは接続済みの draw.io のツールを試す（`.drawio.svg` で保存できるかは要確認）。技術の比較と ADR（既存の `researcher` と、Skill の `engineering:architecture` を試す）。権限マトリクスは NFR-006 の (1)〜(13) を出発点にする |
 | 保存先で守るものの実装の前 | 2026-10-12 に見直した。**足した**：`access-reviewer`（API と D1 の制約を、攻撃する側の目で見る。Firestore をやめたので `rules-reviewer` から名前を変えた）、`.claude/rules/api.md`（下の行から前倒し）、GitHub Actions でプルリクエストごとに型の確かめとテストを動かす（公開リポジトリは無料。外の部品はコミットの番号で固定）。**足さない**：サンドボックス（`/sandbox`）は、いまの deny／ask と作業ログで足りており、ローカルのテストしか動かさないため。困ったら見直す |
-| 実装（Phase 2）の前 | コードレビュー（まず既存の `/code-review` を試す）、`test-writer`、Dependabot、**Playwright CLI**（下のメモ）。API の書き方のルールは 2026-10-12 に作った（`.claude/rules/api.md`） |
+| 実装（Phase 2）の前 | 2026-10-16 に `researcher` で1人＋AI の開発の道具を調べて決めた。**足す**：`/code-review` を push の前に毎回、ESLint＋Prettier（[ADR 0009](adr/0009-lint-eslint-prettier.md)。推奨は Biome だったがユーザーが ESLint を選んだ）と Claude Code の hooks、Dependabot（脆弱性の修正 PR と、npm は週1回・Actions は月1回の版上げ、出てから7日待つ）、`test` を必須のチェックに、`.dev.vars*` を `.gitignore` に、CLAUDE.md に「新しい部品は `npm view` で実在を確かめる」「テストを変えたら差分を先に見せる」。**公開の前**：CodeQL。**画面ができたら**：Playwright Test の E2E を入れるかを決める（それまではアプリ内のブラウザで確かめる）。**足さない**：`test-writer`（ルールで足りる）、husky などのコミット前の確かめ（CI の必須のチェックで足りる）、Renovate（外のアプリに権限を渡す）、Playwright CLI（MCP で足りなくなったら）。secret scanning と push protection はもう有効だった |
 | 公開（Phase 2 の終わり）の前 | **Strix**（下のメモ） |
 | 要件定義の後 | docs の自動チェック（Markdown の書式、Mermaid の構文、リンク切れ） |
 | βテスト（Phase 4）の前 | GitHub Issues（友達からのフィードバックの受け口） |
@@ -114,7 +115,7 @@
 
 （ADR 0003 で案 C に決まった（2026-10-10））
 
-- [ ] 始める前に「デプロイとテーブル定義の変更（マイグレーション）の手順書」を作る（テーブル定義の変更は戻せないため。ADR 0003 の「C で書き直すときの方針」）
+- [x] 始める前に「デプロイとテーブル定義の変更（マイグレーション）の手順書」を作る（2026-10-16：[deploy](design/deploy.md)。デプロイは PC から手で、ステージングは作らない：[ADR 0008](adr/0008-deploy-from-pc-no-staging.md)。〔未〕の確かめは最初の本番のデプロイで）
 - [ ] Vite＋React＋TypeScript の構成を作り、モックの画面を React の部品に書き直す（ADR 0004）
 - [ ] リアルタイムの共有（NFR-003）：Durable Objects ＋ WebSocket で「行った」の変更を配る
 - [ ] `localStorage` の読み書きを API（Hono＋D1）に置き換える（端末が覚えるメンバーだけは `localStorage` に残す：Q-017）
