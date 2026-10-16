@@ -167,7 +167,7 @@ Workers Logs の設定（`wrangler.jsonc` の `observability`）：`"enabled": t
 - 中身（2026-10-16 にユーザーと決めた）：
   - `og:title`：旅会議マップ
   - `og:description`：友達と行った都道府県を塗って、次の旅行先を決めよう
-  - `og:image`：[assets/ogp.png](../../assets/ogp.png)（1200×630 の PNG、約100KB。地図データから `tools/gen-ogp.mjs` で作る）。`https` の絶対の URL で書く。X 向けに `twitter:card` を `summary_large_image` にする（ほかは `og:` の値が使われる）
+  - `og:image`：[assets/ogp.png](../../assets/ogp.png)（1200×630 の PNG、約96KB。地図データから `tools/gen-ogp.mjs` で作る）。`https` の絶対の URL で書く。X 向けに `twitter:card` を `summary_large_image` にする（ほかは `og:` の値が使われる）
   - LINE は大きさの決まりを公式に出していない。1200×630・1MB 未満は、よく使われる目安（二次情報：https://postsyncer.com/tips/og-image-size-link-preview ）。公開の前に LINE で実際に送って確かめる（要確認）
   - LINE はプレビューを長く覚えるので、変えたら LINE の Page Poker で覚えたものを消す（二次情報：https://israynotarray.com/en/misc/2022/03/04/clear-line-link-preview-cache-with-page-poker/ ）
 - グループ名を出すのは MVP ではやらない（requirements の「やらないこと」）
