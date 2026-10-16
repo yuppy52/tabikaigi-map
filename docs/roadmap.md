@@ -8,7 +8,7 @@
 
 次にやること（上から順に。推奨の順番）：
 1. ~~Phase 2 を始める前に、道具を見直す~~（2026-10-16 に決めた：下の「工程ごとの道具の見直し」）。~~「デプロイとテーブル定義の変更の手順書」を作る~~（2026-10-16：[deploy](design/deploy.md)、[ADR 0008](adr/0008-deploy-from-pc-no-staging.md)）
-2. 決めた道具を入れる（`chore/…`）：ESLint＋Prettier（[ADR 0009](adr/0009-lint-eslint-prettier.md)）と CI、Claude Code の hooks で Prettier、Dependabot（`.github/dependabot.yml`）、`.gitignore` に `.dev.vars*`、`npm run deploy`。GitHub の設定（`test` を必須のチェックに、Dependabot の修正 PR を有効に）は、1つずつユーザーに確かめてから
+2. 決めた道具を入れる（`chore/…`）：ESLint＋Prettier（[ADR 0009](adr/0009-lint-eslint-prettier.md)）と CI、Claude Code の hooks で Prettier、Dependabot（`.github/dependabot.yml`）、`.gitignore` に `.dev.vars*`、`npm run deploy`（コミットし忘れの確かめ → 型 → lint → テスト → 画面のビルド → デプロイ）。GitHub の設定（`test` を必須のチェックに、Dependabot の修正 PR を有効に）は、1つずつユーザーに確かめてから
 3. Vite＋React＋TypeScript の構成を作る（Phase 2 の2つ目の項目）
 
 あとでやってよいこと：要件IDの対応表を作り直すスクリプトを `tools/` に置き、手で書いた部分（状態の行、要件に対応しない設計）を残す作りにする（いまはリポジトリにない：[learnings](learnings/2026-10-15-regenerated-doc-drops-manual-parts.md)）。それまでは対応表を手で直す。
@@ -135,12 +135,13 @@
   - 〔未〕Turnstile のウィジェットのドメインの制限と、応答の `hostname` を確かめるか（[api](design/api.md)）
   - 〔未〕Durable Objects の動いている時間（GB 秒）と眠れる書き方の効き方
   - 〔未〕無料枠を超えたときに API が実際に返すエラー（D1・Workers・Durable Objects）。D1 の枠切れのエラーの文が分かったら、API の 503 に `reason: "quota"` を付けて「一時的な失敗」と分ける（いまは全部 `temporary`：[api](design/api.md)）
+- [ ] 最初の本番のデプロイ（[deploy](design/deploy.md) の「最初のデプロイ」）と、そこにある〔未〕の確かめ（トークンの権限、本物の D1 の書き出し、わざと失敗するマイグレーション、Time Travel の巻き戻しと取り消し、バックアップからの作り直し、`rollback` で静的アセットが戻るか、デプロイで部屋の接続が切れるか）。どれも公開の前に必須
 - [ ] 公開の前に、相談・確かめ（Phase 1 で決めたことの確かめ）：
   - 〔未〕個人情報保護法相談ダイヤルに、運営者の氏名・住所を「請求があれば遅滞なく回答する」と書く形でよいかを電話で聞く（ユーザーが行う。[privacy](design/privacy.md)）
   - 〔未〕招待URLを LINE と X で実際に送り、OGP のカードの表示を確かめる。変えたら LINE の Page Poker で覚えたものを消す（[architecture](design/architecture.md) の「招待URLのプレビュー（OGP）」）
   - 〔未〕地図データの出典が、グループの画面・トップ・使い方の一番下に出ているか（[screens](design/screens.md)）。N03 のページにある「測量法に基づく国土地理院長承認（複製）」が、加工した形を使うときにも手続きを求めるかを、国土数値情報の問い合わせ窓口で確かめる（要確認：[ADR 0007](adr/0007-map-data-n03.md)）
 - [ ] 公開の前に、試作の Worker（`tabikaigi-spike.tabikaigi.workers.dev`）と試作の D1 を消す（本番と同じアカウントの無料枠を使い、公開されたままのため）
-- [ ] 独自ドメインで公開し（NFR-020）、友達グループで使ってもらう
+- [ ] 独自ドメインで公開し（NFR-020）、友達グループで使ってもらう。友達に最初の招待URLを渡した日を「公開」とし、ここに日付を書く（公開の前と後でマイグレーションの決まりが変わる：[deploy](design/deploy.md)）
 
 ## Phase 3：MVP②（ログインあり）
 

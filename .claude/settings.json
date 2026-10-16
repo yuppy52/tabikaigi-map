@@ -20,7 +20,11 @@
       "Bash(git push * --force*)",
       "Bash(git push * -f)",
       "Bash(rm -rf:*)",
-      "Bash(rm -fr:*)"
+      "Bash(rm -fr:*)",
+      "Read(./.dev.vars*)",
+      "Read(**/.dev.vars*)",
+      "Bash(wrangler login:*)",
+      "Bash(npx wrangler login:*)"
     ],
     "ask": [
       "Bash(firebase deploy:*)",
@@ -44,7 +48,12 @@
       "Bash(wrangler d1 time-travel restore:*)",
       "Bash(npx wrangler d1 time-travel restore:*)",
       "Bash(wrangler d1 export * --remote*)",
-      "Bash(npx wrangler d1 export * --remote*)"
+      "Bash(npx wrangler d1 export * --remote*)",
+      "Bash(*wrangler*deploy*)",
+      "Bash(*wrangler*--remote*)",
+      "Bash(*wrangler*rollback*)",
+      "Bash(*wrangler*secret*)",
+      "Bash(*wrangler*time-travel restore*)"
     ]
   },
   "hooks": {

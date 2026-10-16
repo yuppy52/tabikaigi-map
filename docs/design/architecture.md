@@ -95,7 +95,7 @@ Workers の枠が尽きると、`run_worker_first` に当たる `/api/*` は Clo
 
 | 何を | どうやって | 要件・未決 |
 |---|---|---|
-| バックアップ | 新しい版を出す前に `wrangler d1 export` で全データを手元に書き出す。書き出しの間はほかの読み書きが止まる（要確認）ので、使われない時間に行う | NFR-017 |
+| バックアップ | 新しい版を出す前に `wrangler d1 export` で全データを手元に書き出す。書き出しの間はほかの読み書きが止まる（公式：https://developers.cloudflare.com/d1/best-practices/import-export-data/ ）ので、使われない時間に行う。直近の1つだけ残す。手順は [deploy](deploy.md) | NFR-017 |
 | 消したデータの残り方 | D1 の Time Travel は常に有効で、消したデータも7日間は戻せる状態で残る（Free。復元は10分に10回まで）。プライバシーポリシーの保存期間に書く | NFR-008 |
 | 利用状況 | 運営者の PC から、D1 の読み取りだけ・期限付きの API トークンで `wrangler d1 execute --remote` を動かし、集計の SQL を流す（`wrangler login` の広い権限や、バックアップ用の鍵は使わない。読み取りだけの権限を作れるかは要確認。2026-10-12：`/review-docs` #16）（グループ数、メンバー数をログインあり・なし別、直近30日に開かれたグループ数）。「開かれた」は、グループを開く API が `groups.last_opened_on` を日付で残したもの（[data-model](data-model.md)）。集計の SQL も D1 の読み取りの回数に数える（全件を読んでも数千行で、1日の枠の1％未満）。外部のアクセス解析は使わない（Q-025） | NFR-010 |
 | 使用量 | 週1回、Cloudflare のダッシュボード（Workers・D1・Durable Objects の Metrics）と Firebase のコンソール（サービスのコンソール）を見る。どれかが1日の上限の5割を超えた日があったら、自動の知らせ（下）を作るか、構成を考え直す。D1 は上限に達すると Cloudflare からメールが届く。上限に近づいたことを自動で知らせる仕組みは MVP では作らない（Q-026） | NFR-011 |
@@ -203,6 +203,7 @@ Workers Logs の設定（`wrangler.jsonc` の `observability`）：`"enabled": t
 
 ## 開発環境
 
+- 手元の D1（`.wrangler/`）は、当て済みのマイグレーションを書き換えても作り直されない。`0001_init.sql` を書き換える前の古い形が残っていたので（2026-10-16）、`wrangler dev` で画面を試す前に作り直す（[deploy](deploy.md) の「確かめたこと」）
 - Node.js 22（`.node-version`。2027-04 まで保守される版。2026-10-12）
 - `wrangler`（ローカルの実行、D1 のマイグレーション、デプロイ）
 - Vitest と `@cloudflare/vitest-plugin`（API と D1 の制約のテスト。2026-10 に `@cloudflare/vitest-pool-workers` から名前が変わった）。プルリクエストごとに GitHub Actions で動かす（`.github/workflows/test.yml`）

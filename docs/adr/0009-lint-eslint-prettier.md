@@ -2,6 +2,8 @@
 
 状態：決定（2026-10-16）
 
+- 関係する要件：NFR-014（運営者1人で回せる。機械で見つけられる間違いを人の確かめに頼らない）
+
 ## 背景
 
 Phase 2 からコード（画面と API）が増える。いまの CI は型の確かめ（`tsc --noEmit`）とテストだけで、次のものを見ていない。
@@ -33,6 +35,7 @@ Phase 2 からコード（画面と API）が増える。いまの CI は型の�
 
 ## 結果と注意
 
+- Prettier を当てるのはコード（`ts`・`tsx`・`js`・`mjs`・`json`・`css`）だけ。`docs/**/*.md`（日本語の表が崩れる）、ビルド結果の `index.html`、`tools/` の生成物、`*.drawio.svg` は `.prettierignore` に入れる（差分を読みやすくする目的と逆になるため。2026-10-17：`/review-docs` #20）
 - 型を使うチェックは、`tsconfig.json` の範囲のファイルにしか効かない。画面（`web/`）を足したら、ESLint の設定の対象と `tsconfig` をそろえる
 - CI（`.github/workflows/test.yml`）で lint と `prettier --check` を動かし、通らなければマージできないようにする（ブランチ保護の必須のチェック）
 - Claude がファイルを書いたら、Claude Code の hooks（`PostToolUse`）で Prettier を当てる（CI でフォーマットの差で落ちる手戻りを減らす）
