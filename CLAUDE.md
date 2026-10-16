@@ -20,7 +20,7 @@
 - `.claude/rules/docs.md`：ドキュメントの書き方（要件ID、状態、図の使い分け）
 - `.claude/rules/sql.md`：SQL（D1）の書き方
 - `.claude/rules/api.md`：API（Hono）の書き方
-- `.claude/agents/`：`researcher`（調査）、`doc-reviewer`（設計書のレビュー）、`access-reviewer`（API と D1 の制約を攻撃する側の目でレビュー）
+- `.claude/agents/`：`researcher`（調査）、`doc-reviewer`（設計書のレビュー）、`access-reviewer`（API・D1 の制約・部屋・配信の設定を攻撃する側の目でレビュー）
 - `.claude/skills/`：`/review-docs`（設計書のレビュー）、`/compound`（学びを残す）
 
 ## 技術の前提
@@ -44,7 +44,7 @@
 - ユーザーに論点を決めてもらうときは、関係の深い論点をまとめ、前提の仕組みと具体的な場面を説明し、推奨案と理由を添えてから聞く
   - 「なぜそうなるか」（判断の順番など）と場面の手順（1. 2. 3.）を最初から書く。推奨しない案は、手間を具体的に（表・SQL・テストがいくつ増えるか）書き、推奨の理由は手間ではなく本当の理由で書く（[learnings](docs/learnings/2026-10-02-explain-context-before-decisions.md)）
 - 計画 → 作業 → レビュー（`/review-docs`）→ 学びを残す（`/compound`）の順で回す。作業の区切りでは `/compound` を提案する
-- コードを変えたら、push の前に `/code-review` を回す。API や D1 の制約を変えたら、加えて `access-reviewer` にレビューを頼む
+- コードを変えたら、push の前に `/code-review` を回す。API・D1 の制約・部屋（WebSocket）・配信の設定（`wrangler.jsonc` のヘッダーやリライト）を変えたら、加えて `access-reviewer` にレビューを頼む
 - テストを変えたら（期待する値を直した、テストを消した・飛ばした）、その差分を先にユーザーに見せる。AI は、コードではなくテストの側を直して通すことがある（2026-10-16）
 - 工程（ロードマップの Phase）を始める前に、サブエージェント・Skill・ルールが足りているかを見直す
 - ロードマップの先の Phase の作業に手を付けるとき（前倒し、項目を広く読むとき）は、始める前に伝えて、理由と推奨を添えて確かめる。作業の報告では、いまどの Phase のどの項目か、何がまだかを一言添える（[learnings](docs/learnings/2026-10-14-say-when-work-jumps-phase.md)）
