@@ -1,0 +1,32 @@
+# Dependabot：部品（npm）と GitHub Actions の新しい版を、プルリクエストで知らせる。
+# セキュリティの修正の PR は、リポジトリの設定（Dependabot security updates）で別に出る。
+# どちらも CI（test）が通るかを見て、変更点を確かめてからマージする（自動ではマージしない）
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+    # 出たばかりの版はすぐ入れない（乗っ取られた版は数日で見つかって消されることが多い）
+    cooldown:
+      default-days: 7
+    open-pull-requests-limit: 5
+    groups:
+      # 道具（devDependencies）の小さな版上げは1つの PR にまとめる
+      dev-minor-patch:
+        dependency-type: development
+        update-types: [minor, patch]
+    ignore:
+      # typescript-eslint が TypeScript 7 にまだ対応していない（ADR 0009）。対応したら外す
+      - dependency-name: typescript
+        update-types: [version-update:semver-major]
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly
+    cooldown:
+      default-days: 7
+    groups:
+      actions:
+        patterns: ["*"]

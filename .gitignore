@@ -11,6 +11,9 @@ tools/japan.topojson
 # secrets
 .env
 .env.*
+# wrangler dev が読む秘密の値
+.dev.vars
+.dev.vars.*
 *firebase-adminsdk*.json
 *serviceAccount*.json
 *service-account*.json
