@@ -1,6 +1,6 @@
 # システム構成
 
-状態：下書き（2026-10-19：画面のテストは計算だけにすると決めた。2026-10-19：lint・Dependabot を入れ、GitHub の設定（ルールセット）を書き、「開発環境」を実際の設定に合わせた。2026-10-16：開発運用を決め、「環境」と「開発環境」にデプロイ・ステージング・lint・Dependabot を書いた。2026-10-16：OGP の文言と画像を決めた。2026-10-15：`/review-docs` を受けて、「ログに残るもの」のグループIDの扱いを実際の API（URL のパスに入れる）に合わせ、部屋が配らないものに管理できる人の変更と退会を足した。2026-10-13：管理の操作の API を作った `access-reviewer` の指摘で、名前の変更を「使い切られうる API」に足した。2026-10-13：API を作った `access-reviewer` の指摘で、目印のヘッダー（よそのサイトから読ませない）を「無料枠を使い切られないために」に足し、Sentry で消す URL に `/api/groups/` を足した。2026-10-12：開発環境を用意して、Node.js の版とリポジトリの構成（1つの `package.json`）を決め、テストの道具の名前を `@cloudflare/vitest-plugin` に直した。2026-10-12：`/review-docs`（24件）を受けて、Mermaid の構成図を清書にそろえ（WAF、Turnstile、運営者の PC、部屋への接続）、部屋の URL を `/api/rooms/{room_key}` にし、429 の扱い、Sentry に送る前に消すもの・作る前に確かめること・DSN と CPU の注意、集計の鍵、問い合わせの確かめ方と保存期間、Durable Objects の枠を直した。2026-10-12：Q-025・Q-026・Q-027・Q-031 を推奨案で決めて、「運用」、「無料枠を使い切られないために」、「エラーの送り方」、ログに残るもの、使うサービス（WAF のレート制限、Sentry）を書いた。構成図の清書（draw.io）を足した。2026-10-12：Q-016・Q-017 の `/review-docs`（18件）を受けて、`noindex` と `Referrer-Policy: no-referrer` を付けるパスを並べた。2026-10-12：Q-016 を決めて、アプリの画面の URL を `app.html` へのリライトに足した。2026-10-11：Q-020 の `/review-docs`（21件）を受けて、メンバーとグループの削除も部屋から「取り直して」を配ることにし、503 の理由の分け方を足した。2026-10-10：[ADR 0003](../adr/0003-backend-selection.md) が案 C に決まったので、Firebase 一式の版から書き直した。元の版は git の履歴にある。画面の作り方は [ADR 0004](../adr/0004-frontend-react-typescript.md)。システム構成図の清書（draw.io）は roadmap の Phase 1 で作る）
+状態：下書き（2026-10-19：画面の道具（Vite＋React）を入れ、開発の動かし方（[ADR 0010](../adr/0010-plain-vite-with-wrangler-dev.md)）とリポジトリの構成を実際に合わせた。2026-10-19：画面のテストは計算だけにすると決めた。2026-10-19：lint・Dependabot を入れ、GitHub の設定（ルールセット）を書き、「開発環境」を実際の設定に合わせた。2026-10-16：開発運用を決め、「環境」と「開発環境」にデプロイ・ステージング・lint・Dependabot を書いた。2026-10-16：OGP の文言と画像を決めた。2026-10-15：`/review-docs` を受けて、「ログに残るもの」のグループIDの扱いを実際の API（URL のパスに入れる）に合わせ、部屋が配らないものに管理できる人の変更と退会を足した。2026-10-13：管理の操作の API を作った `access-reviewer` の指摘で、名前の変更を「使い切られうる API」に足した。2026-10-13：API を作った `access-reviewer` の指摘で、目印のヘッダー（よそのサイトから読ませない）を「無料枠を使い切られないために」に足し、Sentry で消す URL に `/api/groups/` を足した。2026-10-12：開発環境を用意して、Node.js の版とリポジトリの構成（1つの `package.json`）を決め、テストの道具の名前を `@cloudflare/vitest-plugin` に直した。2026-10-12：`/review-docs`（24件）を受けて、Mermaid の構成図を清書にそろえ（WAF、Turnstile、運営者の PC、部屋への接続）、部屋の URL を `/api/rooms/{room_key}` にし、429 の扱い、Sentry に送る前に消すもの・作る前に確かめること・DSN と CPU の注意、集計の鍵、問い合わせの確かめ方と保存期間、Durable Objects の枠を直した。2026-10-12：Q-025・Q-026・Q-027・Q-031 を推奨案で決めて、「運用」、「無料枠を使い切られないために」、「エラーの送り方」、ログに残るもの、使うサービス（WAF のレート制限、Sentry）を書いた。構成図の清書（draw.io）を足した。2026-10-12：Q-016・Q-017 の `/review-docs`（18件）を受けて、`noindex` と `Referrer-Policy: no-referrer` を付けるパスを並べた。2026-10-12：Q-016 を決めて、アプリの画面の URL を `app.html` へのリライトに足した。2026-10-11：Q-020 の `/review-docs`（21件）を受けて、メンバーとグループの削除も部屋から「取り直して」を配ることにし、503 の理由の分け方を足した。2026-10-10：[ADR 0003](../adr/0003-backend-selection.md) が案 C に決まったので、Firebase 一式の版から書き直した。元の版は git の履歴にある。画面の作り方は [ADR 0004](../adr/0004-frontend-react-typescript.md)。システム構成図の清書（draw.io）は roadmap の Phase 1 で作る）
 
 ## 構成図
 
@@ -196,7 +196,7 @@ Workers Logs の設定（`wrangler.jsonc` の `observability`）：`"enabled": t
 
 | 環境 | 使うもの |
 |---|---|
-| ローカル開発 | `wrangler dev`（Worker、D1、Durable Objects、静的アセットを手元で動かす）。認証のテストは、テスト用の鍵で自分で署名した証明書を使う（「確認を緩める」設定は作らない） |
+| ローカル開発 | `npm run dev` で、`wrangler dev`（Worker、D1、Durable Objects を手元で動かす）と Vite（画面）を一緒に起こす。`/g/*` のリライトや `noindex` などの配信の動きは、`npm run build` の後に `wrangler dev` で確かめる（[ADR 0010](../adr/0010-plain-vite-with-wrangler-dev.md)）。認証のテストは、テスト用の鍵で自分で署名した証明書を使う（「確認を緩める」設定は作らない） |
 | 本番 | Cloudflare の Worker 1つ（`tabikaigi-map.com`）、D1 のデータベース1つ、Firebase のプロジェクト `tabikaigi-map` |
 
 ステージング環境は作らない（[ADR 0008](../adr/0008-deploy-from-pc-no-staging.md)、2026-10-16）。公開の前は本番を試す場所にし、公開の後はマイグレーションを本番のデータの写しで手元で試してから当てる。デプロイは運営者の PC から手で行う。手順とマイグレーションの決まりは [deploy](deploy.md)。
@@ -209,8 +209,8 @@ Workers Logs の設定（`wrangler.jsonc` の `observability`）：`"enabled": t
 - Vitest と `@cloudflare/vitest-plugin`（API と D1 の制約のテスト。2026-10 に `@cloudflare/vitest-pool-workers` から名前が変わった）。プルリクエストごとに GitHub Actions で動かす（`.github/workflows/test.yml`）
 - Hono（API）、`jose`（ID トークンの確かめ）
 - Firebase JS SDK（画面の Authentication だけ）
-- Vite＋React＋TypeScript（画面）
-- ESLint（typescript-eslint の型を使うチェック、`eslint-plugin-react-hooks`）と Prettier（[ADR 0009](../adr/0009-lint-eslint-prettier.md)、2026-10-16）。CI で動かし、Claude がファイルを書いたら Claude Code の hooks で Prettier を当てる。設定は `eslint.config.mjs`・`.prettierrc.json`（1行は140文字まで）・`.prettierignore`。2026-10-19 に入れた。`eslint-plugin-react-hooks` は React を入れるときに足す
+- Vite＋React＋TypeScript（画面）。Cloudflare の Vite のプラグインは使わず、素の Vite で `web/` を `dist/` にビルドする（[ADR 0010](../adr/0010-plain-vite-with-wrangler-dev.md)、2026-10-19）。型の設定は `tsconfig.json`（API）と `web/tsconfig.json`（画面）の2つ。CI と `npm run deploy` でビルドも動かす
+- ESLint（typescript-eslint の型を使うチェック、`eslint-plugin-react-hooks`）と Prettier（[ADR 0009](../adr/0009-lint-eslint-prettier.md)、2026-10-16）。CI で動かし、Claude がファイルを書いたら Claude Code の hooks で Prettier を当てる。設定は `eslint.config.mjs`・`.prettierrc.json`（1行は140文字まで）・`.prettierignore`。2026-10-19 に入れた。型を使うチェックと `eslint-plugin-react-hooks` は、2026-10-19 に画面（`web/src/`）にも広げた
 - Dependabot（`.github/dependabot.yml`）：脆弱性の修正 PR に加え、npm は週1回（開発用のマイナー・パッチはまとめる）、GitHub Actions は月1回、版上げの PR を作る。出てから7日たった版だけを提案させる（2026-10-16）。TypeScript のメジャーの版は、typescript-eslint が対応するまで上げない。見るのはリポジトリの直下の部品だけ（`tools/` はモックの道具、`spike/` は消す予定のため）
 - GitHub の設定（2026-10-19 に変えた）：
   - ブランチ保護（Settings → Branches）：main に直接 push できない、管理者も対象。2026-10-19 の前から
@@ -227,9 +227,14 @@ docs/                設計書
 tools/               地図データと OGP の画像の生成（既存。package.json は別）
 assets/              OGP の画像（Phase 2 で、公開する静的なファイルに入れる）
 spike/               案 C を小さく試した試作（Phase 2 で本番のコードに移したら消すか残すかを決める）
-web/                 画面（Vite＋React＋TypeScript）  ← Phase 2 で追加
-  pages/             検索に出すページ（素の HTML：トップ、使い方、プライバシーポリシー）
-  src/               アプリの画面（React）
+web/                 画面（Vite＋React＋TypeScript。2026-10-19 に追加）
+  app.html           アプリの画面の入口
+  src/               アプリの画面（React）。計算のテスト（*.test.ts）もここに置く
+  tsconfig.json      画面の型の設定（ブラウザの型、JSX）
+  pages/             検索に出すページ（素の HTML：トップ、使い方、プライバシーポリシー）← その項目で追加
+dist/                画面のビルド結果（npm run build。git には入れない）
+vite.config.ts       画面のビルドと開発用のサーバー（ADR 0010）
+vitest.config.ts     テストの2組（api：Workers の実行環境、web：画面の計算）
 api/                 API（Hono、TypeScript）
   src/
   test/              API と D1 の制約のテスト（Vitest）
@@ -238,4 +243,4 @@ package.json         画面と API で1つ（2026-10-12）
 wrangler.jsonc       Cloudflare の設定
 ```
 
-`package.json` は、画面と API で1つにする（2026-10-12。ユーザーが「次の作業」を頼んだので、推奨案で決めた）。理由：Worker と画面は1つの `wrangler.jsonc` で配るので、設定と道具の版を1か所にそろえられ、入れる手間も1回で済む。分けると、画面と API で TypeScript などの版がずれる。Phase 2 で Vite を足すときに、Cloudflare の Vite のプラグインで1つにまとまらないと分かったら見直す。
+`package.json` は、画面と API で1つにする（2026-10-12。ユーザーが「次の作業」を頼んだので、推奨案で決めた）。理由：Worker と画面は1つの `wrangler.jsonc` で配るので、設定と道具の版を1か所にそろえられ、入れる手間も1回で済む。分けると、画面と API で TypeScript などの版がずれる。2026-10-19 に Vite を足したときも1つのままにした（Cloudflare の Vite のプラグインは使わず、素の Vite と `wrangler dev` を別々に動かす：[ADR 0010](../adr/0010-plain-vite-with-wrangler-dev.md)）。

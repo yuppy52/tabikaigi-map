@@ -5,6 +5,8 @@
 index.html
 tools/
 *.drawio.svg
+# 画面のビルド結果
+dist/
 # 試作、部品、ローカルの D1
 spike/
 node_modules/

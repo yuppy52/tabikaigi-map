@@ -28,7 +28,8 @@ npm run typecheck
 npm run lint
 npm test
 
-# 4. 画面のビルドは、Vite を入れたらここに足す（Phase 2 の「Vite＋React の構成」）
+# 4. 画面のビルド（dist/ に作り直す）
+npm run build
 
 # 5. 出す
 wrangler deploy

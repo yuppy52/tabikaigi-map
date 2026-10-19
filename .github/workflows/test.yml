@@ -1,4 +1,4 @@
-# プルリクエストごとに、型の確かめ、lint、見た目のそろい、API・D1 のテストを動かす。
+# プルリクエストごとに、型の確かめ、lint、見た目のそろい、API・D1 と画面の計算のテスト、画面のビルドを動かす。
 # 公開リポジトリなので、GitHub が用意する標準のマシンは無料（2026-10-12）
 name: test
 
@@ -29,3 +29,4 @@ jobs:
       - run: npm run lint
       - run: npm run format:check
       - run: npm test
+      - run: npm run build
