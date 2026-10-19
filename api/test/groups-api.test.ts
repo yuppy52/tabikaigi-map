@@ -247,6 +247,24 @@ describe("参加する（REQ-004・REQ-005・REQ-008）", () => {
     try {
       expect((await join("short", "たろう")).json).toEqual({ error: "group_not_found" });
       expect((await call("GET", "/api/groups/abc")).json).toEqual({ error: "group_not_found" });
+      // グループIDを持つ API のすべてで同じ（確かめを外したり、ルートの後ろに動かしたりしたら落ちる）
+      const routes: [string, string][] = [
+        ["PUT", "/members/1/visits/13"],
+        ["DELETE", "/members/1/visits/13"],
+        ["PUT", "/my-visits/13"],
+        ["DELETE", "/my-visits/13"],
+        ["POST", "/members/1/link"],
+        ["PUT", "/members/1/name"],
+        ["POST", "/members/1/leave"],
+        ["DELETE", "/members/1"],
+        ["PUT", "/name"],
+        ["PUT", "/manage-by"],
+        ["DELETE", ""],
+      ];
+      for (const [method, rest] of routes) {
+        const res = await call(method, `/api/groups/short${rest}`, { body: {} });
+        expect({ method, rest, ...res }).toEqual({ method, rest, status: 404, json: { error: "group_not_found" } });
+      }
     } finally {
       await env.DB.prepare("ALTER TABLE groups_tmp RENAME TO groups").run();
     }
@@ -286,11 +304,21 @@ describe("参加する（REQ-004・REQ-005・REQ-008）", () => {
       ["たろう😀😀", "たろう😀\u200D😀"],
       ["🏴", "🏴\u{E0067}\u{E0062}\u{E0065}\u{E006E}\u{E0067}\u{E007F}"],
       ["ゆ う", "ゆ  う"],
+      ["\u2600", "\u2600\uFE0E"],
+      ["じろう", "\u3000じろう\u3000"],
     ];
     for (const [first, second] of same) {
       expect((await join(groupId, first)).status).toBe(201);
       expect(await join(groupId, second)).toMatchObject({ status: 409, json: { error: "name_taken" } });
     }
+  });
+
+  it("名前の前後の空白（全角の空白も）は取り除いて保存する", async () => {
+    const { groupId } = await create("ゆう");
+    const r = await join(groupId, "\u3000 さぶろう\u3000");
+    expect(r.status).toBe(201);
+    const row = await env.DB.prepare("SELECT name FROM members WHERE id = ?").bind(r.json.memberId).first();
+    expect(row).toEqual({ name: "さぶろう" });
   });
 
   it("同じ名前（全角半角・大文字小文字の違いも同じ）は 409 name_taken と、その人の番号と紐づいているか（REQ-011・REQ-012）", async () => {

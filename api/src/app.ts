@@ -138,7 +138,8 @@ export function createApp(deps: Deps) {
     return c.json({ groupId: r.groupId, memberId: r.memberId }, 201);
   });
 
-  // グループIDの形が違えば、データベースを引かずに「ない」と返す
+  // グループIDの形が違えば、データベースを引かずに「ない」と返す。
+  // Hono では /groups/:groupId/* が /groups/abc にも当たる（2026-10-19 にテストで確かめた）が、念のため両方に掛ける
   const checkGroupId = async (c: C, next: Next) => {
     if (!isGroupId(c.req.param("groupId") ?? "")) return fail(c, 404, "group_not_found");
     return next();
