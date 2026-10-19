@@ -8,7 +8,10 @@ if [ "$(git branch --show-current)" != "main" ]; then
   echo "main ではないブランチです。git switch main && git pull をしてから出してください" >&2
   exit 1
 fi
-git fetch --quiet origin main
+if ! git fetch --quiet origin main; then
+  echo "GitHub の main を取りに行けませんでした（ネットにつながっているか確かめてください）。main が最新か分からないので止めます" >&2
+  exit 1
+fi
 if [ "$(git rev-parse HEAD)" != "$(git rev-parse origin/main)" ]; then
   echo "手元の main が GitHub の main と違います。git pull をしてから出してください" >&2
   exit 1
