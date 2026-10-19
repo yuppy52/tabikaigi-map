@@ -8,7 +8,7 @@
 
 次にやること（上から順に。推奨の順番）：
 1. ~~Phase 2 を始める前に、道具を見直す~~（2026-10-16 に決めた：下の「工程ごとの道具の見直し」）。~~「デプロイとテーブル定義の変更の手順書」を作る~~（2026-10-16：[deploy](design/deploy.md)、[ADR 0008](adr/0008-deploy-from-pc-no-staging.md)）
-2. ~~決めた道具を入れる~~（2026-10-19：`chore/dev-tooling`。`eslint-plugin-react-hooks` は React を入れる 3 で足す）。**残り**：GitHub の設定（`test` を必須のチェックに、Dependabot の修正 PR を有効に）を、1つずつユーザーに確かめてから変える。中身：ESLint＋Prettier（[ADR 0009](adr/0009-lint-eslint-prettier.md)）と CI、Claude Code の hooks で Prettier、Dependabot（`.github/dependabot.yml`）、`.gitignore` に `.dev.vars*`、`npm run deploy`（コミットし忘れの確かめ → 型 → lint → テスト → 画面のビルド → デプロイ）。GitHub の設定（`test` を必須のチェックに、Dependabot の修正 PR を有効に）は、1つずつユーザーに確かめてから
+2. ~~決めた道具を入れる~~（2026-10-19：`chore/dev-tooling`。`eslint-plugin-react-hooks` は React を入れる 3 で足す）。GitHub の設定も 2026-10-19 にユーザーに1つずつ確かめて変えた（`test` を必須のチェックにするルールセット、Dependabot の知らせと修正 PR）。中身：ESLint＋Prettier（[ADR 0009](adr/0009-lint-eslint-prettier.md)）と CI、Claude Code の hooks で Prettier、Dependabot（`.github/dependabot.yml`）、`.gitignore` に `.dev.vars*`、`npm run deploy`（コミットし忘れの確かめ → 型 → lint → テスト → 画面のビルド → デプロイ）
 3. Vite＋React＋TypeScript の構成を作る（Phase 2 の2つ目の項目）。始めるときに、下の Phase 2 の項目を小分けにする
 
 あとでやってよいこと：要件IDの対応表を作り直すスクリプトを `tools/` に置き、手で書いた部分（状態の行、要件に対応しない設計）を残す作りにする（いまはリポジトリにない：[learnings](learnings/2026-10-15-regenerated-doc-drops-manual-parts.md)）。それまでは対応表を手で直す。
