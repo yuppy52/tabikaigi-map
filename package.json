@@ -6,7 +6,7 @@
     "node": ">=22"
   },
   "scripts": {
-    "dev": "concurrently --names api,web --kill-others-on-fail \"wrangler dev\" \"vite\"",
+    "dev": "concurrently --names api,web --kill-others \"wrangler dev\" \"vite\"",
     "dev:api": "wrangler dev",
     "build": "vite build",
     "test": "vitest run",

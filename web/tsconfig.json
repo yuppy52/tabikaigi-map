@@ -7,6 +7,9 @@
     "strict": true,
     "noEmit": true,
     "skipLibCheck": true,
+    // Vite はファイルを1つずつ変換するので、型だけの import は `import type` と書かせる（書き忘れると画面で読み込みエラーになる）
+    "verbatimModuleSyntax": true,
+    "isolatedModules": true,
     "jsx": "react-jsx",
     "lib": ["ES2022", "DOM", "DOM.Iterable"],
     "types": ["vite/client"]

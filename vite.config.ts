@@ -20,6 +20,9 @@ export default defineConfig({
     },
   },
   server: {
+    // 5173 番が使われていたら、別の番号に移らずに止まる（古いサーバーを見て確かめた気にならないように）
+    port: 5173,
+    strictPort: true,
     // /api への要求は wrangler dev に回す。部屋（WebSocket）も通す
     proxy: { "/api": { target: "http://localhost:8787", ws: true } },
   },
