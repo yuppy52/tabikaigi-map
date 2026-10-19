@@ -3,17 +3,18 @@
 import js from "@eslint/js";
 import { defineConfig } from "eslint/config";
 import prettier from "eslint-config-prettier";
+import reactHooks from "eslint-plugin-react-hooks";
 import tseslint from "typescript-eslint";
 
 export default defineConfig(
   // 見ないもの：ビルド結果、モックの道具、試作、部品
   {
-    ignores: ["index.html", "tools/", "spike/", "node_modules/", ".wrangler/", "api/src/worker-configuration.d.ts"],
+    ignores: ["index.html", "dist/", "tools/", "spike/", "node_modules/", ".wrangler/", "api/src/worker-configuration.d.ts"],
   },
   js.configs.recommended,
-  // 型を使うチェック。tsconfig.json の範囲（いまは api/）にだけ効く
+  // 型を使うチェック。tsconfig の範囲（api/ は直下の tsconfig.json、web/src/ は web/tsconfig.json）にだけ効く
   {
-    files: ["api/**/*.ts"],
+    files: ["api/**/*.ts", "web/src/**/*.{ts,tsx}"],
     extends: [tseslint.configs.recommendedTypeChecked],
     languageOptions: {
       parserOptions: { projectService: true, tsconfigRootDir: import.meta.dirname },
@@ -31,6 +32,11 @@ export default defineConfig(
       "@typescript-eslint/no-explicit-any": "off",
       "@typescript-eslint/require-await": "off",
     },
+  },
+  // 画面：React の決まり（useEffect の依存の書き忘れ、フックを条件の中で呼ぶ、など）
+  {
+    files: ["web/src/**/*.{ts,tsx}"],
+    extends: [reactHooks.configs.flat.recommended],
   },
   // 名前の決まり（api/src/names.ts）は、見えない部品を \u{…} で書いて文字の組から外している
   {

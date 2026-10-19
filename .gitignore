@@ -18,6 +18,9 @@ tools/japan.topojson
 *serviceAccount*.json
 *service-account*.json
 
+# 画面のビルド結果（npm run build で作る）
+dist/
+
 # wrangler のローカルの D1 など
 .wrangler/
 

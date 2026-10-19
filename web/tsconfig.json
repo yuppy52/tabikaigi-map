@@ -1,0 +1,18 @@
+{
+  // 画面（ブラウザで動く）用の型の設定。API（api/）は直下の tsconfig.json
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "strict": true,
+    "noEmit": true,
+    "skipLibCheck": true,
+    // Vite はファイルを1つずつ変換するので、型だけの import は `import type` と書かせる（書き忘れると画面で読み込みエラーになる）
+    "verbatimModuleSyntax": true,
+    "isolatedModules": true,
+    "jsx": "react-jsx",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "types": ["vite/client"]
+  },
+  "include": ["src"]
+}

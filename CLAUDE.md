@@ -14,12 +14,14 @@
 - `index.html`：ビルド結果。直接編集しない
 - `tools/template.html`：モックの画面のソース
 - `tools/`：地図データの生成とビルド（`npm run build` で `index.html` を作り直す）
-- `api/`：API（Hono）とそのテスト。`migrations/`：D1 のテーブル定義。リポジトリの直下で `npm test`（API と D1 の制約のテスト）、`npm run typecheck`、`npm run lint`（ESLint）、`npm run format:check`（Prettier）。プルリクエストごとに GitHub Actions でも動く（`test` が通らないとマージできない）
+- `web/`：画面（Vite＋React。`npm run dev` で画面と API を一緒に起こし、`http://localhost:5173/app.html` を開く。`npm run build` で `dist/` にビルド：[ADR 0010](docs/adr/0010-plain-vite-with-wrangler-dev.md)）
+- `api/`：API（Hono）とそのテスト。`migrations/`：D1 のテーブル定義。リポジトリの直下で `npm test`（API と D1 の制約、画面の計算のテスト）、`npm run typecheck`、`npm run lint`（ESLint）、`npm run format:check`（Prettier）。プルリクエストごとに GitHub Actions でも動く（`test` が通らないとマージできない）
 - `docs/`：要件、設計、ADR、ロードマップ
 - `docs/learnings/`：過去の失敗や判断の記録（tags 付き）。設計やレビューの前に、関係するものを探して読む
 - `.claude/rules/docs.md`：ドキュメントの書き方（要件ID、状態、図の使い分け）
 - `.claude/rules/sql.md`：SQL（D1）の書き方
 - `.claude/rules/api.md`：API（Hono）の書き方
+- `.claude/rules/web.md`：画面（React）の書き方
 - `.claude/agents/`：`researcher`（調査）、`doc-reviewer`（設計書のレビュー）、`access-reviewer`（API・D1 の制約・部屋・配信の設定を攻撃する側の目でレビュー）、`coder`（決まった設計に沿ってコードとテストを書く）
 - `.claude/hooks/`：作業ログ、Claude が書いたファイルに Prettier を当てる
 - `.claude/skills/`：`/review-docs`（設計書のレビュー）、`/compound`（学びを残す）
