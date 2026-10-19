@@ -29,7 +29,7 @@ const MAX_PARTS_PER_CHAR = 10;
 export function nameKey(name: string): string {
   return name
     .normalize("NFKC")
-    .replace(/[︎️‍\u{E0020}-\u{E007F}]/gu, "")
+    .replace(/[\u{FE0E}\u{FE0F}\u{200D}\u{E0020}-\u{E007F}]/gu, "")
     .replace(/\s+/gu, " ")
     .toLowerCase()
     .trim();
@@ -77,7 +77,7 @@ export const GROUP_NAME = { max: 20, storeMax: 400 } as const;
  */
 export function checkName(input: unknown, rule: { max: number; storeMax: number }): NameCheck {
   if (typeof input !== "string") return { ok: false };
-  const name = input.replace(/^[\s　]+|[\s　]+$/g, "");
+  const name = input.replace(/^[\s\u3000]+|[\s\u3000]+$/g, "");
   if (name.length === 0 || visibleLength(name) > rule.max || hasInvisible(name) || hasOverstackedChar(name)) return { ok: false };
   const key = nameKey(name);
   // 比べる形が空になる名前（NFKC で消える文字だけ）や、NFKC で長くなりすぎる名前も断る

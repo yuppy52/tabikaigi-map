@@ -10,7 +10,11 @@
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
     "types": "wrangler types --env-interface Env --include-runtime false api/src/worker-configuration.d.ts",
-    "db:migrate:local": "wrangler d1 migrations apply DB --local"
+    "db:migrate:local": "wrangler d1 migrations apply DB --local",
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "deploy": "sh scripts/deploy.sh"
   },
   "dependencies": {
     "hono": "^4.13.13",
@@ -19,7 +23,12 @@
   "devDependencies": {
     "@cloudflare/vitest-plugin": "^1.4.0",
     "@cloudflare/workers-types": "^5.20261004.1",
+    "@eslint/js": "^10.0.1",
+    "eslint": "^10.12.0",
+    "eslint-config-prettier": "^10.1.8",
+    "prettier": "3.9.10",
     "typescript": "^5.9.3",
+    "typescript-eslint": "^8.71.2",
     "vitest": "~4.1",
     "wrangler": "^4.149.0"
   }

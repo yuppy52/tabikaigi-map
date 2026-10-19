@@ -1,0 +1,14 @@
+# Prettier をかけないもの（ADR 0009）
+# 日本語の表が崩れる
+*.md
+# ビルド結果と、モックの道具・生成物（作り直すと差分が出るため）
+index.html
+tools/
+*.drawio.svg
+# 試作、部品、ローカルの D1
+spike/
+node_modules/
+.wrangler/
+package-lock.json
+# wrangler types が作るファイル
+api/src/worker-configuration.d.ts

@@ -94,7 +94,7 @@ async function fetchGoogleKeys(now: number): Promise<KeyCache> {
     throw new KeyUnavailableError("公開鍵を取りに行けなかった");
   }
   if (!res.ok) throw new KeyUnavailableError(`公開鍵の取得に失敗：${res.status}`);
-  const body = (await res.json()) as { keys?: (JsonWebKey & { kid?: string })[] };
+  const body = await res.json<{ keys?: (JsonWebKey & { kid?: string })[] }>();
   const keys = new Map<string, CryptoKey>();
   for (const jwk of body.keys ?? []) {
     if (!jwk.kid) continue;

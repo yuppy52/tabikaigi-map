@@ -23,6 +23,6 @@ export const cloudflareTurnstile: TurnstileVerifier = async (token, env) => {
     throw new TurnstileUnavailableError("Cloudflare に聞けなかった");
   }
   if (!res.ok) throw new TurnstileUnavailableError(`siteverify：${res.status}`);
-  const body = (await res.json()) as { success?: boolean };
+  const body = await res.json<{ success?: boolean }>();
   return body.success === true;
 };

@@ -1,6 +1,6 @@
 // API の本体（Hono）。URL と応答の一覧は docs/design/api.md。
 // 外の仕組み（Google の公開鍵、Turnstile）は引数で受け取り、テストで差し替えられるようにしている
-import { Hono, type Context } from "hono";
+import { Hono, type Context, type Next } from "hono";
 import { bodyLimit } from "hono/body-limit";
 import type { ContentfulStatusCode } from "hono/utils/http-status";
 import {
@@ -127,7 +127,7 @@ export function createApp(deps: Deps) {
   }
 
   async function readBody(c: C): Promise<Record<string, unknown>> {
-    const body = await c.req.json().catch(() => null);
+    const body: unknown = await c.req.json().catch(() => null);
     return body !== null && typeof body === "object" && !Array.isArray(body) ? (body as Record<string, unknown>) : {};
   }
 
@@ -145,14 +145,12 @@ export function createApp(deps: Deps) {
   });
 
   // グループIDの形が違えば、データベースを引かずに「ない」と返す
-  app.use("/groups/:groupId/*", async (c, next) => {
-    if (!isGroupId(c.req.param("groupId"))) return fail(c, 404, "group_not_found");
+  const checkGroupId = async (c: C, next: Next) => {
+    if (!isGroupId(c.req.param("groupId") ?? "")) return fail(c, 404, "group_not_found");
     return next();
-  });
-  app.use("/groups/:groupId", async (c, next) => {
-    if (!isGroupId(c.req.param("groupId"))) return fail(c, 404, "group_not_found");
-    return next();
-  });
+  };
+  app.use("/groups/:groupId/*", checkGroupId);
+  app.use("/groups/:groupId", checkGroupId);
 
   // 新しいメンバーとして参加する（REQ-004・REQ-005・REQ-008）
   app.post("/groups/:groupId/members", async (c) => {
@@ -210,7 +208,7 @@ export function createApp(deps: Deps) {
     const memberId = memberIdOf(c);
     const body = await readBody(c);
     if (memberId === null || (body.visits !== "merge" && body.visits !== "discard")) return fail(c, 400, "bad_request");
-    return writeResponse(c, await linkMember(c.env.DB, c.req.param("groupId")!, memberId, user.uid, body.visits === "merge"));
+    return writeResponse(c, await linkMember(c.env.DB, c.req.param("groupId"), memberId, user.uid, body.visits === "merge"));
   });
 
   // 自分に紐づいたメンバーの名前を変える（REQ-014・REQ-015）
@@ -221,14 +219,14 @@ export function createApp(deps: Deps) {
     if (memberId === null) return fail(c, 400, "bad_request");
     const name = checkName((await readBody(c)).name, MEMBER_NAME);
     if (!name.ok) return fail(c, 400, "bad_name");
-    return writeResponse(c, await renameMember(c.env.DB, c.req.param("groupId")!, memberId, user.uid, name.name));
+    return writeResponse(c, await renameMember(c.env.DB, c.req.param("groupId"), memberId, user.uid, name.name));
   });
 
   // 自分で退出する（REQ-049・REQ-050）。最後の1人ならグループも消え、groupDeleted: true を返す
   app.post("/groups/:groupId/members/:memberId/leave", async (c) => {
     const memberId = memberIdOf(c);
     if (memberId === null) return fail(c, 400, "bad_request");
-    const r = await leaveMember(c.env.DB, c.req.param("groupId")!, memberId, c.get("user")?.uid ?? null);
+    const r = await leaveMember(c.env.DB, c.req.param("groupId"), memberId, c.get("user")?.uid ?? null);
     return writeResponse(c, r, r.ok ? { ok: true, groupDeleted: r.groupDeleted } : undefined);
   });
 
@@ -236,7 +234,7 @@ export function createApp(deps: Deps) {
   app.delete("/groups/:groupId/members/:memberId", async (c) => {
     const memberId = memberIdOf(c);
     if (memberId === null) return fail(c, 400, "bad_request");
-    const r = await deleteMember(c.env.DB, c.req.param("groupId")!, memberId, c.get("user")?.uid ?? null);
+    const r = await deleteMember(c.env.DB, c.req.param("groupId"), memberId, c.get("user")?.uid ?? null);
     return writeResponse(c, r, r.ok ? { ok: true, groupDeleted: r.groupDeleted } : undefined);
   });
 
@@ -244,7 +242,7 @@ export function createApp(deps: Deps) {
   app.put("/groups/:groupId/name", async (c) => {
     const name = checkName((await readBody(c)).name, GROUP_NAME);
     if (!name.ok) return fail(c, 400, "bad_name");
-    return writeResponse(c, await renameGroup(c.env.DB, c.req.param("groupId")!, c.get("user")?.uid ?? null, name.name));
+    return writeResponse(c, await renameGroup(c.env.DB, c.req.param("groupId"), c.get("user")?.uid ?? null, name.name));
   });
 
   // 管理できる人を変える（REQ-045）。ログイン済みの作成者だけ
@@ -253,12 +251,12 @@ export function createApp(deps: Deps) {
     if (error) return error;
     const manageBy = (await readBody(c)).manageBy;
     if (manageBy !== "everyone" && manageBy !== "owner") return fail(c, 400, "bad_request");
-    return writeResponse(c, await setManageBy(c.env.DB, c.req.param("groupId")!, user.uid, manageBy));
+    return writeResponse(c, await setManageBy(c.env.DB, c.req.param("groupId"), user.uid, manageBy));
   });
 
   // グループを削除する（REQ-047）
   app.delete("/groups/:groupId", async (c) => {
-    return writeResponse(c, await deleteGroup(c.env.DB, c.req.param("groupId")!, c.get("user")?.uid ?? null));
+    return writeResponse(c, await deleteGroup(c.env.DB, c.req.param("groupId"), c.get("user")?.uid ?? null));
   });
 
   // グループ一覧（REQ-032）
