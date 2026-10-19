@@ -158,7 +158,10 @@ async function groupRefused(db: D1Database, groupId: string): Promise<GroupWrite
 
 /** グループ名を変える（REQ-046）。同じ名前なら書かない（同じ値を繰り返し送られても、D1 の書き込みの枠を使わない） */
 export async function renameGroup(db: D1Database, groupId: string, uid: string | null, name: string): Promise<GroupWriteResult> {
-  const res = await db.prepare(`UPDATE groups SET name = ?1 WHERE id = ?2 AND name IS NOT ?1 AND ${CAN_MANAGE}`).bind(name, groupId, uid).run();
+  const res = await db
+    .prepare(`UPDATE groups SET name = ?1 WHERE id = ?2 AND name IS NOT ?1 AND ${CAN_MANAGE}`)
+    .bind(name, groupId, uid)
+    .run();
   if (res.meta.changes > 0) return { ok: true };
   // 0行：ない・権限がない・同じ名前だった、を分ける
   const g = await db.prepare("SELECT 1 FROM groups WHERE id = ?").bind(groupId).first();

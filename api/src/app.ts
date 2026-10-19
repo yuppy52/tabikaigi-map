@@ -3,13 +3,7 @@
 import { Hono, type Context, type Next } from "hono";
 import { bodyLimit } from "hono/body-limit";
 import type { ContentfulStatusCode } from "hono/utils/http-status";
-import {
-  InvalidTokenError,
-  KeyUnavailableError,
-  verifyFirebaseIdToken,
-  type KeyProvider,
-  type VerifiedUser,
-} from "./firebase-auth";
+import { InvalidTokenError, KeyUnavailableError, verifyFirebaseIdToken, type KeyProvider, type VerifiedUser } from "./firebase-auth";
 import { createGroup, joinGroup, readGroup, setAccountVisit, setMemberVisit, touchGroup } from "./groups";
 import { isGroupId } from "./ids";
 import { deleteGroup, deleteMember, leaveMember, linkMember, renameGroup, renameMember, setManageBy, type Refused } from "./manage";

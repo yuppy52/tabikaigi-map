@@ -152,8 +152,7 @@ describe("グループを作る（REQ-001）", () => {
   });
 
   it("名前とグループ名の決まり（REQ-009・REQ-010）：空白だけ、長すぎは 400", async () => {
-    const post = (groupName: unknown, name: unknown) =>
-      call("POST", "/api/groups", { body: { groupName, name, turnstileToken: "ok" } });
+    const post = (groupName: unknown, name: unknown) => call("POST", "/api/groups", { body: { groupName, name, turnstileToken: "ok" } });
     expect((await post("旅行部", "　 ")).status).toBe(400);
     expect((await post("旅行部", "あ".repeat(11))).status).toBe(400);
     expect((await post("あ".repeat(21), "ゆう")).status).toBe(400);
@@ -341,7 +340,12 @@ describe("グループを開く", () => {
     await call("PUT", `/api/groups/${groupId}/my-visits/13`, { token: t });
     await call("PUT", `/api/groups/${groupId}/members/${taro}/visits/1`);
     const r = await call("GET", `/api/groups/${groupId}`);
-    expect(r.json.visits).toEqual(expect.arrayContaining([{ memberId: me, pref: 13 }, { memberId: taro, pref: 1 }]));
+    expect(r.json.visits).toEqual(
+      expect.arrayContaining([
+        { memberId: me, pref: 13 },
+        { memberId: taro, pref: 1 },
+      ]),
+    );
     expect(r.json.visits).toHaveLength(2);
   });
 

@@ -7,14 +7,7 @@ import tseslint from "typescript-eslint";
 export default tseslint.config(
   // 見ないもの：ビルド結果、モックの道具、試作、部品
   {
-    ignores: [
-      "index.html",
-      "tools/",
-      "spike/",
-      "node_modules/",
-      ".wrangler/",
-      "api/src/worker-configuration.d.ts",
-    ],
+    ignores: ["index.html", "tools/", "spike/", "node_modules/", ".wrangler/", "api/src/worker-configuration.d.ts"],
   },
   js.configs.recommended,
   // 型を使うチェック。tsconfig.json の範囲（いまは api/）にだけ効く

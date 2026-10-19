@@ -45,19 +45,28 @@ function addMember(groupId: string, name: string, opts: { uid?: string | null; i
 }
 
 async function count(sql: string, ...args: unknown[]) {
-  return (await db().prepare(sql).bind(...args).first<{ n: number }>())!.n;
+  return (await db()
+    .prepare(sql)
+    .bind(...args)
+    .first<{ n: number }>())!.n;
 }
 
 describe("groups", () => {
   it("グループIDが短いと断る（NFR-005）", async () => {
     await expect(
-      db().prepare("INSERT INTO groups (id, name, last_opened_on, room_key) VALUES ('short', '旅行部', '2026-10-12', ?)").bind(rk("short")).run(),
+      db()
+        .prepare("INSERT INTO groups (id, name, last_opened_on, room_key) VALUES ('short', '旅行部', '2026-10-12', ?)")
+        .bind(rk("short"))
+        .run(),
     ).rejects.toThrow(/CHECK/);
   });
 
   it("グループ名が空や長すぎると断る（NFR-006 (8)）", async () => {
     const insert = (name: string) =>
-      db().prepare("INSERT INTO groups (id, name, last_opened_on, room_key) VALUES (?, ?, '2026-10-12', ?)").bind(newId(), name, rk(`r-${seq}`)).run();
+      db()
+        .prepare("INSERT INTO groups (id, name, last_opened_on, room_key) VALUES (?, ?, '2026-10-12', ?)")
+        .bind(newId(), name, rk(`r-${seq}`))
+        .run();
     await expect(insert("")).rejects.toThrow(/CHECK/);
     await expect(insert("あ".repeat(401))).rejects.toThrow(/CHECK/);
     await expect(insert("あ".repeat(400))).resolves.toBeTruthy();
@@ -70,13 +79,19 @@ describe("groups", () => {
 
   it("最後に開かれた日は空にできない（Q-025）", async () => {
     await expect(
-      db().prepare("INSERT INTO groups (id, name, room_key) VALUES (?, '旅行部', ?)").bind(newId(), rk(`r-${seq}`)).run(),
+      db()
+        .prepare("INSERT INTO groups (id, name, room_key) VALUES (?, '旅行部', ?)")
+        .bind(newId(), rk(`r-${seq}`))
+        .run(),
     ).rejects.toThrow(/NOT NULL/);
   });
 
   it("room_key は重複できない（Q-031）", async () => {
     const insert = () =>
-      db().prepare("INSERT INTO groups (id, name, last_opened_on, room_key) VALUES (?, '旅行部', '2026-10-12', ?)").bind(newId(), rk("same-room")).run();
+      db()
+        .prepare("INSERT INTO groups (id, name, last_opened_on, room_key) VALUES (?, '旅行部', '2026-10-12', ?)")
+        .bind(newId(), rk("same-room"))
+        .run();
     await insert();
     await expect(insert()).rejects.toThrow(/UNIQUE/);
   });
@@ -86,7 +101,8 @@ describe("groups", () => {
     await db().prepare("INSERT INTO account_visits (uid, pref) VALUES ('uid-delete-group', 13)").run();
     const id = await createGroup("uid-delete-group");
     await addMember(id, "たろう");
-    const memberId = (await db().prepare("SELECT id FROM members WHERE group_id = ? AND name = 'たろう'").bind(id).first<{ id: number }>())!.id;
+    const memberId = (await db().prepare("SELECT id FROM members WHERE group_id = ? AND name = 'たろう'").bind(id).first<{ id: number }>())!
+      .id;
     await db().prepare("INSERT INTO member_visits (member_id, pref) VALUES (?, 1)").bind(memberId).run();
 
     await db().prepare("DELETE FROM groups WHERE id = ?").bind(id).run();
@@ -159,16 +175,16 @@ describe("作成者（NFR-006 (4)、ADR 0005）", () => {
   it("作成者の印は後から付けられない", async () => {
     const id = await createGroup();
     await addMember(id, "たろう");
-    await expect(
-      db().prepare("UPDATE members SET is_owner = 1 WHERE group_id = ? AND name = 'たろう'").bind(id).run(),
-    ).rejects.toThrow(/member_fixed/);
+    await expect(db().prepare("UPDATE members SET is_owner = 1 WHERE group_id = ? AND name = 'たろう'").bind(id).run()).rejects.toThrow(
+      /member_fixed/,
+    );
   });
 
   it("作成者の印は外せない", async () => {
     const id = await createGroup();
-    await expect(
-      db().prepare("UPDATE members SET is_owner = 0 WHERE group_id = ? AND is_owner = 1").bind(id).run(),
-    ).rejects.toThrow(/member_fixed/);
+    await expect(db().prepare("UPDATE members SET is_owner = 0 WHERE group_id = ? AND is_owner = 1").bind(id).run()).rejects.toThrow(
+      /member_fixed/,
+    );
   });
 
   it("2人目以降を作成者として入れられない", async () => {
@@ -205,9 +221,9 @@ describe("作成者（NFR-006 (4)、ADR 0005）", () => {
     const b = await createGroup();
     await addMember(b, "たろう");
     await db().prepare("DELETE FROM members WHERE group_id = ? AND is_owner = 1").bind(b).run();
-    await expect(
-      db().prepare("UPDATE members SET group_id = ? WHERE group_id = ? AND is_owner = 1").bind(b, a).run(),
-    ).rejects.toThrow(/member_fixed/);
+    await expect(db().prepare("UPDATE members SET group_id = ? WHERE group_id = ? AND is_owner = 1").bind(b, a).run()).rejects.toThrow(
+      /member_fixed/,
+    );
   });
 
   it("作成者のメンバーへの紐づけは、印のトリガーに引っかからない", async () => {
@@ -234,17 +250,17 @@ describe("紐づけ（NFR-006 (3)(9)）", () => {
     await addAccount("uid-a");
     await addAccount("uid-b");
     const id = await createGroup("uid-a");
-    await expect(
-      db().prepare("UPDATE members SET uid = 'uid-b' WHERE group_id = ? AND uid = 'uid-a'").bind(id).run(),
-    ).rejects.toThrow(/uid_fixed/);
+    await expect(db().prepare("UPDATE members SET uid = 'uid-b' WHERE group_id = ? AND uid = 'uid-a'").bind(id).run()).rejects.toThrow(
+      /uid_fixed/,
+    );
   });
 
   it("紐づけを外せない", async () => {
     await addAccount("uid-unlink");
     const id = await createGroup("uid-unlink");
-    await expect(
-      db().prepare("UPDATE members SET uid = NULL WHERE group_id = ? AND uid = 'uid-unlink'").bind(id).run(),
-    ).rejects.toThrow(/uid_fixed/);
+    await expect(db().prepare("UPDATE members SET uid = NULL WHERE group_id = ? AND uid = 'uid-unlink'").bind(id).run()).rejects.toThrow(
+      /uid_fixed/,
+    );
   });
 
   it("同じグループで、2人目のメンバーを同じアカウントに紐づけられない", async () => {
@@ -293,9 +309,9 @@ describe("10グループまで（NFR-006 (13)、REQ-060）", () => {
     const uid = "uid-limit-link";
     await inTenGroups(uid);
     const other = await createGroup();
-    await expect(
-      db().prepare("UPDATE members SET uid = ? WHERE group_id = ? AND uid IS NULL").bind(uid, other).run(),
-    ).rejects.toThrow(/group_limit/);
+    await expect(db().prepare("UPDATE members SET uid = ? WHERE group_id = ? AND uid IS NULL").bind(uid, other).run()).rejects.toThrow(
+      /group_limit/,
+    );
   });
 
   it("10グループに入っている人も、名前を変えられる（自分の行を数えて断らない）", async () => {
@@ -331,7 +347,10 @@ describe("「行った」", () => {
     const id = await createGroup();
     const memberId = (await db().prepare("SELECT id FROM members WHERE group_id = ?").bind(id).first<{ id: number }>())!.id;
     const insert = () =>
-      db().prepare("INSERT INTO member_visits (member_id, pref) VALUES (?, 13) ON CONFLICT (member_id, pref) DO NOTHING").bind(memberId).run();
+      db()
+        .prepare("INSERT INTO member_visits (member_id, pref) VALUES (?, 13) ON CONFLICT (member_id, pref) DO NOTHING")
+        .bind(memberId)
+        .run();
     await insert();
     await insert();
     expect(await count("SELECT count(*) AS n FROM member_visits WHERE member_id = ?", memberId)).toBe(1);
@@ -341,7 +360,10 @@ describe("「行った」", () => {
     const id = await createGroup();
     const memberId = (await db().prepare("SELECT id FROM members WHERE group_id = ?").bind(id).first<{ id: number }>())!.id;
     await expect(
-      db().prepare("INSERT INTO member_visits (member_id, pref) VALUES (?, 99) ON CONFLICT (member_id, pref) DO NOTHING").bind(memberId).run(),
+      db()
+        .prepare("INSERT INTO member_visits (member_id, pref) VALUES (?, 99) ON CONFLICT (member_id, pref) DO NOTHING")
+        .bind(memberId)
+        .run(),
     ).rejects.toThrow(/CHECK/);
   });
 });
@@ -376,9 +398,13 @@ describe("値の形（API の入口の確かめが抜けたときの最後の守
   it("県と色は整数だけ（13.5 を通すと、1人で何行でも書けてしまう）", async () => {
     const id = await createGroup();
     const memberId = (await db().prepare("SELECT id FROM members WHERE group_id = ?").bind(id).first<{ id: number }>())!.id;
-    await expect(db().prepare("INSERT INTO member_visits (member_id, pref) VALUES (?, 13.5)").bind(memberId).run()).rejects.toThrow(/CHECK constraint failed: .*pref/);
+    await expect(db().prepare("INSERT INTO member_visits (member_id, pref) VALUES (?, 13.5)").bind(memberId).run()).rejects.toThrow(
+      /CHECK constraint failed: .*pref/,
+    );
     await addAccount("uid-real");
-    await expect(db().prepare("INSERT INTO account_visits (uid, pref) VALUES ('uid-real', 1.0000001)").run()).rejects.toThrow(/CHECK constraint failed: .*pref/);
+    await expect(db().prepare("INSERT INTO account_visits (uid, pref) VALUES ('uid-real', 1.0000001)").run()).rejects.toThrow(
+      /CHECK constraint failed: .*pref/,
+    );
     await expect(addMember(id, "たろう", { color: 2.5 })).rejects.toThrow(/CHECK constraint failed: .*color/);
   });
 
@@ -390,7 +416,10 @@ describe("値の形（API の入口の確かめが抜けたときの最後の守
 
   it("作成者の印は 0 か 1 だけ", async () => {
     const id = newId();
-    await db().prepare("INSERT INTO groups (id, name, last_opened_on, room_key) VALUES (?, '旅行部', '2026-10-12', ?)").bind(id, rk(id)).run();
+    await db()
+      .prepare("INSERT INTO groups (id, name, last_opened_on, room_key) VALUES (?, '旅行部', '2026-10-12', ?)")
+      .bind(id, rk(id))
+      .run();
     await expect(addMember(id, "ゆう", { isOwner: 2 as 1 })).rejects.toThrow(/CHECK constraint failed: .*is_owner/);
   });
 
@@ -430,7 +459,9 @@ describe("値の形（API の入口の確かめが抜けたときの最後の守
 
   it("アカウントの「行った」も県は 1〜47 だけ", async () => {
     await addAccount("uid-pref48");
-    await expect(db().prepare("INSERT INTO account_visits (uid, pref) VALUES ('uid-pref48', 48)").run()).rejects.toThrow(/CHECK constraint failed: .*pref/);
+    await expect(db().prepare("INSERT INTO account_visits (uid, pref) VALUES ('uid-pref48', 48)").run()).rejects.toThrow(
+      /CHECK constraint failed: .*pref/,
+    );
   });
 });
 
@@ -440,8 +471,6 @@ describe("NOT NULL", () => {
     await expect(
       db().prepare("INSERT INTO members (group_id, name, name_key, color) VALUES (?, NULL, 'x', 0)").bind(id).run(),
     ).rejects.toThrow(/NOT NULL/);
-    await expect(
-      db().prepare("INSERT INTO member_visits (member_id, pref) VALUES (1, NULL)").run(),
-    ).rejects.toThrow(/NOT NULL/);
+    await expect(db().prepare("INSERT INTO member_visits (member_id, pref) VALUES (1, NULL)").run()).rejects.toThrow(/NOT NULL/);
   });
 });

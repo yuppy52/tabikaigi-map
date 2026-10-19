@@ -23,11 +23,7 @@ export class InvalidTokenError extends Error {}
 /** 公開鍵が取れない（こちらの都合で使えない：503） */
 export class KeyUnavailableError extends Error {}
 
-export async function verifyFirebaseIdToken(
-  token: string,
-  projectId: string,
-  getKey: KeyProvider,
-): Promise<VerifiedUser> {
+export async function verifyFirebaseIdToken(token: string, projectId: string, getKey: KeyProvider): Promise<VerifiedUser> {
   let kid: string | undefined;
   try {
     const header = decodeProtectedHeader(token);
@@ -71,8 +67,7 @@ export async function verifyFirebaseIdToken(
 
 // ---- 本番用：Google の公開鍵を取って、決められた時間だけ取っておく ----
 
-const GOOGLE_JWK_URL =
-  "https://www.googleapis.com/service_accounts/v1/jwk/securetoken@system.gserviceaccount.com";
+const GOOGLE_JWK_URL = "https://www.googleapis.com/service_accounts/v1/jwk/securetoken@system.gserviceaccount.com";
 
 type KeyCache = { keys: Map<string, CryptoKey>; expiresAt: number };
 // Worker のメモリに置く（同じ Worker が動いている間だけ残る。KV の書き込みの枠を使わない）
@@ -98,13 +93,7 @@ async function fetchGoogleKeys(now: number): Promise<KeyCache> {
   const keys = new Map<string, CryptoKey>();
   for (const jwk of body.keys ?? []) {
     if (!jwk.kid) continue;
-    const key = await crypto.subtle.importKey(
-      "jwk",
-      jwk,
-      { name: "RSASSA-PKCS1-v1_5", hash: "SHA-256" },
-      false,
-      ["verify"],
-    );
+    const key = await crypto.subtle.importKey("jwk", jwk, { name: "RSASSA-PKCS1-v1_5", hash: "SHA-256" }, false, ["verify"]);
     keys.set(jwk.kid, key);
   }
   // Cache-Control の max-age（秒）に従う。書いていなければ1時間
