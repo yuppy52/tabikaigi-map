@@ -14,13 +14,14 @@
 - `index.html`：ビルド結果。直接編集しない
 - `tools/template.html`：モックの画面のソース
 - `tools/`：地図データの生成とビルド（`npm run build` で `index.html` を作り直す）
-- `api/`：API（Hono）とそのテスト。`migrations/`：D1 のテーブル定義。リポジトリの直下で `npm test`（API と D1 の制約のテスト）、`npm run typecheck`。プルリクエストごとに GitHub Actions でも動く
+- `api/`：API（Hono）とそのテスト。`migrations/`：D1 のテーブル定義。リポジトリの直下で `npm test`（API と D1 の制約のテスト）、`npm run typecheck`、`npm run lint`（ESLint）、`npm run format:check`（Prettier）。プルリクエストごとに GitHub Actions でも動く（`test` が通らないとマージできない）
 - `docs/`：要件、設計、ADR、ロードマップ
 - `docs/learnings/`：過去の失敗や判断の記録（tags 付き）。設計やレビューの前に、関係するものを探して読む
 - `.claude/rules/docs.md`：ドキュメントの書き方（要件ID、状態、図の使い分け）
 - `.claude/rules/sql.md`：SQL（D1）の書き方
 - `.claude/rules/api.md`：API（Hono）の書き方
-- `.claude/agents/`：`researcher`（調査）、`doc-reviewer`（設計書のレビュー）、`access-reviewer`（API・D1 の制約・部屋・配信の設定を攻撃する側の目でレビュー）
+- `.claude/agents/`：`researcher`（調査）、`doc-reviewer`（設計書のレビュー）、`access-reviewer`（API・D1 の制約・部屋・配信の設定を攻撃する側の目でレビュー）、`coder`（決まった設計に沿ってコードとテストを書く）
+- `.claude/hooks/`：作業ログ、Claude が書いたファイルに Prettier を当てる
 - `.claude/skills/`：`/review-docs`（設計書のレビュー）、`/compound`（学びを残す）
 
 ## 技術の前提
@@ -44,6 +45,8 @@
 - ユーザーに論点を決めてもらうときは、関係の深い論点をまとめ、前提の仕組みと具体的な場面を説明し、推奨案と理由を添えてから聞く
   - 「なぜそうなるか」（判断の順番など）と場面の手順（1. 2. 3.）を最初から書く。推奨しない案は、手間を具体的に（表・SQL・テストがいくつ増えるか）書き、推奨の理由は手間ではなく本当の理由で書く（[learnings](docs/learnings/2026-10-02-explain-context-before-decisions.md)）
 - 計画 → 作業 → レビュー（`/review-docs`）→ 学びを残す（`/compound`）の順で回す。作業の区切りでは `/compound` を提案する
+- ロードマップの項目を始めるときは、プルリクエスト1つ分の大きさに分け、項目の下に小分けのチェックリストを書く。チケット（GitHub Issues）は使わない。公開の後に、友達からの報告やバグを受けるときから使う（2026-10-19）
+- コードは、小分けの1項目ずつ `coder` サブエージェントに任せてよい（小さな設定の変更はメインが直接書く）。依頼文には、読む設計書の節と、決まっていること・終わりの条件を書く。`coder` が「決まっていない」と止まったら、メインがユーザーに聞いてから続きを頼む。戻ってきた差分はメインが読み、レビューに回し、考え方をユーザーに説明する（2026-10-19）
 - コードを変えたら、push の前に `/code-review` を回す。API・D1 の制約・部屋（WebSocket）・配信の設定（`wrangler.jsonc` のヘッダーやリライト）を変えたら、加えて `access-reviewer` にレビューを頼む
 - テストを変えたら（期待する値を直した、テストを消した・飛ばした）、その差分を先にユーザーに見せる。AI は、コードではなくテストの側を直して通すことがある（2026-10-16）
 - 工程（ロードマップの Phase）を始める前に、サブエージェント・Skill・ルールが足りているかを見直す

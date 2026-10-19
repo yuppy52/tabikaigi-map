@@ -24,9 +24,7 @@ export function constraintError(e: unknown): "name_taken" | "already_member" | "
 const PICK_COLOR = `(SELECT column1 FROM (VALUES (0),(1),(2),(3),(4),(5),(6),(7),(8),(9))
   ORDER BY (SELECT count(*) FROM members WHERE group_id = ?1 AND color = column1), column1 LIMIT 1)`;
 
-export type CreateResult =
-  | { ok: true; groupId: string; memberId: number }
-  | { ok: false; reason: "group_limit" };
+export type CreateResult = { ok: true; groupId: string; memberId: number } | { ok: false; reason: "group_limit" };
 
 /**
  * グループを作り、作った人を最初のメンバー（作成者）にする（REQ-001）。
@@ -37,7 +35,9 @@ export async function createGroup(db: D1Database, groupName: string, name: strin
   const stmts: D1PreparedStatement[] = [];
   if (uid) stmts.push(db.prepare("INSERT INTO accounts (uid) VALUES (?) ON CONFLICT (uid) DO NOTHING").bind(uid));
   stmts.push(
-    db.prepare("INSERT INTO groups (id, name, last_opened_on, room_key) VALUES (?, ?, ?, ?)").bind(groupId, groupName, jstToday(), await roomKey(groupId)),
+    db
+      .prepare("INSERT INTO groups (id, name, last_opened_on, room_key) VALUES (?, ?, ?, ?)")
+      .bind(groupId, groupName, jstToday(), await roomKey(groupId)),
     db
       .prepare("INSERT INTO members (group_id, name, name_key, color, is_owner, uid) VALUES (?, ?, ?, 0, 1, ?) RETURNING id")
       .bind(groupId, name, nameKey(name), uid),
@@ -216,13 +216,7 @@ export async function setMemberVisit(
  * ログイン済みの人の「行った」を付ける・外す（REQ-030）。アカウントに書き、全グループで共有する。
  * 開いているグループに自分のメンバーがいるときだけ書く（いなければ 404 にして、画面に「削除された」を知らせる）
  */
-export async function setAccountVisit(
-  db: D1Database,
-  groupId: string,
-  uid: string,
-  pref: number,
-  visited: boolean,
-): Promise<WriteResult> {
+export async function setAccountVisit(db: D1Database, groupId: string, uid: string, pref: number, visited: boolean): Promise<WriteResult> {
   const mine = "EXISTS (SELECT 1 FROM members WHERE group_id = ?3 AND uid = ?1)";
   const sql = visited
     ? `INSERT INTO account_visits (uid, pref) SELECT ?1, ?2 WHERE ${mine} ON CONFLICT (uid, pref) DO NOTHING`

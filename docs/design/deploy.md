@@ -88,7 +88,7 @@ SQLite は列の型や制約をあとから変えられないので、「新し�
 3. **バックアップ**（NFR-017：新しい版を出す前に毎回）：`npx wrangler d1 export DB --remote --output <バックアップの置き場>/tabikaigi-YYYYMMDD-HHMM.sql`
    - 置き場は、リポジトリの外の運営者の PC のフォルダ（名前が入っているので、リポジトリやクラウドの共有フォルダに置かない）
    - **新しいバックアップを取ったら、古いものは消す**（直近の1つだけ残す。消したデータが手元に残り続けないため：NFR-017・NFR-008、[privacy](privacy.md) の保存期間）。消すのは運営者が手で行う（Claude の `rm -rf` は deny）
-4. Claude が `npm run deploy` を実行する（`ask` で OK をもらってから）。中身は、手元にコミットしていない変更がないか（`git status`）→ 型の確かめ → lint → テスト → 画面のビルド → `wrangler deploy`
+4. Claude が `npm run deploy` を実行する（`ask` で OK をもらってから）。中身（`scripts/deploy.sh`）は、main の最新か（GitHub の main と同じか）→ 手元にコミットしていない変更がないか（`git status`）→ 型の確かめ → lint → テスト → 画面のビルド（Vite を入れたら足す）→ `wrangler deploy`。どれかが失敗したら、そこで止まる
 5. 本番の画面を開き、変えたところとグループを開けることを確かめる。`wrangler tail` かダッシュボードのログでエラーが出ていないかを見る
 6. おかしければ、下の「戻し方」
 

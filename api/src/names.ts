@@ -29,7 +29,7 @@ const MAX_PARTS_PER_CHAR = 10;
 export function nameKey(name: string): string {
   return name
     .normalize("NFKC")
-    .replace(/[︎️‍\u{E0020}-\u{E007F}]/gu, "")
+    .replace(/[\u{FE0E}\u{FE0F}\u{200D}\u{E0020}-\u{E007F}]/gu, "")
     .replace(/\s+/gu, " ")
     .toLowerCase()
     .trim();
@@ -42,7 +42,7 @@ export function nameKey(name: string): string {
  * - 制御文字・書式の文字・私用の文字・行と段落の区切り、点字の空白（U+2800。記号の仲間で見た目は空）
  * 絵文字の部品（ZWJ、タグ文字、U+FE0F）もここでは断る。絵文字の中で使うものは、先に EMOJI_PARTS で取り除いてから調べる
  */
-const INVISIBLE = /[\p{Default_Ignorable_Code_Point}\p{Cc}\p{Cf}\p{Cs}\p{Co}\p{Zl}\p{Zp}⠀]/u;
+const INVISIBLE = /[\p{Default_Ignorable_Code_Point}\p{Cc}\p{Cf}\p{Cs}\p{Co}\p{Zl}\p{Zp}\u{2800}]/u;
 
 /**
  * 絵文字の中でだけ意味を持つ部品。この並びのときだけ通す（絵文字の外にあれば、見えない文字として断る）。
@@ -52,7 +52,7 @@ const INVISIBLE = /[\p{Default_Ignorable_Code_Point}\p{Cc}\p{Cf}\p{Cs}\p{Co}\p{Z
  *   それ以外の並びは黒い旗 🏴 だけが見え、タグ文字は見えないので、見た目が同じ別の名前を作れてしまう
  */
 const EMOJI_PARTS =
-  /(?<=\p{Extended_Pictographic}[️\p{Emoji_Modifier}]*)‍(?=\p{Extended_Pictographic})|(?<=\p{Extended_Pictographic})[︎️]|(?<=[0-9#*])️(?=⃣)|(?<=\u{1F3F4})\u{E0067}\u{E0062}(?:\u{E0065}\u{E006E}\u{E0067}|\u{E0073}\u{E0063}\u{E0074}|\u{E0077}\u{E006C}\u{E0073})\u{E007F}/gu;
+  /(?<=\p{Extended_Pictographic}[\u{FE0F}\p{Emoji_Modifier}]*)\u{200D}(?=\p{Extended_Pictographic})|(?<=\p{Extended_Pictographic})[\u{FE0E}\u{FE0F}]|(?<=[0-9#*])\u{FE0F}(?=\u{20E3})|(?<=\u{1F3F4})\u{E0067}\u{E0062}(?:\u{E0065}\u{E006E}\u{E0067}|\u{E0073}\u{E0063}\u{E0074}|\u{E0077}\u{E006C}\u{E0073})\u{E007F}/gu;
 
 /** 絵文字の部品を取り除いた後に、見えない文字が残っていれば true */
 function hasInvisible(name: string): boolean {
@@ -77,7 +77,7 @@ export const GROUP_NAME = { max: 20, storeMax: 400 } as const;
  */
 export function checkName(input: unknown, rule: { max: number; storeMax: number }): NameCheck {
   if (typeof input !== "string") return { ok: false };
-  const name = input.replace(/^[\s　]+|[\s　]+$/g, "");
+  const name = input.replace(/^[\s\u3000]+|[\s\u3000]+$/g, "");
   if (name.length === 0 || visibleLength(name) > rule.max || hasInvisible(name) || hasOverstackedChar(name)) return { ok: false };
   const key = nameKey(name);
   // 比べる形が空になる名前（NFKC で消える文字だけ）や、NFKC で長くなりすぎる名前も断る
