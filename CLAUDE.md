@@ -59,6 +59,6 @@
 - ブランチ名：`docs/…`（ドキュメント）、`feat/…`（機能）、`fix/…`（修正）、`chore/…`（道具・設定）
 - **確認は push の前に行う**（2026-10-04 に変更。それまではユーザーがプルリクエストを見てマージしていた）。Claude は作業をコミットしたら、push する前に、何を変えたか（コミットの一覧と、変えたファイルごとの要点）をユーザーに見せる。`git push` の許可の確認（`ask`）で OK をもらったら、それを「マージしてよい」の確認として扱い、Claude が push → プルリクエストの作成 → マージ（`gh pr merge --squash --delete-branch`）まで続けて行う
 - push の許可で断られたら、直す点を聞いて、コミットを足してからもう一度見せる
-- ブランチ保護はそのまま使う（main への直接の push はしない。必ずプルリクエストを通す）
+- ブランチ保護はそのまま使う（main への直接の push はしない。必ずプルリクエストを通す）。CI の `test` が通らないとマージできない（ルールセット。2026-10-19）。GitHub の設定は2か所（Branches と Rules）にあり、中身は [architecture](docs/design/architecture.md) の「開発環境」。変えるときは1つずつユーザーに確かめ、ブランチ保護を丸ごと送り直さない
 - デプロイと表の変更（マイグレーション）は、マージした後に運営者の PC から [docs/design/deploy.md](docs/design/deploy.md) の手順で行う（[ADR 0008](docs/adr/0008-deploy-from-pc-no-staging.md)）。`wrangler deploy` などの `ask` の OK は、その1回のデプロイの OK として扱う
 - 秘密情報（`.env`、`.dev.vars`、サービスアカウントの鍵）はリポジトリに置かない
