@@ -1,5 +1,5 @@
 ---
-tags: [npm, dependencies, security, setup, test, process]
+tags: [npm, dependencies, security, setup, test, process, cooldown]
 area: process
 ---
 
@@ -30,6 +30,13 @@ area: process
 - 次は：道具を足す前に、(1) 元のデータに、欲しい形のものが入っていないか（zip の中身を一覧する）、(2) いま入っている部品でできないか、を先に見る。足すなら、増える部品の数と警告を見て比べる
 
 2026-10-16：追記の分を、ユーザーの OK をもらい、CLAUDE.md の「技術の前提」に反映した。
+
+## 追記（2026-10-22）：手で入れる版も7日待つ。npm が自身の不具合で止まったら、新しい npm を1回だけ使い、npm 10 の `npm ci` で確かめる
+- 2026-10-19 に React を入れるとき、最新の 19.3.1 は公開から5日だった。Dependabot と同じく、出てから7日たった 19.3.0 を選んだ。19.3.1 の中身（このアプリが使わない Server Components の修正）を GitHub のリリースで確かめてから決めた。7日の後に Dependabot が上げる
+- 同じ日に `vite` を足すと、npm 10.9.7（Node 22 に付いてくるもの）が `Cannot read properties of null (reading 'edgesOut')` で止まった。npm 10.9.9 でも同じだった。部品の組み合わせ（vitest の任意の相手の部品）を読むところの、npm 自身の不具合だった。npm 11.21.0（公開から7日以上たっていた）を `npx npm@11.21.0 install` で1回だけ使って入れた。できた `package-lock.json` は npm 10 の `npm ci` で入れ直せ、テストも通ることを確かめた（CI は npm 10 のまま）
+- 次は：手で入れるときも、公開から7日たった版を選ぶ。新しい版を選ぶなら、理由（安全の修正など）を確かめて書く。npm が止まったら、`package.json` を手で直したり `--legacy-peer-deps` を使ったりせずに、新しい npm（7日たった版）で1回だけ入れる。そのあと、CI と同じ npm の `npm ci` とテストで確かめる。使ったことは ADR か作業の記録に書く（ADR 0010 に書いた）
+
+2026-10-22：追記の分を、ユーザーの OK をもらい、CLAUDE.md の「技術の前提」に反映した。
 
 ## 関連
 - package.json、.github/workflows/test.yml
