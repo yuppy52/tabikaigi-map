@@ -29,7 +29,7 @@ Phase 2 で画面（`web/`）を足す。Vite（画面のビルドと開発用�
 
 ## 結果と注意
 
-- `npm run dev`：`concurrently` で `wrangler dev`（API、8787 番）と `vite`（画面、5173 番。使われていたら止まる）を一緒に起こし、片方が止まったらもう片方も止める。画面は `http://localhost:5173/app.html` で開く。API だけなら `npm run dev:api`
+- `npm run dev`：`concurrently` で `wrangler dev`（API、8787 番）と `vite`（画面、5173 番。使われていたら止まる）を一緒に起こし、片方が止まったらもう片方も止める。起こす前に1回 `vite build` する（`wrangler.jsonc` の `assets` が `dist/` を指していて、`dist/` がないと `wrangler dev` が起きないため。2026-10-21）。画面は `http://localhost:5173/app.html` で開く。API だけなら `npm run dev:api`（これも先にビルドする）
 - `npm run build`：`web/` を `dist/` にビルドする。CI と `npm run deploy` でも動かす。`dist/` は `.gitignore` に入れる
 - `/g/*` で `app.html` を返すことと `noindex` は、開発中の Vite では確かめられない。ビルドしてから `wrangler dev` で確かめる（配信の設定を書く roadmap の 3-2 で）
 - `vite.config.ts` の設定はテストには効かない（`vitest.config.ts` があるとそちらだけを読む）。テストは `vitest.config.ts` の2組（`api`：Workers の実行環境、`web`：画面から切り出した計算）

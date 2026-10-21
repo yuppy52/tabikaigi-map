@@ -1,6 +1,6 @@
 # システム構成
 
-状態：下書き（2026-10-19：画面の道具（Vite＋React）を入れ、開発の動かし方（[ADR 0010](../adr/0010-plain-vite-with-wrangler-dev.md)）とリポジトリの構成を実際に合わせた。2026-10-19：画面のテストは計算だけにすると決めた。2026-10-19：lint・Dependabot を入れ、GitHub の設定（ルールセット）を書き、「開発環境」を実際の設定に合わせた。2026-10-16：開発運用を決め、「環境」と「開発環境」にデプロイ・ステージング・lint・Dependabot を書いた。2026-10-16：OGP の文言と画像を決めた。2026-10-15：`/review-docs` を受けて、「ログに残るもの」のグループIDの扱いを実際の API（URL のパスに入れる）に合わせ、部屋が配らないものに管理できる人の変更と退会を足した。2026-10-13：管理の操作の API を作った `access-reviewer` の指摘で、名前の変更を「使い切られうる API」に足した。2026-10-13：API を作った `access-reviewer` の指摘で、目印のヘッダー（よそのサイトから読ませない）を「無料枠を使い切られないために」に足し、Sentry で消す URL に `/api/groups/` を足した。2026-10-12：開発環境を用意して、Node.js の版とリポジトリの構成（1つの `package.json`）を決め、テストの道具の名前を `@cloudflare/vitest-plugin` に直した。2026-10-12：`/review-docs`（24件）を受けて、Mermaid の構成図を清書にそろえ（WAF、Turnstile、運営者の PC、部屋への接続）、部屋の URL を `/api/rooms/{room_key}` にし、429 の扱い、Sentry に送る前に消すもの・作る前に確かめること・DSN と CPU の注意、集計の鍵、問い合わせの確かめ方と保存期間、Durable Objects の枠を直した。2026-10-12：Q-025・Q-026・Q-027・Q-031 を推奨案で決めて、「運用」、「無料枠を使い切られないために」、「エラーの送り方」、ログに残るもの、使うサービス（WAF のレート制限、Sentry）を書いた。構成図の清書（draw.io）を足した。2026-10-12：Q-016・Q-017 の `/review-docs`（18件）を受けて、`noindex` と `Referrer-Policy: no-referrer` を付けるパスを並べた。2026-10-12：Q-016 を決めて、アプリの画面の URL を `app.html` へのリライトに足した。2026-10-11：Q-020 の `/review-docs`（21件）を受けて、メンバーとグループの削除も部屋から「取り直して」を配ることにし、503 の理由の分け方を足した。2026-10-10：[ADR 0003](../adr/0003-backend-selection.md) が案 C に決まったので、Firebase 一式の版から書き直した。元の版は git の履歴にある。画面の作り方は [ADR 0004](../adr/0004-frontend-react-typescript.md)。システム構成図の清書（draw.io）は roadmap の Phase 1 で作る）
+状態：下書き（2026-10-21：配信の設定（`assets`、`_redirects`、`_headers`、`404.html`）を書き、ローカルで確かめた結果を「無料枠を使い切られないために」に足した。2026-10-19：画面の道具（Vite＋React）を入れ、開発の動かし方（[ADR 0010](../adr/0010-plain-vite-with-wrangler-dev.md)）とリポジトリの構成を実際に合わせた。2026-10-19：画面のテストは計算だけにすると決めた。2026-10-19：lint・Dependabot を入れ、GitHub の設定（ルールセット）を書き、「開発環境」を実際の設定に合わせた。2026-10-16：開発運用を決め、「環境」と「開発環境」にデプロイ・ステージング・lint・Dependabot を書いた。2026-10-16：OGP の文言と画像を決めた。2026-10-15：`/review-docs` を受けて、「ログに残るもの」のグループIDの扱いを実際の API（URL のパスに入れる）に合わせ、部屋が配らないものに管理できる人の変更と退会を足した。2026-10-13：管理の操作の API を作った `access-reviewer` の指摘で、名前の変更を「使い切られうる API」に足した。2026-10-13：API を作った `access-reviewer` の指摘で、目印のヘッダー（よそのサイトから読ませない）を「無料枠を使い切られないために」に足し、Sentry で消す URL に `/api/groups/` を足した。2026-10-12：開発環境を用意して、Node.js の版とリポジトリの構成（1つの `package.json`）を決め、テストの道具の名前を `@cloudflare/vitest-plugin` に直した。2026-10-12：`/review-docs`（24件）を受けて、Mermaid の構成図を清書にそろえ（WAF、Turnstile、運営者の PC、部屋への接続）、部屋の URL を `/api/rooms/{room_key}` にし、429 の扱い、Sentry に送る前に消すもの・作る前に確かめること・DSN と CPU の注意、集計の鍵、問い合わせの確かめ方と保存期間、Durable Objects の枠を直した。2026-10-12：Q-025・Q-026・Q-027・Q-031 を推奨案で決めて、「運用」、「無料枠を使い切られないために」、「エラーの送り方」、ログに残るもの、使うサービス（WAF のレート制限、Sentry）を書いた。構成図の清書（draw.io）を足した。2026-10-12：Q-016・Q-017 の `/review-docs`（18件）を受けて、`noindex` と `Referrer-Policy: no-referrer` を付けるパスを並べた。2026-10-12：Q-016 を決めて、アプリの画面の URL を `app.html` へのリライトに足した。2026-10-11：Q-020 の `/review-docs`（21件）を受けて、メンバーとグループの削除も部屋から「取り直して」を配ることにし、503 の理由の分け方を足した。2026-10-10：[ADR 0003](../adr/0003-backend-selection.md) が案 C に決まったので、Firebase 一式の版から書き直した。元の版は git の履歴にある。画面の作り方は [ADR 0004](../adr/0004-frontend-react-typescript.md)。システム構成図の清書（draw.io）は roadmap の Phase 1 で作る）
 
 ## 構成図
 
@@ -113,7 +113,7 @@ Workers の枠が尽きると、`run_worker_first` に当たる `/api/*` は Clo
 
 | 手立て | 中身 | 守るもの |
 |---|---|---|
-| 画面は Worker を通さない | `run_worker_first` は `/api/*` だけ（部屋への接続も `/api/rooms/{room_key}`）。互換日付（`compatibility_date`）を 2025-04-01 以降にし、ページの移動はアセットの側で返す。ファイルがない URL は `not_found_handling = "404-page"` で静的な `404.html` を返す（`_redirects` の 200 リライトと合わせた動きは Phase 2 で確かめる：要確認） | Workers の回数 |
+| 画面は Worker を通さない | `run_worker_first` は `/api/*` だけ（部屋への接続も `/api/rooms/{room_key}`）。互換日付（`compatibility_date`）を 2025-04-01 以降にし、ページの移動はアセットの側で返す。ファイルがない URL は `not_found_handling = "404-page"` で静的な `404.html` を返す（`_redirects` の 200 リライトと合わせた動きは、〔済：ローカル、2026-10-21〕`wrangler dev` で両方が効いた：アプリの URL は 200 で `app.html`、ない URL は 404 で `404.html`。ほかに、GET 以外（POST・PUT・OPTIONS）はアセットの側が 405 を返して Worker に回らない、`/G/…`・`/NEW`・`/API/…`・`/api` は 404、`/_headers`・`/_redirects` は配られない、クエリ（`?openExternalBrowser=1`）が付いてもヘッダーは付く。〔未〕本番で同じかは最初のデプロイで確かめる：roadmap の「最初の本番のデプロイ」） | Workers の回数 |
 | `/api/*` のレート制限 | Cloudflare WAF のレート制限のルール1本（Free）。IP ごとに10秒で一定の回数を超えたら10秒止める。回数は、会議で1人が続けて「行った」を押す速さより十分多くし、Phase 2 で決める（仮に10秒で50回） | Workers・D1・Durable Objects の回数 |
 | Turnstile | グループの作成、参加、問い合わせの API で確かめる（いまのまま）。地図を開くたびには付けない | D1 の書き込み |
 | 部屋への接続の確かめ | 部屋の URL は `/api/rooms/{room_key}`（グループIDの SHA-256。WAF のレート制限も効く）。Worker が D1 の `groups.room_key`（`UNIQUE`）で引いてグループがあることを確かめてから Durable Objects に回す（読み取り1行程度。[data-model](data-model.md)）。作るのはリアルタイムと同じ Phase 2（2026-10-12：`/review-docs` #3） | Durable Objects の回数 |
@@ -177,8 +177,8 @@ Workers Logs の設定（`wrangler.jsonc` の `observability`）：`"enabled": t
 | | 検索に出すページ（トップ、使い方、プライバシーポリシー） | アプリの画面（`/g/*` など） |
 |---|---|---|
 | 作り方 | 中身を書いた素の HTML（[ADR 0004](../adr/0004-frontend-react-typescript.md)） | React の画面（`app.html` から動く） |
-| `noindex` | 付けない | **付ける**。`_headers` でレスポンスのヘッダー（`X-Robots-Tag`）に最初から書く。対象のパスを並べる：`/g/*`、`/new`、`/account`、`/login`、`/groups`、`/me`、`/contact`、`/app*`（`app.html` を直接開いたとき）、確認メールのリンク先（自前にするなら。[screens.md](screens.md) の「トップと URL」）（検索エンジンが JavaScript を動かす前に読めるように。2026-10-04 にローカルで確認） |
-| `Referrer-Policy` | 既定のまま | **`no-referrer`**。`_headers` で上と同じパスに付ける。アプリの画面から外のサイトやトップへ移ったときに、参照元の URL（`/g/{groupId}`）を渡さないため（NFR-005・NFR-010。2026-10-12。アクセス解析は使わないことにした：Q-025） |
+| `noindex` | 付けない | **付ける**。`_headers` でレスポンスのヘッダー（`X-Robots-Tag`）に最初から書く。対象のパスを並べる：`/g/*`、`/new`、`/account`、`/login`、`/groups`、`/me`、`/contact`、`/app`・`/app.html`（`app.html` を直接開いたとき。`/app.html` は `/app` に 307 で移る）、確認メールのリンク先（自前にするなら。[screens.md](screens.md) の「トップと URL」）（検索エンジンが JavaScript を動かす前に読めるように。2026-10-04 にローカルで確認）。二重の守りとして `app.html` と `404.html` にも `<meta name="robots" content="noindex">` を書く（`_headers` に書き忘れた URL でも効く。2026-10-21） |
+| `Referrer-Policy` | 既定のまま | **`no-referrer`**。`_headers` で上と同じパスに付け、`app.html`・`404.html` にも `<meta name="referrer">` で書く。アプリの画面から外のサイトやトップへ移ったときに、参照元の URL（`/g/{groupId}`）を渡さないため（NFR-005・NFR-010。2026-10-12。アクセス解析は使わないことにした：Q-025） |
 | `robots.txt` | 許可 | **禁止しない**。`robots.txt` で読むのを禁止すると、検索エンジンが `noindex` を読めず、URL だけが検索結果に載ることがある（要確認） |
 | sitemap | 載せる | 載せない |
 | OGP | ページごとの説明 | 全グループ共通の固定の OGP（上） |
@@ -231,6 +231,7 @@ web/                 画面（Vite＋React＋TypeScript。2026-10-19 に追加�
   app.html           アプリの画面の入口
   src/               アプリの画面（React）。計算のテスト（*.test.ts）もここに置く
   tsconfig.json      画面の型の設定（ブラウザの型、JSX）
+  public/            そのまま dist/ に写るもの：_redirects（アプリの URL → app.html）、_headers（noindex など）、404.html（2026-10-21）
   pages/             検索に出すページ（素の HTML：トップ、使い方、プライバシーポリシー）← その項目で追加
 dist/                画面のビルド結果（npm run build。git には入れない）
 vite.config.ts       画面のビルドと開発用のサーバー（ADR 0010）
