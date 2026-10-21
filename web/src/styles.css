@@ -1,0 +1,142 @@
+/* 色の変数と地図の見た目。モック（tools/template.html）の値をそのまま写した（見た目は Phase 3 で整える） */
+
+/* ライト（ふだん） */
+:root {
+  --sea: #e6edf1;
+  --bg: #f3f6f8;
+  --surface: #ffffff;
+  --ink: #1b2630;
+  --ink2: #5b6b77;
+  --line: #d3dce2;
+  --land: #ffffff;
+  --border: #a9b8c2;
+  --h1: #d5e5f4;
+  --h2: #98bfe6;
+  --h3: #5890ce;
+  --h4: #23579e;
+  --accent: #23579e;
+  --accent-ink: #ffffff;
+  --gap-fill: #fde9bd;
+  --gap-line: #e39a12;
+  --shadow: 0 8px 28px rgba(20, 40, 60, 0.14);
+  color-scheme: light;
+}
+
+/* 端末がダークのとき（data-theme="light" で明るくしていなければ） */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --sea: #0e151b;
+    --bg: #121a21;
+    --surface: #1a242d;
+    --ink: #e6edf2;
+    --ink2: #95a5b1;
+    --line: #2c3a45;
+    --land: #233039;
+    --border: #445662;
+    --h1: #1f3a57;
+    --h2: #2e5f93;
+    --h3: #4f89cc;
+    --h4: #9cc6f2;
+    --accent: #6ea6e6;
+    --accent-ink: #0e151b;
+    --gap-fill: #4a3a12;
+    --gap-line: #f0b94a;
+    --shadow: 0 8px 28px rgba(0, 0, 0, 0.45);
+    color-scheme: dark;
+  }
+}
+
+/* data-theme="dark" で選んだとき */
+:root[data-theme="dark"] {
+  --sea: #0e151b;
+  --bg: #121a21;
+  --surface: #1a242d;
+  --ink: #e6edf2;
+  --ink2: #95a5b1;
+  --line: #2c3a45;
+  --land: #233039;
+  --border: #445662;
+  --h1: #1f3a57;
+  --h2: #2e5f93;
+  --h3: #4f89cc;
+  --h4: #9cc6f2;
+  --accent: #6ea6e6;
+  --accent-ink: #0e151b;
+  --gap-fill: #4a3a12;
+  --gap-line: #f0b94a;
+  --shadow: 0 8px 28px rgba(0, 0, 0, 0.45);
+  color-scheme: dark;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+/* 外のフォント（モックの Google Fonts の Zen Maru Gothic）は読み込まない。下の名前は端末に入っていれば使う */
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Noto Sans JP", "Yu Gothic", system-ui, sans-serif;
+  font-size: 15px;
+  line-height: 1.6;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.wrap {
+  max-width: 560px;
+  margin: 0 auto;
+  padding-inline: 16px;
+  padding-block: 0 120px;
+}
+
+/* 地図：幅いっぱい、縦横比は viewBox のまま（スマホ幅でも横にはみ出さない） */
+.mapcard {
+  background: var(--sea);
+  border-radius: 18px;
+  position: relative;
+  overflow: hidden;
+}
+.japan-map {
+  display: block;
+  width: 100%;
+  height: auto;
+  touch-action: manipulation;
+}
+.pref {
+  stroke: var(--border);
+  stroke-width: 0.7;
+  vector-effect: non-scaling-stroke;
+  stroke-linejoin: round;
+  transition: fill 0.2s;
+}
+.pref.tap {
+  cursor: pointer;
+}
+.pref.gap {
+  stroke: var(--gap-line);
+  stroke-width: 1.6;
+}
+.inset {
+  fill: none;
+  stroke: var(--border);
+  stroke-dasharray: 4 4;
+}
+.inset-label {
+  fill: var(--ink2);
+  font-size: 18px;
+}
+@media (prefers-reduced-motion: reduce) {
+  .pref {
+    transition: none;
+  }
+}
+
+/* 地図データの出典（screens の「画面のルール」） */
+.credit {
+  color: var(--ink2);
+  font-size: 12px;
+}
+.credit a {
+  color: inherit;
+}
