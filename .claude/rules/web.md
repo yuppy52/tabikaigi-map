@@ -33,4 +33,4 @@ paths:
 ## 開発と確かめ
 
 - `npm run dev` で画面（5173 番）と API（8787 番）を一緒に起こし、`http://localhost:5173/app.html` を開く。`/api` への要求は Vite が API に回す
-- `/g/*` で `app.html` が出ること、`noindex` が付くことは、開発中には確かめられない。`npm run build` の後に `wrangler dev` で確かめる（ADR 0010）
+- `/g/*` で `app.html` が出ること、`noindex` が付くことは、開発中の Vite（5173 番）では確かめられない。`wrangler dev`（8787 番）が配るのは最後にビルドした `dist/` なので、画面を変えたら `npm run build` をしてから 8787 番で確かめる（ADR 0010）

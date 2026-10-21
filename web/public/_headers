@@ -1,0 +1,29 @@
+# アプリの画面は検索に出さない（NFR-019）。参照元の URL（/g/<グループID>）をよそに渡さない（NFR-005・NFR-010）
+# 付けるパスは architecture の「検索に出すページと出さないページ」。確認メールのリンク先は Phase 3 で決めてから足す
+/g/*
+  X-Robots-Tag: noindex
+  Referrer-Policy: no-referrer
+/new
+  X-Robots-Tag: noindex
+  Referrer-Policy: no-referrer
+/account
+  X-Robots-Tag: noindex
+  Referrer-Policy: no-referrer
+/login
+  X-Robots-Tag: noindex
+  Referrer-Policy: no-referrer
+/groups
+  X-Robots-Tag: noindex
+  Referrer-Policy: no-referrer
+/me
+  X-Robots-Tag: noindex
+  Referrer-Policy: no-referrer
+/contact
+  X-Robots-Tag: noindex
+  Referrer-Policy: no-referrer
+/app
+  X-Robots-Tag: noindex
+  Referrer-Policy: no-referrer
+/app.html
+  X-Robots-Tag: noindex
+  Referrer-Policy: no-referrer

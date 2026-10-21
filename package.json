@@ -6,8 +6,8 @@
     "node": ">=22"
   },
   "scripts": {
-    "dev": "concurrently --names api,web --kill-others \"wrangler dev\" \"vite\"",
-    "dev:api": "wrangler dev",
+    "dev": "vite build && concurrently --names api,web --kill-others \"wrangler dev\" \"vite\"",
+    "dev:api": "vite build && wrangler dev",
     "build": "vite build",
     "test": "vitest run",
     "typecheck": "tsc --noEmit && tsc --noEmit -p web",

@@ -1,0 +1,10 @@
+# アプリの画面の URL は、どれも app.html をそのまま返す（URL は変えない：200 のリライト）。
+# Worker を通らないので、Worker の枠が尽きても画面は出る（architecture の構成図の下、screens の「トップと URL」）。
+# 行き先を /app.html にしないのは、Cloudflare が /app.html を /app に移す（307）ため
+/g/* /app 200
+/new /app 200
+/account /app 200
+/login /app 200
+/groups /app 200
+/me /app 200
+/contact /app 200

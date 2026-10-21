@@ -1,4 +1,4 @@
-// 旅会議マップの Cloudflare の設定（Phase 1：API と D1 だけ。画面の配信と部屋は Phase 2 で足す）
+// 旅会議マップの Cloudflare の設定（API と D1、画面の配信。部屋（Durable Objects）はその項目で足す）
 {
   "name": "tabikaigi-map",
   "main": "api/src/index.ts",
@@ -7,6 +7,16 @@
   // Q-031：workers.dev とプレビューの URL は出さない（独自ドメインだけで公開する）
   "workers_dev": false,
   "preview_urls": false,
+  // 画面の配信（architecture の「無料枠を使い切られないために」）。
+  // Worker が画面のファイルを読まないので binding は付けない
+  "assets": {
+    // Vite のビルド結果（npm run build で作る：ADR 0010）
+    "directory": "./dist",
+    // Q-031：/api/* だけ Worker を通す。画面は Worker を通さずに返す（Worker の枠が尽きても画面は出る）
+    "run_worker_first": ["/api/*"],
+    // Q-031：ファイルがない URL は Worker を通さず、静的な 404.html を返す
+    "not_found_handling": "404-page"
+  },
   "vars": {
     // Firebase のプロジェクトID（秘密の値ではない）
     "FIREBASE_PROJECT_ID": "tabikaigi-map"
