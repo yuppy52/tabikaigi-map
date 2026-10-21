@@ -1,6 +1,7 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { App } from "./App";
+import "./styles.css";
 
 // app.html の <div id="root"> に、アプリの画面を描く。
 // StrictMode は開発中だけ、副作用の書き忘れを見つけやすくするために部品を2回描く（本番では1回）

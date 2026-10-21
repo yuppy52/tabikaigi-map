@@ -9,7 +9,7 @@
 次にやること（上から順に。推奨の順番）：
 1. ~~Phase 2 を始める前に、道具を見直す~~（2026-10-16 に決めた：下の「工程ごとの道具の見直し」）。~~「デプロイとテーブル定義の変更の手順書」を作る~~（2026-10-16：[deploy](design/deploy.md)、[ADR 0008](adr/0008-deploy-from-pc-no-staging.md)）
 2. ~~決めた道具を入れる~~（2026-10-19：`chore/dev-tooling`。`eslint-plugin-react-hooks` は React を入れる 3 で足す）。GitHub の設定も 2026-10-19 にユーザーに1つずつ確かめて変えた（`test` を必須のチェックにするルールセット、Dependabot の知らせと修正 PR）。中身：ESLint＋Prettier（[ADR 0009](adr/0009-lint-eslint-prettier.md)）と CI、Claude Code の hooks で Prettier、Dependabot（`.github/dependabot.yml`）、`.gitignore` に `.dev.vars*`、`npm run deploy`（コミットし忘れの確かめ → 型 → lint → テスト → 画面のビルド → デプロイ）
-3. Vite＋React＋TypeScript の構成を作る（Phase 2 の2つ目の項目）。2026-10-19 に小分け（3-1〜3-5）を決め、下の Phase 2 に書いた。3-1（Vite＋React を入れる）は 2026-10-19、3-2（配信の設定）は 2026-10-21 に済み、次は 3-3（地図の部品）
+3. Vite＋React＋TypeScript の構成を作る（Phase 2 の2つ目の項目）。2026-10-19 に小分け（3-1〜3-5）を決め、下の Phase 2 に書いた。3-1（Vite＋React を入れる）は 2026-10-19、3-2（配信の設定）と 3-3（地図の部品）は 2026-10-21 に済み、次は 3-4（グループの画面）
 
 あとでやってよいこと：要件IDの対応表を作り直すスクリプトを `tools/` に置き、手で書いた部分（状態の行、要件に対応しない設計）を残す作りにする（いまはリポジトリにない：[learnings](learnings/2026-10-15-regenerated-doc-drops-manual-parts.md)）。それまでは対応表を手で直す。
 
@@ -121,8 +121,8 @@
   - 小分け（2026-10-19 にユーザーと決めた。上から順に、1つずつプルリクエストにする。画面のテストは、切り出した計算だけを Vitest で書く：[architecture](design/architecture.md) の「開発環境」）：
   - [x] 3-1 `chore/web-setup`（2026-10-19：素の Vite にした：[ADR 0010](adr/0010-plain-vite-with-wrangler-dev.md)）：Vite＋React＋TypeScript を入れ、`web/` の空の `app.html`（「旅会議マップ」と出るだけ）がビルドできる。画面用の `tsconfig`（ブラウザの型）、ESLint の型を使うチェックと `eslint-plugin-react-hooks` を `web/` に広げる、CI と `npm run deploy` に画面のビルドを足す、`.claude/rules/web.md` を書く。部品を入れるのでメインが書く。始めに、Cloudflare の Vite のプラグインを使うか（API と画面を1つの開発サーバーで動かせる）を `researcher` に調べてもらい、結果を見せて決める（[architecture](design/architecture.md) の「リポジトリの構成」の見直しの条件）
   - [x] 3-2 `feat/web-delivery`（2026-10-21。ローカルの `wrangler dev` で確かめた。本番は最初のデプロイで）：配信の設定。`wrangler.jsonc` の `assets`（`/api/*` だけ Worker が受ける）、`_redirects`（`/g/*` とアプリの URL → `app.html`）、`_headers`（`noindex`、`Referrer-Policy`）。[architecture](design/architecture.md) の「検索に出すページと出さないページ」のパスの一覧どおりにし、ローカルの `wrangler dev` で確かめる。配信の設定なので `access-reviewer` に頼む。この前に、手元の D1（`.wrangler/`）を作り直してもらう（[deploy](design/deploy.md)）
-  - [ ] 3-3 `feat/web-map`：地図の部品（`tools/paths.json` から県を描く、押した県を知らせる、塗りの色）。色の濃さの計算はモックの式のまま
-  - [ ] 3-4 `feat/web-group-screen`：グループの画面（わたし／みんな／メンバー別、まとめの数、凡例、まだ誰も行っていない県、一覧、県の詳細のシート）。データは、この項目ではモックと同じ `localStorage`（API につなぐのは次の項目）。`/g/`（グループIDがない）や形の違う ID でも `app.html` が返るので、画面で ID の形を確かめる（2026-10-21：`/code-review`）
+  - [x] 3-3 `feat/web-map`（2026-10-21。地図は押すだけで、キーボードと読み上げでは選べない。代わりの道は 3-4 の地方ごとの一覧）：地図の部品（`tools/paths.json` から県を描く、押した県を知らせる、塗りの色）。色の濃さの計算はモックの式のまま
+  - [ ] 3-4 `feat/web-group-screen`：グループの画面（わたし／みんな／メンバー別、まとめの数、凡例、まだ誰も行っていない県、一覧、県の詳細のシート）。データは、この項目ではモックと同じ `localStorage`（API につなぐのは次の項目）。`/g/`（グループIDがない）や形の違う ID でも `app.html` が返るので、画面で ID の形を確かめる（2026-10-21：`/code-review`）。地方ごとの一覧（REQ-055）はボタンにして、キーボードと読み上げでも県を選べる道にする（地図は押すだけのため）。メンバーの10色（番号 0〜9 と色の対応。data-model の「色」）を決める
   - [ ] 3-5 `feat/web-sheets`：グループ作成・参加・招待のシートを、モックと同じ動きで（API・Turnstile・本物の招待URLは後の項目）
   - モックの `index.html` と `tools/template.html` は、検索に出すページを作る項目まで残す（配るのは `web/` のビルド結果だけ）
 - [ ] リアルタイムの共有（NFR-003）：Durable Objects ＋ WebSocket で「行った」の変更を配る
