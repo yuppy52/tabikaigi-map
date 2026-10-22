@@ -13,6 +13,7 @@ paths:
 - TypeScript と関数の部品（`function App() { … }`）で書く。部品とフックの頭に、考え方を日本語で一言書く（ユーザーは React に慣れていない）
 - データ（行った県、メンバー、表示の切り替え）から画面を作る。画面を直接書き換えない（`document.querySelector` で中身を変える、`innerHTML` を使う、など）
 - 人が入れた文字（名前、グループ名）は JSX の `{…}` で出す。`dangerouslySetInnerHTML` は使わない（名前に HTML を入れられると、ほかのメンバーの画面で動いてしまうため）
+- データの読み書きは `web/src/data/` の関数（Promise を返す）だけを通す。画面の部品から `localStorage` や API を直接呼ばない（保存先を替えても画面を変えずに済むように）
 - 計算（色の濃さ、数え方、まだ誰も行っていない県など）は、部品の外の関数に切り出す。テストはこの関数にだけ書く（`web/src/**/*.test.ts`、`npm test` の `web` の組。部品の動きのテストは書かない：[architecture](../../docs/design/architecture.md) の「開発環境」）
 
 ## 守ること
@@ -33,4 +34,4 @@ paths:
 ## 開発と確かめ
 
 - `npm run dev` で画面（5173 番）と API（8787 番）を一緒に起こし、`http://localhost:5173/app.html` を開く。`/api` への要求は Vite が API に回す
-- `/g/*` で `app.html` が出ること、`noindex` が付くことは、開発中の Vite（5173 番）では確かめられない。`wrangler dev`（8787 番）が配るのは最後にビルドした `dist/` なので、画面を変えたら `npm run build` をしてから 8787 番で確かめる（ADR 0010）
+- 開発中の Vite（5173 番）でも `/g/…` などのアプリの URL は開ける（`vite.config.ts` のプラグインが `web/public/_redirects` を読んで同じ書き換えをする。URL の一覧は `_redirects` だけに書く）。`noindex` などのヘッダー（`_headers`）は開発中の Vite では付かない。配信の動きは、`npm run build` をしてから `wrangler dev`（8787 番。配るのは最後にビルドした `dist/`）で確かめる（ADR 0010）

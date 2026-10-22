@@ -1,29 +1,34 @@
-import { useMemo, useState } from "react";
-import { everyoneFills, gapPrefIds } from "./map/colors";
-import { DEMO_MEMBERS } from "./map/demo";
-import { PREFS } from "./map/geo";
-import { JapanMap } from "./map/JapanMap";
+import { createBrowserRouter, useParams } from "react-router";
+import { isGroupId } from "./group/calc";
+import { GroupScreen } from "./group/GroupScreen";
+import { FooterLinks } from "./Footer";
+import { NotYet } from "./NotYet";
 
-// アプリの画面の一番外側の部品。いまは地図の部品を確かめるだけ（3-4 でグループの画面に置き換える）。
-// 仮の3人の「行った」を「みんな」の塗りで出し、全員まだの県を強調する。押した県の名前を地図の下に出す
-export function App() {
-  const [selected, setSelected] = useState<number | null>(null);
-  const visitedByMember = useMemo(() => DEMO_MEMBERS.map((m) => m.visited), []);
-  const fills = useMemo(() => everyoneFills(visitedByMember, true), [visitedByMember]);
-  const outlined = useMemo(() => new Set(gapPrefIds(visitedByMember)), [visitedByMember]);
-  const selectedName = PREFS.find((p) => p.id === selected)?.name;
+// URL ごとに出す画面の一覧（ADR 0011。URL の正本は screens の「トップと URL」）。
+// /g/ の後ろは「/g/*」で受け、グループIDの形かどうかは画面の側で確かめる（/g/ だけや、形の違う ID でも app.html が返るため）。
+// ほかのアプリの URL（/new・/account・/login・/groups・/me・/contact）と、それ以外（/app、開発中の /app.html など）は、まだ仮の画面
+export const router = createBrowserRouter([
+  { path: "/g/*", element: <GroupRoute /> },
+  { path: "*", element: <NotYet /> },
+]);
 
+// /g/ の後ろを読み、グループIDの形なら グループの画面、違えば API を呼ばずにエラーを出す（screens の「API の応答と画面の動き」）。
+// key にグループIDを渡すのは、別のグループに移ったときに、前のグループの表示（タブや読み込んだデータ）を持ち越さないため
+function GroupRoute() {
+  const groupId = useParams()["*"] ?? "";
+  if (!isGroupId(groupId)) return <GroupNotFound />;
+  return <GroupScreen key={groupId} groupId={groupId} />;
+}
+
+// 形の違うグループIDのときのエラー（2026-10-22 にユーザーと決めた仮の文。Phase 3 で整える）
+function GroupNotFound() {
   return (
     <main className="wrap">
-      <h1>旅会議マップ</h1>
-      <div className="mapcard">
-        <JapanMap fills={fills} outlined={outlined} onSelect={setSelected} />
-      </div>
-      {selectedName && <p>{selectedName}を押しました</p>}
-      <p className="credit">
-        地図：「国土数値情報（行政区域データ）」（国土交通省）を加工して作成（
-        <a href="https://nlftp.mlit.go.jp/ksj/gml/datalist/KsjTmplt-N03-2025.html">国土交通省国土数値情報ダウンロードサイト</a>）
+      <p className="message">グループが見つかりません。招待URLをもう一度確かめてください</p>
+      <p>
+        <a href="/">トップへ</a>
       </p>
+      <FooterLinks />
     </main>
   );
 }

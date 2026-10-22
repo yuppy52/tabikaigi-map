@@ -22,7 +22,8 @@
     "hono": "^4.13.13",
     "jose": "^6.2.12",
     "react": "^19.3.0",
-    "react-dom": "^19.3.0"
+    "react-dom": "^19.3.0",
+    "react-router": "^8.4.0"
   },
   "devDependencies": {
     "@cloudflare/vitest-plugin": "^1.4.0",
