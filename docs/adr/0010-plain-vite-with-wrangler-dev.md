@@ -31,7 +31,7 @@ Phase 2 で画面（`web/`）を足す。Vite（画面のビルドと開発用�
 
 - `npm run dev`：`concurrently` で `wrangler dev`（API、8787 番）と `vite`（画面、5173 番。使われていたら止まる）を一緒に起こし、片方が止まったらもう片方も止める。起こす前に1回 `vite build` する（`wrangler.jsonc` の `assets` が `dist/` を指していて、`dist/` がないと `wrangler dev` が起きないため。2026-10-21）。画面は `http://localhost:5173/app.html` で開く。API だけなら `npm run dev:api`（これも先にビルドする）
 - `npm run build`：`web/` を `dist/` にビルドする。CI と `npm run deploy` でも動かす。`dist/` は `.gitignore` に入れる
-- `/g/*` で `app.html` を返すことと `noindex` は、開発中の Vite では確かめられない。ビルドしてから `wrangler dev` で確かめる（配信の設定を書く roadmap の 3-2 で）
+- `/g/*` で `app.html` を返すことと `noindex` は、開発中の Vite では確かめられない。ビルドしてから `wrangler dev` で確かめる（配信の設定を書く roadmap の 3-2 で）。2026-10-22 の追記：開発中の Vite でも `/g/…` を開けるように、`vite.config.ts` に開発中だけ効くプラグインを足した（`web/public/_redirects` を読み、行き先が `/app` の 200 の行に合う URL を `app.html` で返す。URL の一覧は `_redirects` の1か所のまま）。`_headers` は今も開発中の Vite では効かない
 - `vite.config.ts` の設定はテストには効かない（`vitest.config.ts` があるとそちらだけを読む）。テストは `vitest.config.ts` の2組（`api`：Workers の実行環境、`web`：画面から切り出した計算）
 - 型の設定は2つ：`tsconfig.json`（API）と `web/tsconfig.json`（画面。ブラウザの型と JSX）。`npm run typecheck` は両方を見る
 - 入れた部品（2026-10-19、どれも `npm view` で公開者とリポジトリを確かめた。`npm audit` は 0 件）：`vite` 8.3.4、`@vitejs/plugin-react` 6.1.2、`react`・`react-dom` 19.3.0、`@types/react`・`@types/react-dom` 19.3.0、`eslint-plugin-react-hooks` 7.1.1、`concurrently` 10.0.6

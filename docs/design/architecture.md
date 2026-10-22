@@ -196,7 +196,7 @@ Workers Logs の設定（`wrangler.jsonc` の `observability`）：`"enabled": t
 
 | 環境 | 使うもの |
 |---|---|
-| ローカル開発 | `npm run dev` で、`wrangler dev`（Worker、D1、Durable Objects を手元で動かす）と Vite（画面）を一緒に起こす。`/g/*` のリライトや `noindex` などの配信の動きは、`npm run build` の後に `wrangler dev` で確かめる（[ADR 0010](../adr/0010-plain-vite-with-wrangler-dev.md)）。認証のテストは、テスト用の鍵で自分で署名した証明書を使う（「確認を緩める」設定は作らない） |
+| ローカル開発 | `npm run dev` で、`wrangler dev`（Worker、D1、Durable Objects を手元で動かす）と Vite（画面）を一緒に起こす。`/g/*` などのアプリの URL は開発中の Vite でも開ける（`_redirects` を読む開発用のプラグイン）。`noindex` などのヘッダーと配信の動きは、`npm run build` の後に `wrangler dev` で確かめる（[ADR 0010](../adr/0010-plain-vite-with-wrangler-dev.md)）。認証のテストは、テスト用の鍵で自分で署名した証明書を使う（「確認を緩める」設定は作らない） |
 | 本番 | Cloudflare の Worker 1つ（`tabikaigi-map.com`）、D1 のデータベース1つ、Firebase のプロジェクト `tabikaigi-map` |
 
 ステージング環境は作らない（[ADR 0008](../adr/0008-deploy-from-pc-no-staging.md)、2026-10-16）。公開の前は本番を試す場所にし、公開の後はマイグレーションを本番のデータの写しで手元で試してから当てる。デプロイは運営者の PC から手で行う。手順とマイグレーションの決まりは [deploy](deploy.md)。
