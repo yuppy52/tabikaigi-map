@@ -23,3 +23,9 @@ export type GroupView = {
 
 // 端末が覚えているメンバー（auth-flow の「端末が覚えるもの」：グループIDごとに番号と名前だけ）
 export type RememberedMember = { memberId: number; name: string };
+
+// グループを作ったときの応答（API の POST /api/groups の 201 と同じ）
+export type CreatedGroup = { groupId: string; memberId: number };
+
+// 参加したときの結果。入れた（API の 201）か、同じ名前の人がいた（API の 409 name_taken。その人の番号と、紐づいているか）
+export type JoinResult = { status: "joined"; memberId: number } | { status: "name_taken"; memberId: number; linked: boolean };

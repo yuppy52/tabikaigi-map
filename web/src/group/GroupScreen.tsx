@@ -1,8 +1,13 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
+import { useLocation, useNavigate } from "react-router";
 import { memberColor } from "../data/memberColors";
-import { applyVisit, fetchGroup, readRememberedMember, saveVisit } from "../data/store";
+import { applyVisit, fetchGroup, forgetMember, readRememberedMember, saveVisit } from "../data/store";
 import type { GroupView } from "../data/types";
 import { FooterLinks, MapCredit } from "../Footer";
+import { SAVE_FAILED } from "../messages";
+import type { CreatedState } from "../sheets/CreateGroupScreen";
+import { InviteSheet } from "../sheets/InviteSheet";
+import { JoinSheet } from "../sheets/JoinSheet";
 import { everyoneFills, gapPrefIds, heatFill } from "../map/colors";
 import { PREFS } from "../map/geo";
 import { JapanMap } from "../map/JapanMap";
@@ -11,10 +16,12 @@ import {
   countVisitedByAnyone,
   defaultFocusMember,
   findMeId,
+  inviteUrl,
   memberFills,
   membersByCount,
   prefsOf,
   REGIONS,
+  rememberedIsMissing,
   shortPrefName,
   visitedByMember,
   withPending,
@@ -23,30 +30,60 @@ import { PrefSheet } from "./PrefSheet";
 
 type Tab = "mine" | "all" | "member";
 
-type Loaded = { status: "loading" } | { status: "failed" } | { status: "ready"; view: GroupView; meId: number | null };
+// 読み終わったときの中身。lostMember：覚えていたメンバーがいなかった（REQ-025）。
+// toast：最初に出す知らせ（参加した直後）。invite：招待のシートを「グループができました」で開く（作った直後）
+type Ready = { status: "ready"; view: GroupView; meId: number | null; lostMember: boolean; toast: string | null; invite: boolean };
+type Loaded = { status: "loading" } | { status: "failed" } | Ready;
+
+// 招待のシートの状態。fresh は作った直後（見出しが「グループができました」）
+type Invite = "fresh" | "normal" | null;
 
 const PREF_NAMES = new Map(PREFS.map((p) => [p.id, p.name]));
 const prefName = (id: number) => PREF_NAMES.get(id) ?? "";
 
 // 知らせ（モックの toast）を出しておく時間
 const TOAST_MS = 1800;
-// 表にない失敗の文（.claude/rules/web.md、screens の「知らせ」）
-const SAVE_FAILED = "保存できませんでした。もう一度お試しください";
 // グループを読めなかったときの仮の文（2026-10-22。API につなぐ項目で、削除された・いまは使えないと合わせて決め直す）
 const LOAD_FAILED = "読み込めませんでした。もう一度お試しください";
 
 // グループの画面（screens の「グループの画面の中身」。見た目と文はモックのまま）。
 // グループと、端末が覚えているメンバーを読んでから描く。「行った」の付け外しは、押したらすぐ仮の表示にして保存し、
-// 失敗したら最後に保存できた状態に戻す（screens の「知らせ」）
+// 失敗したら最後に保存できた状態に戻す（screens の「知らせ」）。
+// 端末がこのグループのメンバーを覚えていなければ、上に参加のシートを出す（後ろの画面は押せない。モックの onboarding）。
+// 覚えていたメンバーがグループにいなければ、その覚えを忘れて、参加のシートに「前回の名前が見つかりませんでした」を出す（REQ-025）
 export function GroupScreen({ groupId }: { groupId: string }) {
   const [loaded, setLoaded] = useState<Loaded>({ status: "loading" });
+  const location = useLocation();
+  const navigate = useNavigate();
+  // グループ作成の画面から来たときの、作ったメンバーの番号（最初に開いたときの1回だけ使う）。
+  // 端末に書けなかったときも、作った人として開けるように、覚えの代わりに使う
+  const [createdMemberId] = useState<number | null>(() => {
+    const state = location.state as Partial<CreatedState> | null;
+    return typeof state?.createdMemberId === "number" ? state.createdMemberId : null;
+  });
+
+  // 作った直後の印は、読み直し（再読み込み）でまた「グループができました」と出ないように、履歴から消しておく
+  useEffect(() => {
+    if (location.state !== null) void navigate(`${location.pathname}${location.search}`, { replace: true, state: null });
+  }, [location.state, location.pathname, location.search, navigate]);
 
   // 開いたときに1回読む。読み終わる前に画面を離れたら（StrictMode の2回目も）、古い結果は捨てる
   useEffect(() => {
     let alive = true;
     Promise.all([fetchGroup(groupId), readRememberedMember(groupId)]).then(
       ([view, remembered]) => {
-        if (alive) setLoaded({ status: "ready", view, meId: findMeId(view.members, remembered?.memberId ?? null) });
+        if (!alive) return;
+        const rememberedId = remembered?.memberId ?? createdMemberId;
+        const lostMember = rememberedIsMissing(view.members, rememberedId);
+        if (lostMember) void forgetMember(groupId);
+        setLoaded({
+          status: "ready",
+          view,
+          meId: findMeId(view.members, rememberedId),
+          lostMember,
+          toast: null,
+          invite: createdMemberId !== null,
+        });
       },
       () => {
         if (alive) setLoaded({ status: "failed" });
@@ -55,7 +92,15 @@ export function GroupScreen({ groupId }: { groupId: string }) {
     return () => {
       alive = false;
     };
-  }, [groupId]);
+  }, [groupId, createdMemberId]);
+
+  // 参加できたら、グループを読み直して（新しいメンバーを入れるため）、そのメンバーとして「わたし」を開く
+  const onJoined = (memberId: number, toast: string) => {
+    fetchGroup(groupId).then(
+      (view) => setLoaded({ status: "ready", view, meId: findMeId(view.members, memberId), lostMember: false, toast, invite: false }),
+      () => setLoaded({ status: "failed" }),
+    );
+  };
 
   if (loaded.status === "loading") {
     return (
@@ -75,17 +120,34 @@ export function GroupScreen({ groupId }: { groupId: string }) {
       </main>
     );
   }
+  const joining = loaded.meId === null;
   return (
-    <GroupBody
-      groupId={groupId}
-      view={loaded.view}
-      meId={loaded.meId}
-      onSaved={(memberId, pref, visited) =>
-        setLoaded((d) =>
-          d.status === "ready" ? { ...d, view: { ...d.view, visits: applyVisit(d.view.visits, memberId, pref, visited) } } : d,
-        )
-      }
-    />
+    <>
+      {/* key に自分の番号を渡すのは、参加した後に「わたし」から始め直すため（タブなどの表示を作り直す） */}
+      <GroupBody
+        key={loaded.meId ?? "guest"}
+        groupId={groupId}
+        view={loaded.view}
+        meId={loaded.meId}
+        inert={joining}
+        initialToast={loaded.toast}
+        initialInvite={loaded.invite ? "fresh" : null}
+        onSaved={(memberId, pref, visited) =>
+          setLoaded((d) =>
+            d.status === "ready" ? { ...d, view: { ...d.view, visits: applyVisit(d.view.visits, memberId, pref, visited) } } : d,
+          )
+        }
+      />
+      {joining && (
+        <JoinSheet
+          groupId={groupId}
+          groupName={loaded.view.group.name}
+          members={loaded.view.members}
+          lostMember={loaded.lostMember}
+          onJoined={onJoined}
+        />
+      )}
+    </>
   );
 }
 
@@ -94,12 +156,18 @@ type BodyProps = {
   // 保存できた「行った」（失敗したらここに戻る）
   view: GroupView;
   meId: number | null;
+  // 参加のシートが出ている間は、後ろの画面を押せないようにする（キーボードでも届かない）
+  inert: boolean;
+  // 最初に出す知らせ（参加した直後）
+  initialToast: string | null;
+  // 最初に開いておく招待のシート（作った直後は fresh）
+  initialInvite: Invite;
   // 保存できたら、保存できた「行った」に入れる
   onSaved: (memberId: number, pref: number, visited: boolean) => void;
 };
 
 // 読み終わった後のグループの画面。タブ・まとめ・地図・凡例・全員まだの県・地方ごとの一覧・県の詳細のシート・知らせ
-function GroupBody({ groupId, view, meId, onSaved }: BodyProps) {
+function GroupBody({ groupId, view, meId, inert, initialToast, initialInvite, onSaved }: BodyProps) {
   const { members } = view;
   // 自分がいなければ（端末が覚えていない）、わたし は選べないので みんな から始める（モックの最初の画面と同じ）
   const [tab, setTab] = useState<Tab>(meId !== null ? "mine" : "all");
@@ -110,7 +178,8 @@ function GroupBody({ groupId, view, meId, onSaved }: BodyProps) {
   // 送っている途中の県。続けて押されたとき、描き直しを待たずに断るために、描画とは別に持つ
   const inFlight = useRef(new Set<number>());
   const [sheetPref, setSheetPref] = useState<number | null>(null);
-  const [toast, setToast] = useState<{ text: string; key: number } | null>(null);
+  const [toast, setToast] = useState<{ text: string; key: number } | null>(initialToast !== null ? { text: initialToast, key: 1 } : null);
+  const [invite, setInvite] = useState<Invite>(initialInvite);
 
   const shown = useMemo(() => withPending(view.visits, meId, pending), [view.visits, meId, pending]);
   const me = members.find((m) => m.id === meId) ?? null;
@@ -164,6 +233,7 @@ function GroupBody({ groupId, view, meId, onSaved }: BodyProps) {
     else setSheetPref(pref);
   };
   const closeSheet = useCallback(() => setSheetPref(null), []);
+  const closeInvite = useCallback(() => setInvite(null), []);
 
   const fills =
     tab === "all"
@@ -174,7 +244,7 @@ function GroupBody({ groupId, view, meId, onSaved }: BodyProps) {
   const outlined = tab === "all" && showGap ? new Set(gapIds) : undefined;
 
   return (
-    <div className="wrap">
+    <div className="wrap" inert={inert}>
       <header className="top">
         <div className="gname disp">
           <small>グループ</small>
@@ -183,8 +253,7 @@ function GroupBody({ groupId, view, meId, onSaved }: BodyProps) {
         <a className="iconbtn" href="/">
           トップへ
         </a>
-        {/* 招待のシートは 3-5 で作る。それまでは押せない */}
-        <button className="iconbtn" type="button" aria-label="招待リンクを表示" disabled>
+        <button className="iconbtn" type="button" aria-label="招待リンクを表示" onClick={() => setInvite("normal")}>
           <svg
             width="14"
             height="14"
@@ -309,6 +378,16 @@ function GroupBody({ groupId, view, meId, onSaved }: BodyProps) {
           busy={pending.has(sheetPref)}
           onToggle={() => toggleMine(sheetPref)}
           onClose={closeSheet}
+        />
+      )}
+
+      {invite !== null && (
+        <InviteSheet
+          url={inviteUrl(window.location.origin, groupId)}
+          groupName={view.group.name}
+          fresh={invite === "fresh"}
+          onToast={showToast}
+          onClose={closeInvite}
         />
       )}
 

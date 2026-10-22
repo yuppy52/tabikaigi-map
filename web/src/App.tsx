@@ -3,12 +3,15 @@ import { isGroupId } from "./group/calc";
 import { GroupScreen } from "./group/GroupScreen";
 import { FooterLinks } from "./Footer";
 import { NotYet } from "./NotYet";
+import { CreateGroupScreen } from "./sheets/CreateGroupScreen";
 
 // URL ごとに出す画面の一覧（ADR 0011。URL の正本は screens の「トップと URL」）。
 // /g/ の後ろは「/g/*」で受け、グループIDの形かどうかは画面の側で確かめる（/g/ だけや、形の違う ID でも app.html が返るため）。
-// ほかのアプリの URL（/new・/account・/login・/groups・/me・/contact）と、それ以外（/app、開発中の /app.html など）は、まだ仮の画面
+// /new はグループ作成の画面。ほかのアプリの URL（/account・/login・/groups・/me・/contact）と、
+// それ以外（/app、開発中の /app.html など）は、まだ仮の画面
 export const router = createBrowserRouter([
   { path: "/g/*", element: <GroupRoute /> },
+  { path: "/new", element: <CreateGroupScreen /> },
   { path: "*", element: <NotYet /> },
 ]);
 

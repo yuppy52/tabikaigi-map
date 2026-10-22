@@ -7,12 +7,14 @@ import {
   defaultFocusMember,
   findMeId,
   initialOf,
+  inviteUrl,
   isGroupId,
   memberFills,
   membersByCount,
   prefsOf,
   prefVisitors,
   REGIONS,
+  rememberedIsMissing,
   shortPrefName,
   visitedByMember,
   withPending,
@@ -214,5 +216,27 @@ describe("initialOf：アイコンの1文字", () => {
     expect(initialOf("たろう")).toBe("た");
     expect(initialOf("😀ゆう")).toBe("😀");
     expect(initialOf("")).toBe("");
+  });
+});
+
+describe("rememberedIsMissing：覚えていたメンバーがグループにいないか（REQ-025）", () => {
+  it("覚えていた番号がいなければ true（そのグループの覚えを忘れて、参加のシートに文を出す）", () => {
+    expect(rememberedIsMissing(members, 9)).toBe(true);
+  });
+
+  it("いれば false。覚えていなければ（初めて開いたのと同じ）false", () => {
+    expect(rememberedIsMissing(members, 2)).toBe(false);
+    expect(rememberedIsMissing(members, null)).toBe(false);
+  });
+});
+
+describe("inviteUrl：招待URL", () => {
+  it("/g/グループID に、LINE の中から外部ブラウザで開かせる ?openExternalBrowser=1 を付ける", () => {
+    expect(inviteUrl("https://tabikaigi.example", "abcdefghijABCDEFGHIJ01")).toBe(
+      "https://tabikaigi.example/g/abcdefghijABCDEFGHIJ01?openExternalBrowser=1",
+    );
+    expect(inviteUrl("http://localhost:5173", "abcdefghijABCDEFGHIJ01")).toBe(
+      "http://localhost:5173/g/abcdefghijABCDEFGHIJ01?openExternalBrowser=1",
+    );
   });
 });

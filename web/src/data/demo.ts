@@ -1,6 +1,6 @@
-// API につなぐまでの仮のグループ（Phase 2 の 3-4）。モックの demo() の「夏旅2026」と3人、「行った」をそのまま写した。
+// API につなぐまでの仮のグループ（Phase 2 の 3-4）。作っていない形の正しいグループIDを開くと、これを出す（3-5）。モックの demo() の「夏旅2026」と3人、「行った」をそのまま写した。
 // 色はモックの COLORS[1]〜[3] と同じく、10色の表の番号 1・2・3。API につないだら、このファイルは消す
-import type { GroupView, RememberedMember, Visit } from "./types";
+import type { GroupView, Visit } from "./types";
 
 const DEMO_VISITED: readonly { id: number; name: string; color: number; prefs: readonly number[] }[] = [
   { id: 1, name: "たろう", color: 1, prefs: [1, 2, 4, 8, 11, 12, 13, 14, 19, 20, 22, 23, 26, 27, 28, 34, 40, 47] },
@@ -16,6 +16,3 @@ export const DEMO_GROUP: Omit<GroupView, "visits"> = {
 
 // 「行った」の最初の状態
 export const DEMO_VISITS: readonly Visit[] = DEMO_VISITED.flatMap((m) => m.prefs.map((pref) => ({ memberId: m.id, pref })));
-
-// 初めて開いたときに、端末が覚えるメンバー
-export const DEMO_ME: RememberedMember = { memberId: 1, name: "たろう" };

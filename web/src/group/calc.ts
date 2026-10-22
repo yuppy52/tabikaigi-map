@@ -32,6 +32,16 @@ export function findMeId(members: readonly GroupMember[], rememberedId: number |
   return rememberedId !== null && members.some((m) => m.id === rememberedId) ? rememberedId : null;
 }
 
+// 端末が覚えていたメンバーが、グループにいないか（削除された、など：REQ-025）。覚えていなければ false（初めて開いたのと同じ）
+export function rememberedIsMissing(members: readonly GroupMember[], rememberedId: number | null): boolean {
+  return rememberedId !== null && !members.some((m) => m.id === rememberedId);
+}
+
+// 招待URL（REQ-002）。LINE のアプリ内ブラウザで開いても外部ブラウザに移るように ?openExternalBrowser=1 を付ける（auth-flow の「LINE のアプリ内ブラウザ」）
+export function inviteUrl(origin: string, groupId: string): string {
+  return `${origin}/g/${groupId}?openExternalBrowser=1`;
+}
+
 // そのメンバーの行った県（番号の小さい順、重なりなし）
 export function prefsOf(visits: readonly Visit[], memberId: number): number[] {
   return [...new Set(visits.filter((v) => v.memberId === memberId).map((v) => v.pref))].sort((a, b) => a - b);
