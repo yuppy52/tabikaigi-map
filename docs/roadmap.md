@@ -127,6 +127,10 @@
   - モックの `index.html` と `tools/template.html` は、検索に出すページを作る項目まで残す（配るのは `web/` のビルド結果だけ）
 - [ ] リアルタイムの共有（NFR-003）：Durable Objects ＋ WebSocket で「行った」の変更を配る
 - [ ] `localStorage` の読み書きを API（Hono＋D1）に置き換える（`web/src/data/store.ts` の中身を替える。3-4 の仮の形（どのグループIDでも仮のグループ、覚えていなければ「たろう」として参加したことにする、`tabikaigi-dev-visits:` のキー、`data/demo.ts`）は必ず消す。読めなかったときの文も決め直す。3-5 の仮の形（作成・参加の localStorage、`tabikaigi-dev-group:` のキー、`data/ids.ts`、`demoNameKey`）も消し、グループ作成から渡す作ったメンバーの番号（router の state）は API の応答で確かめる。端末が覚えるメンバーだけは `localStorage` に残す：Q-017）
+  - 小分け（2026-10-23 にユーザーと決めた。上から順に、1つずつプルリクエストにする）。API は Phase 1 で作ってあり（[api](design/api.md)）、この項目は画面の側（`web/src/data/`）を替える。ログインと紐づけ（Phase 3）、リアルタイム（次の項目）は入れない
+  - [ ] 4-1 `feat/web-turnstile`：ボット対策（Turnstile）のウィジェットの部品。グループ作成と参加の「作る」「参加する」の上に置き、送るたびに新しいトークンを取る（screens の「参加の画面」）。部品を入れずに Cloudflare の読み込み用のスクリプトで作る。手元では Cloudflare の試験用の鍵（いつも通る）を使う。まだ API には送らない
+  - [ ] 4-2 `feat/web-api`：`web/src/data/` の中身を API に替える（開く、「行った」の付け外し、作る、参加する）。`X-Tabikaigi: 1` を付ける。応答の `error` ごとの文と行き先は screens の「API の応答と画面の動き」と「知らせ」のとおり（`404 group_not_found` で端末の覚えを忘れてエラー、`409 already_member`、`group_full`、`name_taken`、`turnstile_failed`、`429`、`503`、JSON でない応答）。3-4・3-5 の仮の形（上の括弧の中）を消す。手元の `.dev.vars` に試験用の秘密の鍵を入れてから始める（運営者が入れる）。API・配信に触れるので `access-reviewer` に頼む
+  - [ ] 4-3 確かめ：手元の `wrangler dev` で、2つのブラウザ（または通常とプライベート）を使い、作る → 招待URLを開く → 参加する → 塗る → もう片方で開き直すと見える、を通す。同じ名前の確認、満員（20人）、消えたグループ（404）も。結果を roadmap に書く（コードの変更がなければプルリクエストは作らず、4-2 の中で済ませてもよい）
 - [ ] iPhone の Safari と Chrome で、しばらく開かないと `localStorage` とログインの状態が消えるかを実機で確かめる（Q-017）
 - [ ] 本物の招待URL（匿名認証は使わない：ADR 0003）
 - [ ] グループ設定：グループ名の変更、管理できる人、メンバーの削除、グループの削除、退出（最後の1人ならグループも削除）
