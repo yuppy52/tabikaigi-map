@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { useLocation, useNavigate } from "react-router";
 import { memberColor } from "../data/memberColors";
-import { applyVisit, fetchGroup, forgetMember, readRememberedMember, saveVisit } from "../data/store";
+import { failureOf } from "../data/api";
+import { applyVisit, fetchGroup, forgetMember, readRememberedMember, rememberMember, saveVisit } from "../data/store";
 import type { GroupView } from "../data/types";
 import { FooterLinks, MapCredit } from "../Footer";
-import { SAVE_FAILED } from "../messages";
+import { GROUP_DELETED, GROUP_FULL, loadErrorOf, LOST_MEMBER, NAME_NEEDS_LOGIN, RELOAD, visitErrorOf } from "../messages";
 import type { CreatedState } from "../sheets/CreateGroupScreen";
 import { InviteSheet } from "../sheets/InviteSheet";
 import { JoinSheet } from "../sheets/JoinSheet";
@@ -15,13 +16,12 @@ import { Avatar } from "./Avatar";
 import {
   countVisitedByAnyone,
   defaultFocusMember,
-  findMeId,
   inviteUrl,
   memberFills,
   membersByCount,
   prefsOf,
   REGIONS,
-  rememberedIsMissing,
+  resolveMe,
   shortPrefName,
   visitedByMember,
   withPending,
@@ -30,10 +30,11 @@ import { PrefSheet } from "./PrefSheet";
 
 type Tab = "mine" | "all" | "member";
 
-// 読み終わったときの中身。lostMember：覚えていたメンバーがいなかった（REQ-025）。
+// 読み終わったときの中身。notice：参加のシートの一番上に出す文（REQ-025 の「前回の名前が見つかりませんでした」、紐づいた・削除された）。
 // toast：最初に出す知らせ（参加した直後）。invite：招待のシートを「グループができました」で開く（作った直後）
-type Ready = { status: "ready"; view: GroupView; meId: number | null; lostMember: boolean; toast: string | null; invite: boolean };
-type Loaded = { status: "loading" } | { status: "failed" } | Ready;
+type Ready = { status: "ready"; view: GroupView; meId: number | null; notice: string | null; toast: string | null; invite: boolean };
+// failed：エラーの画面（文と、「もう一度読み込む」を出すか）
+type Loaded = { status: "loading" } | { status: "failed"; text: string; retry: boolean } | Ready;
 
 // 招待のシートの状態。fresh は作った直後（見出しが「グループができました」）
 type Invite = "fresh" | "normal" | null;
@@ -43,20 +44,21 @@ const prefName = (id: number) => PREF_NAMES.get(id) ?? "";
 
 // 知らせ（モックの toast）を出しておく時間
 const TOAST_MS = 1800;
-// グループを読めなかったときの仮の文（2026-10-22。API につなぐ項目で、削除された・いまは使えないと合わせて決め直す）
-const LOAD_FAILED = "読み込めませんでした。もう一度お試しください";
 
 // グループの画面（screens の「グループの画面の中身」。見た目と文はモックのまま）。
-// グループと、端末が覚えているメンバーを読んでから描く。「行った」の付け外しは、押したらすぐ仮の表示にして保存し、
+// グループ（API）と、端末が覚えているメンバーを読んでから描く。「行った」の付け外しは、押したらすぐ仮の表示にして保存し、
 // 失敗したら最後に保存できた状態に戻す（screens の「知らせ」）。
 // 端末がこのグループのメンバーを覚えていなければ、上に参加のシートを出す（後ろの画面は押せない。モックの onboarding）。
-// 覚えていたメンバーがグループにいなければ、その覚えを忘れて、参加のシートに「前回の名前が見つかりませんでした」を出す（REQ-025）
+// 覚えていたメンバーがグループにいなければ、その覚えを忘れて、参加のシートに「前回の名前が見つかりませんでした」を出す（REQ-025）。
+// 開けなかったとき（削除された、満員、通信エラー、いまは使えない）はエラーの画面（文と行き先は messages の loadErrorOf）
 export function GroupScreen({ groupId }: { groupId: string }) {
   const [loaded, setLoaded] = useState<Loaded>({ status: "loading" });
+  // 「もう一度読み込む」を押した回数。変わったら読み直す
+  const [attempt, setAttempt] = useState(0);
   const location = useLocation();
   const navigate = useNavigate();
   // グループ作成の画面から来たときの、作ったメンバーの番号（最初に開いたときの1回だけ使う）。
-  // 端末に書けなかったときも、作った人として開けるように、覚えの代わりに使う
+  // 端末に書けなかったときも、作った人として開けるように、覚えの代わりに使う（開いたグループにいるときだけ：calc の resolveMe）
   const [createdMemberId] = useState<number | null>(() => {
     const state = location.state as Partial<CreatedState> | null;
     return typeof state?.createdMemberId === "number" ? state.createdMemberId : null;
@@ -67,39 +69,79 @@ export function GroupScreen({ groupId }: { groupId: string }) {
     if (location.state !== null) void navigate(`${location.pathname}${location.search}`, { replace: true, state: null });
   }, [location.state, location.pathname, location.search, navigate]);
 
-  // 開いたときに1回読む。読み終わる前に画面を離れたら（StrictMode の2回目も）、古い結果は捨てる
+  // 開けなかった・読み直せなかったときは、エラーの画面にする。削除されていたら、端末の覚えを忘れる
+  const showLoadError = useCallback(
+    (e: unknown) => {
+      const err = loadErrorOf(failureOf(e));
+      if (err.forget) void forgetMember(groupId);
+      setLoaded({ status: "failed", text: err.text, retry: err.retry });
+    },
+    [groupId],
+  );
+
+  // 開いたときに1回読む（「もう一度読み込む」でも読む）。読み終わる前に画面を離れたら（StrictMode の2回目も）、古い結果は捨てる
   useEffect(() => {
     let alive = true;
     Promise.all([fetchGroup(groupId), readRememberedMember(groupId)]).then(
       ([view, remembered]) => {
         if (!alive) return;
-        const rememberedId = remembered?.memberId ?? createdMemberId;
-        const lostMember = rememberedIsMissing(view.members, rememberedId);
+        const { meId, lostMember } = resolveMe(view.members, remembered?.memberId ?? null, createdMemberId);
         if (lostMember) void forgetMember(groupId);
         setLoaded({
           status: "ready",
           view,
-          meId: findMeId(view.members, rememberedId),
-          lostMember,
+          meId,
+          notice: lostMember ? LOST_MEMBER : null,
           toast: null,
-          invite: createdMemberId !== null,
+          invite: createdMemberId !== null && meId === createdMemberId,
         });
       },
-      () => {
-        if (alive) setLoaded({ status: "failed" });
+      (e: unknown) => {
+        if (alive) showLoadError(e);
       },
     );
     return () => {
       alive = false;
     };
-  }, [groupId, createdMemberId]);
+  }, [groupId, createdMemberId, attempt, showLoadError]);
 
-  // 参加できたら、グループを読み直して（新しいメンバーを入れるため）、そのメンバーとして「わたし」を開く
+  // 参加できたら、グループを読み直して（新しいメンバーを入れるため）、そのメンバーとして「わたし」を開く。
+  // 読み直したときにその人が消えていた・紐づいていた（「続ける」を押すまでの間に、ほかの端末で起きた）ときは、参加のシートに戻す。
+  // 端末に覚える名前は、API に保存された名前にそろえる（入れた名前と全角・半角などが違うことがある）
   const onJoined = (memberId: number, toast: string) => {
+    fetchGroup(groupId).then((view) => {
+      const { meId, lostMember } = resolveMe(view.members, memberId, null);
+      const me = view.members.find((m) => m.id === meId);
+      if (me) void rememberMember(groupId, { memberId: me.id, name: me.name });
+      else void forgetMember(groupId);
+      const notice = meId !== null ? null : lostMember ? LOST_MEMBER : NAME_NEEDS_LOGIN;
+      setLoaded({ status: "ready", view, meId, notice, toast: meId !== null ? toast : null, invite: false });
+    }, showLoadError);
+  };
+
+  // 参加できないと分かったとき：削除された（覚えを忘れる）、満員
+  const onGone = (why: "deleted" | "full") => {
+    if (why === "deleted") void forgetMember(groupId);
+    setLoaded({ status: "failed", text: why === "deleted" ? GROUP_DELETED : GROUP_FULL, retry: false });
+  };
+
+  // 付け外しで、自分のメンバーが紐づいた・削除されたと分かったとき：覚えを忘れて、参加のシートに文を出す。
+  // 参加のシートの「参加中」に消された人が残らないように、グループを読み直して入れ替える（読めなければ、いまの一覧のまま）
+  const onRejoin = (text: string) => {
+    void forgetMember(groupId);
+    setLoaded((d) => (d.status === "ready" ? { ...d, meId: null, notice: text, toast: null, invite: false } : d));
     fetchGroup(groupId).then(
-      (view) => setLoaded({ status: "ready", view, meId: findMeId(view.members, memberId), lostMember: false, toast, invite: false }),
-      () => setLoaded({ status: "failed" }),
+      (view) => setLoaded((d) => (d.status === "ready" && d.meId === null ? { ...d, view } : d)),
+      () => {},
     );
+  };
+
+  // 付け外しで、グループが削除されたと分かったとき：覚えを忘れて、エラーの画面
+  const onDeleted = () => onGone("deleted");
+
+  // 付け外しが画面の不具合で断られたとき：グループを読み直す（読めなければエラーの画面）
+  const onReload = () => {
+    fetchGroup(groupId).then((view) => setLoaded((d) => (d.status === "ready" ? { ...d, view } : d)), showLoadError);
   };
 
   if (loaded.status === "loading") {
@@ -112,7 +154,21 @@ export function GroupScreen({ groupId }: { groupId: string }) {
   if (loaded.status === "failed") {
     return (
       <main className="wrap">
-        <p className="message">{LOAD_FAILED}</p>
+        <p className="message">{loaded.text}</p>
+        {loaded.retry && (
+          <p>
+            <button
+              className="primary"
+              type="button"
+              onClick={() => {
+                setLoaded({ status: "loading" });
+                setAttempt((n) => n + 1);
+              }}
+            >
+              {RELOAD}
+            </button>
+          </p>
+        )}
         <p>
           <a href="/">トップへ</a>
         </p>
@@ -137,14 +193,18 @@ export function GroupScreen({ groupId }: { groupId: string }) {
             d.status === "ready" ? { ...d, view: { ...d.view, visits: applyVisit(d.view.visits, memberId, pref, visited) } } : d,
           )
         }
+        onRejoin={onRejoin}
+        onDeleted={onDeleted}
+        onReload={onReload}
       />
       {joining && (
         <JoinSheet
           groupId={groupId}
           groupName={loaded.view.group.name}
           members={loaded.view.members}
-          lostMember={loaded.lostMember}
+          notice={loaded.notice}
           onJoined={onJoined}
+          onGone={onGone}
         />
       )}
     </>
@@ -164,10 +224,14 @@ type BodyProps = {
   initialInvite: Invite;
   // 保存できたら、保存できた「行った」に入れる
   onSaved: (memberId: number, pref: number, visited: boolean) => void;
+  // 付け外しが断られたとき：自分のメンバーが紐づいた・削除された（参加のシートに文）、グループが削除された、画面の不具合（読み直す）
+  onRejoin: (text: string) => void;
+  onDeleted: () => void;
+  onReload: () => void;
 };
 
 // 読み終わった後のグループの画面。タブ・まとめ・地図・凡例・全員まだの県・地方ごとの一覧・県の詳細のシート・知らせ
-function GroupBody({ groupId, view, meId, inert, initialToast, initialInvite, onSaved }: BodyProps) {
+function GroupBody({ groupId, view, meId, inert, initialToast, initialInvite, onSaved, onRejoin, onDeleted, onReload }: BodyProps) {
   const { members } = view;
   // 自分がいなければ（端末が覚えていない）、わたし は選べないので みんな から始める（モックの最初の画面と同じ）
   const [tab, setTab] = useState<Tab>(meId !== null ? "mine" : "all");
@@ -200,7 +264,22 @@ function GroupBody({ groupId, view, meId, inert, initialToast, initialInvite, on
     return () => clearTimeout(timer);
   }, [toast]);
 
-  // 自分の「行った」を付け外しする（モックの toggleMine）。送っている途中の県は押せない
+  // 付け外しが失敗したときの文と行き先（messages の visitErrorOf）。文に入れる名前は自分のメンバーの名前
+  const myName = me?.name ?? "";
+  const onSaveFailed = (e: unknown) => {
+    const action = visitErrorOf(failureOf(e), myName);
+    if (action.kind === "toast") {
+      showToast(action.text);
+      if (action.reload) onReload();
+    } else if (action.kind === "rejoin") {
+      onRejoin(action.text);
+    } else {
+      onDeleted();
+    }
+  };
+
+  // 自分の「行った」を付け外しする（モックの toggleMine）。送っている途中の県は押せない。
+  // 失敗したら仮の表示を戻し（保存できた「行った」は変えていない）、onSaveFailed で文と行き先を選ぶ
   const toggleMine = (pref: number) => {
     if (meId === null || inFlight.current.has(pref)) return;
     const visited = !shown.some((v) => v.memberId === meId && v.pref === pref);
@@ -220,9 +299,9 @@ function GroupBody({ groupId, view, meId, inert, initialToast, initialInvite, on
         onSaved(meId, pref, visited);
         done();
       },
-      () => {
+      (e: unknown) => {
         done();
-        showToast(SAVE_FAILED);
+        onSaveFailed(e);
       },
     );
   };

@@ -1,13 +1,91 @@
-// いくつかの画面で使う文（screens の「API の応答と画面の動き」「知らせ」のとおり。文を自分で考えない：.claude/rules/web.md）
+// いくつかの画面で使う文と、API の失敗から文と行き先を選ぶ計算（screens の「API の応答と画面の動き」「知らせ」のとおり。
+// 文を自分で考えない：.claude/rules/web.md）。表にない値は「保存できませんでした。もう一度お試しください」にする
+import type { Failure } from "./data/api";
 
-// 表にない失敗、やり直せる失敗
+// 表にない失敗、やり直せる失敗（書き込みの通信エラー、一時的な 503）
 export const SAVE_FAILED = "保存できませんでした。もう一度お試しください";
 // 400 bad_name（画面の側で長さが外れたときも、同じ文を入力欄の下に出す）
 export const BAD_NAME = "1〜10文字（グループ名は20文字）で入れてください。見えない文字や一部の記号は使えません";
 // 403 turnstile_failed（ボット対策のスクリプトが読み込めない・ウィジェットがエラーになったときも同じ文：2026-10-23）
 export const TURNSTILE_FAILED = "確認に失敗しました。もう一度お試しください";
+// グループを開くときの通信エラー・一時的な 503（2026-10-23 にユーザーと決めた仮の文）と、その場で読み直すボタン
+export const LOAD_FAILED = "読み込めませんでした。もう一度お試しください";
+export const RELOAD = "もう一度読み込む";
+// 503 の枠切れと JSON でない応答（screens の「知らせ」の「いまは使えない」）
+export const UNAVAILABLE = "いまは混み合っていて使えません。遅くとも翌朝9時ごろには戻ります";
+// 429（WAF のレート制限）
+export const RATE_LIMITED = "少し待ってから、もう一度お試しください";
+// 404 group_not_found（REQ-006）
+export const GROUP_DELETED = "このグループは削除されました";
+// 409 group_full（REQ-005）
+export const GROUP_FULL = "このグループは満員（20人）です";
+// 覚えていたメンバーがグループにいなかった（REQ-025）
+export const LOST_MEMBER = "前回の名前が見つかりませんでした";
+// 参加で、紐づいたメンバーと同じ名前を入れた（ログインなし：screens の「参加の画面」、REQ-013）
+export const NAME_NEEDS_LOGIN = "この名前で入るにはログインが必要です";
+// 403 member_linked（ログインなしの「行った」の付け外し：ほかの端末で本人が紐づけた）
+export const memberLinkedText = (name: string) => `${name}さんはアカウントに紐づきました。ログインして入ってください`;
+// 404 member_not_found（自分のメンバーが削除されていた：REQ-048）
+export const memberRemovedText = (name: string) => `${name}さんはグループから削除されました`;
 
-// 保存のところ（web/src/data/store.ts）の失敗の値を、画面の文にする。bad_name は入力欄の下、それ以外は「保存できませんでした」
-export function errorText(e: unknown): string {
-  return e instanceof Error && e.message === "bad_name" ? BAD_NAME : SAVE_FAILED;
+const isRefused = (f: Failure, status: number, error: string) => f.kind === "refused" && f.status === status && f.error === error;
+
+// 書き込み（作成・参加・付け外し）の失敗のうち、どの書き込みでも同じ文になるもの。
+// 通信エラーと一時的な 503 は「やり直せる失敗」、枠切れは「いまは使えない」、429 は「少し待って」、ほかは表にない値
+export function writeFailureText(f: Failure): string {
+  if (f.kind === "unavailable" && f.reason === "quota") return UNAVAILABLE;
+  if (f.kind === "rate_limited") return RATE_LIMITED;
+  return SAVE_FAILED;
+}
+
+// グループを開けなかったときのエラーの画面。text：出す文、retry：「もう一度読み込む」を出すか、forget：端末の覚えを忘れるか
+export type LoadError = { text: string; retry: boolean; forget: boolean };
+
+// グループを開く（読み直すときも）の失敗 → エラーの画面。
+// 削除された（404 group_not_found）なら忘れる。通信エラー・一時的な 503 はその場で読み直せる。枠切れと 429 はボタンを出さない（すぐには送り直さない）。
+// 表にない値（400 bad_request など、画面の不具合）は「保存できませんでした」と、読み直すボタン
+export function loadErrorOf(f: Failure): LoadError {
+  if (isRefused(f, 404, "group_not_found")) return { text: GROUP_DELETED, retry: false, forget: true };
+  if (f.kind === "network" || (f.kind === "unavailable" && f.reason === "temporary"))
+    return { text: LOAD_FAILED, retry: true, forget: false };
+  if (f.kind === "unavailable") return { text: UNAVAILABLE, retry: false, forget: false };
+  if (f.kind === "rate_limited") return { text: RATE_LIMITED, retry: false, forget: false };
+  return { text: SAVE_FAILED, retry: true, forget: false };
+}
+
+// 「行った」の付け外しが失敗したときの動き（どれも、付け外しは最後に保存できた状態に戻す）。
+// - toast：知らせを出す。reload なら、グループを読み直す（画面の不具合：400・413・404 not_found）
+// - rejoin：覚えを忘れて、参加のシートに text を出す（紐づいた、削除された）
+// - deleted：覚えを忘れて、エラーの画面（グループが削除された）
+export type VisitErrorAction = { kind: "toast"; text: string; reload: boolean } | { kind: "rejoin"; text: string } | { kind: "deleted" };
+
+// 付け外しの失敗 → 動き。name は自分のメンバーの名前（文に入れる）
+export function visitErrorOf(f: Failure, name: string): VisitErrorAction {
+  if (isRefused(f, 403, "member_linked")) return { kind: "rejoin", text: memberLinkedText(name) };
+  if (isRefused(f, 404, "member_not_found")) return { kind: "rejoin", text: memberRemovedText(name) };
+  if (isRefused(f, 404, "group_not_found")) return { kind: "deleted" };
+  if (f.kind === "refused" && (f.status === 400 || f.status === 413 || isRefused(f, 404, "not_found"))) {
+    return { kind: "toast", text: SAVE_FAILED, reload: true };
+  }
+  return { kind: "toast", text: writeFailureText(f), reload: false };
+}
+
+// グループ作成の失敗 → ボタンの上に出す文（bad_name も、どちらの欄か分からないのでボタンの上）
+export function createErrorText(f: Failure): string {
+  if (isRefused(f, 400, "bad_name")) return BAD_NAME;
+  if (isRefused(f, 403, "turnstile_failed")) return TURNSTILE_FAILED;
+  return writeFailureText(f);
+}
+
+// 参加の失敗のときの動き。field：入力欄の下に文、form：ボタンの上に文、deleted：忘れてエラーの画面（削除された）、full：エラーの画面（満員）
+export type JoinErrorAction = { kind: "field"; text: string } | { kind: "form"; text: string } | { kind: "deleted" } | { kind: "full" };
+
+// 参加の失敗 → 動き（同じ名前の 409 name_taken は失敗ではなく、store の joinGroup が結果として返す）。
+// 409 already_member・group_limit はログイン済みでだけ起きるので、いまは表にない値として扱う
+export function joinErrorOf(f: Failure): JoinErrorAction {
+  if (isRefused(f, 400, "bad_name")) return { kind: "field", text: BAD_NAME };
+  if (isRefused(f, 403, "turnstile_failed")) return { kind: "form", text: TURNSTILE_FAILED };
+  if (isRefused(f, 404, "group_not_found")) return { kind: "deleted" };
+  if (isRefused(f, 409, "group_full")) return { kind: "full" };
+  return { kind: "form", text: writeFailureText(f) };
 }

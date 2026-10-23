@@ -1,9 +1,10 @@
 import { useId, useRef, useState, type FormEvent } from "react";
 import { useNavigate } from "react-router";
 import { checkName, GROUP_NAME_MAX, MEMBER_NAME_MAX } from "../data/names";
+import { failureOf } from "../data/api";
 import { createGroup } from "../data/store";
 import { FooterLinks } from "../Footer";
-import { BAD_NAME, errorText } from "../messages";
+import { BAD_NAME, createErrorText } from "../messages";
 import { TurnstileWidget, type TurnstileHandle } from "../turnstile/TurnstileWidget";
 import { NameField } from "./NameField";
 import { Sheet } from "./Sheet";
@@ -21,7 +22,7 @@ export function CreateGroupScreen() {
   // 入力欄ごとの、合わなかったときの文
   const [groupNameError, setGroupNameError] = useState<string | null>(null);
   const [nameError, setNameError] = useState<string | null>(null);
-  // 送った後の失敗の文（API が断った bad_name も、どちらの欄かは分からないのでここに出す）
+  // 送った後の失敗の文（API が断った bad_name も、どちらの欄かは分からないのでここに出す。文は messages の createErrorText）
   const [formError, setFormError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   // ボット対策のトークン（取れるまで「作る」は押せない）と、送った後に取り直すためのウィジェット
@@ -50,7 +51,7 @@ export function CreateGroupScreen() {
       (err: unknown) => {
         resetTurnstile();
         setBusy(false);
-        setFormError(errorText(err));
+        setFormError(createErrorText(failureOf(err)));
       },
     );
   };

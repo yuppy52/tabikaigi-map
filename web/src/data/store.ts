@@ -1,21 +1,14 @@
-// 保存のところ。画面はここの関数だけを呼ぶ（中身を API に替えても、画面を変えずに済むように、どれも Promise を返す）。
-// いま（Phase 2 の 3-5）は API につなぐ前なので、中身は localStorage と仮のグループ（demo.ts）にしてある。
-// 端末が覚えるメンバー（グループIDごとに番号と名前）は本番と同じ形にする（auth-flow の「端末が覚えるもの」）。
-// 失敗は Error の message に API の error の値（bad_name、bad_request など）を入れて返す。画面はこの値で文を決める
-import { DEMO_GROUP, DEMO_VISITS } from "./demo";
-import { newGroupId } from "./ids";
-import { checkName, demoNameKey, GROUP_NAME_MAX, MEMBER_NAME_MAX } from "./names";
+// 保存のところ。画面はここの関数だけを呼ぶ（中身を替えても、画面を変えずに済むように、どれも Promise を返す）。
+// グループと「行った」は API（Hono＋D1。URL は docs/design/api.md の「一覧」）から毎回読み書きする。
+// 端末が覚えるのは、グループIDごとのメンバー（番号と名前）だけで、localStorage に置く（auth-flow の「端末が覚えるもの」、Q-017）。
+// 失敗は ApiError（中身は api.ts の Failure：状態コードと error の値、通信エラー、いまは使えない、429）で返す。
+// 画面は messages.ts の関数で、失敗の種類から文と行き先を選ぶ
+import { ApiError, BAD_RESPONSE, callApi, isRecord, refused, type ApiResult, type Failure } from "./api";
+import { checkName, GROUP_NAME_MAX, MEMBER_NAME_MAX } from "./names";
 import type { CreatedGroup, GroupMember, GroupView, JoinResult, RememberedMember, Visit } from "./types";
 
 // 端末が覚えるメンバーのキー。中身は { [グループID]: { memberId, name } }
 const MEMBERS_KEY = "tabikaigi-members";
-// 仮の「行った」のキー（API につないだら使わない）。グループIDごとに分ける
-const demoVisitsKey = (groupId: string) => `tabikaigi-dev-visits:${groupId}`;
-// 仮のグループ（グループ名とメンバー）のキー（API につないだら使わない）。作ったグループと、参加して人が増えたグループを置く
-const demoGroupKey = (groupId: string) => `tabikaigi-dev-group:${groupId}`;
-
-// 仮のグループの形（「行った」は別のキーに置く）
-type DemoGroup = Omit<GroupView, "visits">;
 
 // localStorage は読み書きに失敗することがある（Safari のプライベート、容量）。読めなければ null
 function readItem(key: string): string | null {
@@ -26,13 +19,12 @@ function readItem(key: string): string | null {
   }
 }
 
-// 書けたら true
-function writeItem(key: string, value: string): boolean {
+// 書けなくても止めない（覚えられないだけ）
+function writeItem(key: string, value: string): void {
   try {
     localStorage.setItem(key, value);
-    return true;
   } catch {
-    return false;
+    // 何もしない
   }
 }
 
@@ -48,46 +40,6 @@ function parseJson(text: string | null): unknown {
 
 const isPref = (v: unknown): v is number => Number.isInteger(v) && (v as number) >= 1 && (v as number) <= 47;
 const isPositiveInt = (v: unknown): v is number => Number.isInteger(v) && (v as number) > 0;
-const isColor = (v: unknown): v is number => Number.isInteger(v) && (v as number) >= 0 && (v as number) <= 9;
-const isRecord = (v: unknown): v is Record<string, unknown> => typeof v === "object" && v !== null && !Array.isArray(v);
-
-// 保存してある仮の「行った」を読む。形が違えば（壊れている、ほかの版が書いた）null を返し、呼ぶ側は最初の状態にする
-export function parseStoredVisits(text: string | null, memberIds: readonly number[]): Visit[] | null {
-  const data = parseJson(text);
-  if (!Array.isArray(data)) return null;
-  const visits: Visit[] = [];
-  for (const item of data as unknown[]) {
-    if (typeof item !== "object" || item === null) return null;
-    const { memberId, pref } = item as Record<string, unknown>;
-    if (!isPositiveInt(memberId) || !memberIds.includes(memberId) || !isPref(pref)) return null;
-    if (!visits.some((v) => v.memberId === memberId && v.pref === pref)) visits.push({ memberId, pref });
-  }
-  return visits;
-}
-
-// 保存してある仮のグループを読む。形が違えば null（呼ぶ側は、いまの仮のグループ「夏旅2026」にする）。
-// 書くのは名前・メンバーの番号・名前・色・作成者かだけ。管理の設定と紐づきは、仮の保存ではいつも「誰でも」「紐づいていない」
-export function parseStoredGroup(text: string | null): DemoGroup | null {
-  const data = parseJson(text);
-  if (!isRecord(data) || typeof data.name !== "string" || !Array.isArray(data.members) || data.members.length === 0) return null;
-  const members: GroupMember[] = [];
-  for (const item of data.members as unknown[]) {
-    if (!isRecord(item)) return null;
-    const { id, name, color, isOwner } = item;
-    if (!isPositiveInt(id) || typeof name !== "string" || !isColor(color) || typeof isOwner !== "boolean") return null;
-    if (members.some((m) => m.id === id)) return null;
-    members.push({ id, name, color, isOwner, linked: false, isMe: false });
-  }
-  return { group: { name: data.name, manageBy: "everyone", ownerOnly: false }, members };
-}
-
-// 仮のグループを保存する形にする（parseStoredGroup で読み戻せる形）
-export function serializeGroup(g: DemoGroup): string {
-  return JSON.stringify({
-    name: g.group.name,
-    members: g.members.map((m) => ({ id: m.id, name: m.name, color: m.color, isOwner: m.isOwner })),
-  });
-}
 
 // 端末が覚えているメンバーの一覧から、そのグループの分を取り出す。形が違えば「覚えていない」（null）
 export function pickRememberedMember(text: string | null, groupId: string): RememberedMember | null {
@@ -116,116 +68,99 @@ export function withoutRememberedMember(text: string | null, groupId: string): s
   return JSON.stringify(base);
 }
 
-// 「行った」の一覧に1件付ける・外す（同じものは2回入れない）
+// 「行った」の一覧に1件付ける・外す（同じものは2回入れない）。保存できた「行った」に、成功した付け外しを入れるのに使う
 export function applyVisit(visits: readonly Visit[], memberId: number, pref: number, visited: boolean): Visit[] {
   const rest = visits.filter((v) => !(v.memberId === memberId && v.pref === pref));
   return visited ? [...rest, { memberId, pref }] : rest;
 }
 
-// 新しいメンバーの色（API の PICK_COLOR と同じ：REQ-021）。0〜9 のうち、使っている人が少ない順、同じなら番号の小さい順
-export function pickColor(colors: readonly number[]): number {
-  let best = 0;
-  let bestCount = Infinity;
-  for (let c = 0; c <= 9; c++) {
-    const count = colors.filter((x) => x === c).length;
-    if (count < bestCount) {
-      best = c;
-      bestCount = count;
-    }
+// グループを開いたときの応答（api の「グループを開いたときの応答」）を確かめて読む。形が違えば null。
+// API と画面の取り決めが食い違ったときに、画面の途中で止まらないように、使う値の型だけを見る
+export function parseGroupView(body: unknown): GroupView | null {
+  if (!isRecord(body) || !isRecord(body.group) || !Array.isArray(body.members) || !Array.isArray(body.visits)) return null;
+  const { name, manageBy, ownerOnly } = body.group;
+  if (typeof name !== "string" || (manageBy !== "everyone" && manageBy !== "owner") || typeof ownerOnly !== "boolean") return null;
+  const members: GroupMember[] = [];
+  for (const m of body.members as unknown[]) {
+    if (!isRecord(m)) return null;
+    const { id, name: mname, color, isOwner, linked, isMe } = m;
+    if (!isPositiveInt(id) || typeof mname !== "string" || !Number.isInteger(color)) return null;
+    if (typeof isOwner !== "boolean" || typeof linked !== "boolean" || typeof isMe !== "boolean") return null;
+    members.push({ id, name: mname, color: color as number, isOwner, linked, isMe });
   }
-  return best;
+  const visits: Visit[] = [];
+  for (const v of body.visits as unknown[]) {
+    if (!isRecord(v) || !isPositiveInt(v.memberId) || !isPref(v.pref)) return null;
+    visits.push({ memberId: v.memberId, pref: v.pref });
+  }
+  return { group: { name, manageBy, ownerOnly }, members, visits };
 }
 
-// 仮のグループに名前で参加する。同じ名前（仮の比べ方：demoNameKey）の人がいればその人を返し、いなければ新しいメンバーを足す。
-// 番号はいまの一番大きい番号の次（API では D1 が振る）
-export function joinDemoGroup(
-  g: DemoGroup,
-  name: string,
-): { status: "joined"; group: DemoGroup; memberId: number } | { status: "name_taken"; memberId: number; linked: boolean } {
-  const key = demoNameKey(name);
-  const same = g.members.find((m) => demoNameKey(m.name) === key);
-  if (same) return { status: "name_taken", memberId: same.id, linked: same.linked };
-  const memberId = Math.max(0, ...g.members.map((m) => m.id)) + 1;
-  const member: GroupMember = {
-    id: memberId,
-    name,
-    color: pickColor(g.members.map((m) => m.color)),
-    isOwner: false,
-    linked: false,
-    isMe: false,
-  };
-  return { status: "joined", group: { ...g, members: [...g.members, member] }, memberId };
+// グループを作ったときの応答（201 { groupId, memberId }）を読む。形が違えば null
+export function parseCreated(body: unknown): CreatedGroup | null {
+  // グループIDの形（英数字22文字：data-model の groups.id）まで確かめる。localStorage のキーと URL にそのまま使うため
+  if (!isRecord(body) || typeof body.groupId !== "string" || !/^[A-Za-z0-9]{22}$/.test(body.groupId) || !isPositiveInt(body.memberId))
+    return null;
+  return { groupId: body.groupId, memberId: body.memberId };
 }
 
-// いまの仮のグループ。作った・参加したグループは保存したものを、それ以外の形の正しいグループIDは「夏旅2026」を返す
-function currentDemoGroup(groupId: string): DemoGroup {
-  return (
-    parseStoredGroup(readItem(demoGroupKey(groupId))) ?? {
-      group: { ...DEMO_GROUP.group },
-      members: DEMO_GROUP.members.map((m) => ({ ...m })),
-    }
-  );
+// 参加の応答を読む。201 { memberId } は入れた、409 name_taken { memberId, linked } は同じ名前の人がいた（api の「参加で同じ名前がいたとき」）。
+// それ以外は失敗の種類のまま返す。成功の形が違えば、表にない値（bad_response）の失敗にする
+export function parseJoined(r: ApiResult): { ok: true; result: JoinResult } | { ok: false; failure: Failure } {
+  if (r.ok) {
+    if (isRecord(r.body) && isPositiveInt(r.body.memberId)) return { ok: true, result: { status: "joined", memberId: r.body.memberId } };
+    return { ok: false, failure: refused(r.status, BAD_RESPONSE) };
+  }
+  const f = r.failure;
+  if (f.kind === "refused" && f.status === 409 && f.error === "name_taken") {
+    const { memberId, linked } = f.body;
+    if (isPositiveInt(memberId) && typeof linked === "boolean") return { ok: true, result: { status: "name_taken", memberId, linked } };
+  }
+  return { ok: false, failure: f };
 }
 
-// 保存がないときの「行った」の最初の状態（「夏旅2026」の分）。作ったグループは、作ったときに空の一覧を書いておく
-const firstVisits = (memberIds: readonly number[]) => DEMO_VISITS.filter((v) => memberIds.includes(v.memberId));
-
-// いまの仮の「行った」。保存がなければ、または読めなければ最初の状態
-function currentDemoVisits(groupId: string, memberIds: readonly number[]): Visit[] {
-  return parseStoredVisits(readItem(demoVisitsKey(groupId)), memberIds) ?? firstVisits(memberIds);
-}
+// グループIDとメンバーの番号を URL に入れる形にする（グループIDは画面が形を確かめてある。念のため符号にする）
+const groupPath = (groupId: string) => `/api/groups/${encodeURIComponent(groupId)}`;
 
 // 端末にそのグループのメンバーを覚える（auth-flow の「覚えるとき」）。書けなくても画面は止めない（覚えられないだけ）
 function remember(groupId: string, member: RememberedMember): void {
   writeItem(MEMBERS_KEY, withRememberedMember(readItem(MEMBERS_KEY), groupId, member));
 }
 
-// グループを読む（API の「グループを開く」に当たる）。いまは仮のグループを返す
-export function fetchGroup(groupId: string): Promise<GroupView> {
-  const g = currentDemoGroup(groupId);
-  return Promise.resolve({
-    ...g,
-    visits: currentDemoVisits(
-      groupId,
-      g.members.map((m) => m.id),
-    ),
-  });
+// グループを読む（GET /api/groups/{groupId}：REQ-002・REQ-017〜REQ-020）
+export async function fetchGroup(groupId: string): Promise<GroupView> {
+  const r = await callApi("GET", groupPath(groupId));
+  if (!r.ok) throw new ApiError(r.failure);
+  const view = parseGroupView(r.body);
+  if (!view) throw new ApiError(refused(r.status, BAD_RESPONSE));
+  return view;
 }
 
-// グループを作る（API の POST /api/groups に当たる：REQ-001）。作った人は作成者のメンバー（色は0番）。
-// 作れたら、端末がそのメンバーを覚える。名前が決まりに合わなければ bad_name、保存できなければ save_failed で失敗する。
-// turnstileToken はボット対策のトークン（1回しか使えない）。いまは仮の保存なので受け取るだけ（4-2 で API に送る）
-export function createGroup(groupName: string, name: string, turnstileToken: string): Promise<CreatedGroup> {
-  void turnstileToken;
+// グループを作る（POST /api/groups：REQ-001）。作れたら、端末が作ったメンバー（番号と、送った名前）を覚える。
+// 名前が決まりに合わないと分かっていれば、API を呼ばずに bad_name で失敗する（入力の手助け。正本は API）。
+// turnstileToken はボット対策のトークン（1回しか使えない）
+export async function createGroup(groupName: string, name: string, turnstileToken: string): Promise<CreatedGroup> {
   const gname = checkName(groupName, GROUP_NAME_MAX);
   const mname = checkName(name, MEMBER_NAME_MAX);
-  if (gname === null || mname === null) return Promise.reject(new Error("bad_name"));
-  const groupId = newGroupId();
-  const memberId = 1;
-  const g: DemoGroup = {
-    group: { name: gname, manageBy: "everyone", ownerOnly: false },
-    members: [{ id: memberId, name: mname, color: 0, isOwner: true, linked: false, isMe: false }],
-  };
-  if (!writeItem(demoGroupKey(groupId), serializeGroup(g)) || !writeItem(demoVisitsKey(groupId), "[]")) {
-    return Promise.reject(new Error("save_failed"));
-  }
-  remember(groupId, { memberId, name: mname });
-  return Promise.resolve({ groupId, memberId });
+  if (gname === null || mname === null) throw new ApiError(refused(400, "bad_name"));
+  const r = await callApi("POST", "/api/groups", { groupName: gname, name: mname, turnstileToken });
+  if (!r.ok) throw new ApiError(r.failure);
+  const created = parseCreated(r.body);
+  if (!created) throw new ApiError(refused(r.status, BAD_RESPONSE));
+  remember(created.groupId, { memberId: created.memberId, name: mname });
+  return created;
 }
 
-// 新しいメンバーとして参加する（API の POST /api/groups/{groupId}/members に当たる：REQ-004）。
-// 入れたら、端末がそのメンバーを覚える。同じ名前の人がいれば、入れずにその人の番号を返す（画面が REQ-012 の確認を出す）。
-// 満員（REQ-005）と、紐づいたメンバーと同じ名前（REQ-013）は、API とログインの項目で作る。
-// turnstileToken はボット対策のトークン（1回しか使えない）。いまは仮の保存なので受け取るだけ（4-2 で API に送る）
-export function joinGroup(groupId: string, name: string, turnstileToken: string): Promise<JoinResult> {
-  void turnstileToken;
+// 新しいメンバーとして参加する（POST /api/groups/{groupId}/members：REQ-004）。入れたら、端末がそのメンバーを覚える。
+// 同じ名前の人がいれば（409 name_taken）、入れずにその人の番号と、紐づいているかを返す（画面が REQ-012・REQ-013 の文を出す）。
+// turnstileToken はボット対策のトークン（1回しか使えない）
+export async function joinGroup(groupId: string, name: string, turnstileToken: string): Promise<JoinResult> {
   const mname = checkName(name, MEMBER_NAME_MAX);
-  if (mname === null) return Promise.reject(new Error("bad_name"));
-  const result = joinDemoGroup(currentDemoGroup(groupId), mname);
-  if (result.status === "name_taken") return Promise.resolve(result);
-  if (!writeItem(demoGroupKey(groupId), serializeGroup(result.group))) return Promise.reject(new Error("save_failed"));
-  remember(groupId, { memberId: result.memberId, name: mname });
-  return Promise.resolve({ status: "joined", memberId: result.memberId });
+  if (mname === null) throw new ApiError(refused(400, "bad_name"));
+  const r = parseJoined(await callApi("POST", `${groupPath(groupId)}/members`, { name: mname, turnstileToken }));
+  if (!r.ok) throw new ApiError(r.failure);
+  if (r.result.status === "joined") remember(groupId, { memberId: r.result.memberId, name: mname });
+  return r.result;
 }
 
 // 同じ名前の確認で「続ける」を選んだとき、そのメンバーとして端末に覚える（API は呼ばない：REQ-012、api の「参加で同じ名前がいたとき」）
@@ -234,18 +169,16 @@ export function rememberMember(groupId: string, member: RememberedMember): Promi
   return Promise.resolve();
 }
 
-// 端末が覚えているそのグループのメンバーを忘れる（覚えていたメンバーが合わない：REQ-025 など）。書けなくても止めない
+// 端末が覚えているそのグループのメンバーを忘れる（覚えていたメンバーが合わない：REQ-025、グループが削除された、など）。書けなくても止めない
 export function forgetMember(groupId: string): Promise<void> {
   writeItem(MEMBERS_KEY, withoutRememberedMember(readItem(MEMBERS_KEY), groupId));
   return Promise.resolve();
 }
 
-// 自分の「行った」を付ける・外す（API の PUT・DELETE …/visits/{pref} に当たる）。保存できなければ失敗で返す
-export function saveVisit(groupId: string, memberId: number, pref: number, visited: boolean): Promise<void> {
-  const memberIds = currentDemoGroup(groupId).members.map((m) => m.id);
-  if (!memberIds.includes(memberId) || !isPref(pref)) return Promise.reject(new Error("bad_request"));
-  const next = applyVisit(currentDemoVisits(groupId, memberIds), memberId, pref, visited);
-  return writeItem(demoVisitsKey(groupId), JSON.stringify(next)) ? Promise.resolve() : Promise.reject(new Error("save_failed"));
+// ログインなしのメンバーの「行った」を付ける・外す（PUT・DELETE /api/groups/{groupId}/members/{memberId}/visits/{pref}：REQ-016・REQ-023）
+export async function saveVisit(groupId: string, memberId: number, pref: number, visited: boolean): Promise<void> {
+  const r = await callApi(visited ? "PUT" : "DELETE", `${groupPath(groupId)}/members/${memberId}/visits/${pref}`);
+  if (!r.ok) throw new ApiError(r.failure);
 }
 
 // 端末が覚えているメンバーを読む。覚えていなければ（読めなければ）null
