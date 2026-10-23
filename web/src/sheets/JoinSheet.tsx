@@ -1,4 +1,4 @@
-import { useId, useState, type FormEvent } from "react";
+import { useId, useRef, useState, type FormEvent } from "react";
 import { Link } from "react-router";
 import { memberColor } from "../data/memberColors";
 import { checkName, MEMBER_NAME_MAX } from "../data/names";
@@ -7,6 +7,7 @@ import type { GroupMember } from "../data/types";
 import { FooterLinks } from "../Footer";
 import { Avatar } from "../group/Avatar";
 import { BAD_NAME, errorText, SAVE_FAILED } from "../messages";
+import { TurnstileWidget, type TurnstileHandle } from "../turnstile/TurnstileWidget";
 import { NameField } from "./NameField";
 import { Sheet } from "./Sheet";
 
@@ -33,18 +34,25 @@ export function JoinSheet({ groupId, groupName, members, lostMember, onJoined }:
   const [formError, setFormError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [confirm, setConfirm] = useState<Confirm>(null);
+  // ボット対策のトークン（取れるまで「参加する」は押せない）と、送った後に取り直すためのウィジェット。
+  // 同じ名前の確認の間はウィジェットが消え、「別の名前にする」で戻ると出し直されて、新しいトークンを取る
+  const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
+  const turnstileRef = useRef<TurnstileHandle>(null);
 
   // 「参加する」：画面の側で長さを確かめてから送る（入力の手助け。正本は API）
   const onSubmit = (e: FormEvent) => {
     e.preventDefault();
-    if (busy) return;
+    if (busy || turnstileToken === null) return;
     const mname = checkName(name, MEMBER_NAME_MAX);
     setNameError(mname === null ? BAD_NAME : null);
     setFormError(null);
     if (mname === null) return;
     setBusy(true);
-    joinGroup(groupId, mname).then(
+    // トークンは1回しか使えないので、送ったら（成功でも失敗でも）取り直す
+    const resetTurnstile = () => turnstileRef.current?.reset();
+    joinGroup(groupId, mname, turnstileToken).then(
       (result) => {
+        resetTurnstile();
         setBusy(false);
         if (result.status === "joined") {
           onJoined(result.memberId, `${groupName} に参加しました`);
@@ -60,6 +68,7 @@ export function JoinSheet({ groupId, groupName, members, lostMember, onJoined }:
         setConfirm({ memberId: result.memberId, name: same?.name ?? mname });
       },
       (err: unknown) => {
+        resetTurnstile();
         setBusy(false);
         const text = errorText(err);
         if (text === BAD_NAME) setNameError(text);
@@ -125,12 +134,13 @@ export function JoinSheet({ groupId, groupName, members, lostMember, onJoined }:
               autoComplete="nickname"
             />
             <p className="note">あなたの名前は、招待URLを知っている人に表示されます。本名でなくてもかまいません</p>
+            <TurnstileWidget ref={turnstileRef} onToken={setTurnstileToken} />
             {formError !== null && (
               <p className="err" role="alert">
                 {formError}
               </p>
             )}
-            <button className="primary" type="submit" disabled={busy}>
+            <button className="primary" type="submit" disabled={busy || turnstileToken === null}>
               参加する
             </button>
           </form>
