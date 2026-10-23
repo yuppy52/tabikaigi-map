@@ -193,8 +193,10 @@ export function fetchGroup(groupId: string): Promise<GroupView> {
 }
 
 // グループを作る（API の POST /api/groups に当たる：REQ-001）。作った人は作成者のメンバー（色は0番）。
-// 作れたら、端末がそのメンバーを覚える。名前が決まりに合わなければ bad_name、保存できなければ save_failed で失敗する
-export function createGroup(groupName: string, name: string): Promise<CreatedGroup> {
+// 作れたら、端末がそのメンバーを覚える。名前が決まりに合わなければ bad_name、保存できなければ save_failed で失敗する。
+// turnstileToken はボット対策のトークン（1回しか使えない）。いまは仮の保存なので受け取るだけ（4-2 で API に送る）
+export function createGroup(groupName: string, name: string, turnstileToken: string): Promise<CreatedGroup> {
+  void turnstileToken;
   const gname = checkName(groupName, GROUP_NAME_MAX);
   const mname = checkName(name, MEMBER_NAME_MAX);
   if (gname === null || mname === null) return Promise.reject(new Error("bad_name"));
@@ -213,8 +215,10 @@ export function createGroup(groupName: string, name: string): Promise<CreatedGro
 
 // 新しいメンバーとして参加する（API の POST /api/groups/{groupId}/members に当たる：REQ-004）。
 // 入れたら、端末がそのメンバーを覚える。同じ名前の人がいれば、入れずにその人の番号を返す（画面が REQ-012 の確認を出す）。
-// 満員（REQ-005）と、紐づいたメンバーと同じ名前（REQ-013）は、API とログインの項目で作る
-export function joinGroup(groupId: string, name: string): Promise<JoinResult> {
+// 満員（REQ-005）と、紐づいたメンバーと同じ名前（REQ-013）は、API とログインの項目で作る。
+// turnstileToken はボット対策のトークン（1回しか使えない）。いまは仮の保存なので受け取るだけ（4-2 で API に送る）
+export function joinGroup(groupId: string, name: string, turnstileToken: string): Promise<JoinResult> {
+  void turnstileToken;
   const mname = checkName(name, MEMBER_NAME_MAX);
   if (mname === null) return Promise.reject(new Error("bad_name"));
   const result = joinDemoGroup(currentDemoGroup(groupId), mname);

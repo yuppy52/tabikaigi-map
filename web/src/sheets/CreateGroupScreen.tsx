@@ -1,9 +1,10 @@
-import { useId, useState, type FormEvent } from "react";
+import { useId, useRef, useState, type FormEvent } from "react";
 import { useNavigate } from "react-router";
 import { checkName, GROUP_NAME_MAX, MEMBER_NAME_MAX } from "../data/names";
 import { createGroup } from "../data/store";
 import { FooterLinks } from "../Footer";
 import { BAD_NAME, errorText } from "../messages";
+import { TurnstileWidget, type TurnstileHandle } from "../turnstile/TurnstileWidget";
 import { NameField } from "./NameField";
 import { Sheet } from "./Sheet";
 
@@ -23,11 +24,14 @@ export function CreateGroupScreen() {
   // 送った後の失敗の文（API が断った bad_name も、どちらの欄かは分からないのでここに出す）
   const [formError, setFormError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  // ボット対策のトークン（取れるまで「作る」は押せない）と、送った後に取り直すためのウィジェット
+  const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
+  const turnstileRef = useRef<TurnstileHandle>(null);
 
   // 「作る」：画面の側で長さを確かめてから送る（入力の手助け。正本は API）
   const onSubmit = (e: FormEvent) => {
     e.preventDefault();
-    if (busy) return;
+    if (busy || turnstileToken === null) return;
     const gname = checkName(groupName, GROUP_NAME_MAX);
     const mname = checkName(name, MEMBER_NAME_MAX);
     setGroupNameError(gname === null ? BAD_NAME : null);
@@ -35,12 +39,16 @@ export function CreateGroupScreen() {
     setFormError(null);
     if (gname === null || mname === null) return;
     setBusy(true);
-    createGroup(gname, mname).then(
+    // トークンは1回しか使えないので、送ったら（成功でも失敗でも）取り直す
+    const resetTurnstile = () => turnstileRef.current?.reset();
+    createGroup(gname, mname, turnstileToken).then(
       ({ groupId, memberId }) => {
+        resetTurnstile();
         const state: CreatedState = { createdMemberId: memberId };
         void navigate(`/g/${groupId}`, { state });
       },
       (err: unknown) => {
+        resetTurnstile();
         setBusy(false);
         setFormError(errorText(err));
       },
@@ -65,12 +73,13 @@ export function CreateGroupScreen() {
             autoComplete="nickname"
           />
           <p className="note">グループ名とあなたの名前は、招待URLを知っている人に表示されます。本名でなくてもかまいません</p>
+          <TurnstileWidget ref={turnstileRef} onToken={setTurnstileToken} />
           {formError !== null && (
             <p className="err" role="alert">
               {formError}
             </p>
           )}
-          <button className="primary" type="submit" disabled={busy}>
+          <button className="primary" type="submit" disabled={busy || turnstileToken === null}>
             作る
           </button>
         </form>
