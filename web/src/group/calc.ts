@@ -37,6 +37,28 @@ export function rememberedIsMissing(members: readonly GroupMember[], rememberedI
   return rememberedId !== null && !members.some((m) => m.id === rememberedId);
 }
 
+// グループを開いたときの自分のメンバー。meId：自分の番号（いなければ null で参加のシート）、lostMember：覚えを忘れて REQ-025 の文を出すか。
+// 1. ログイン済みで紐づいたメンバー（isMe）がいれば、その人
+// 2. 端末が覚えている番号がいなければ、忘れて「前回の名前が見つかりませんでした」（REQ-025）
+// 3. 覚えている番号のメンバーが紐づいていれば、覚えを消さずに参加のシート（2026-10-23 にメインが決めた仮の動き。
+//    ログインがない Phase 2 では起きない。REQ-025・REQ-035 の文は Phase 3 で作る）
+// 4. 覚えていなければ、グループ作成から渡された番号（端末に書けなかったときの代わり）。グループにいて紐づいていないときだけ使う
+export function resolveMe(
+  members: readonly GroupMember[],
+  rememberedId: number | null,
+  createdId: number | null,
+): { meId: number | null; lostMember: boolean } {
+  const linked = members.find((m) => m.isMe);
+  if (linked) return { meId: linked.id, lostMember: false };
+  if (rememberedId !== null) {
+    const m = members.find((x) => x.id === rememberedId);
+    if (!m) return { meId: null, lostMember: true };
+    return { meId: m.linked ? null : m.id, lostMember: false };
+  }
+  const created = members.find((x) => x.id === createdId);
+  return { meId: created && !created.linked ? created.id : null, lostMember: false };
+}
+
 // 招待URL（REQ-002）。LINE のアプリ内ブラウザで開いても外部ブラウザに移るように ?openExternalBrowser=1 を付ける（auth-flow の「LINE のアプリ内ブラウザ」）
 export function inviteUrl(origin: string, groupId: string): string {
   return `${origin}/g/${groupId}?openExternalBrowser=1`;

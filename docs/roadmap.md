@@ -126,11 +126,11 @@
   - [x] 3-5 `feat/web-sheets`（2026-10-22。閉じられないシートの中にも「トップへ」と一番下のリンクを置いた）：グループ作成・参加・招待のシートを、モックと同じ動きで（API・Turnstile・本物の招待URLは後の項目）
   - モックの `index.html` と `tools/template.html` は、検索に出すページを作る項目まで残す（配るのは `web/` のビルド結果だけ）
 - [ ] リアルタイムの共有（NFR-003）：Durable Objects ＋ WebSocket で「行った」の変更を配る
-- [ ] `localStorage` の読み書きを API（Hono＋D1）に置き換える（`web/src/data/store.ts` の中身を替える。3-4 の仮の形（どのグループIDでも仮のグループ、覚えていなければ「たろう」として参加したことにする、`tabikaigi-dev-visits:` のキー、`data/demo.ts`）は必ず消す。読めなかったときの文も決め直す。3-5 の仮の形（作成・参加の localStorage、`tabikaigi-dev-group:` のキー、`data/ids.ts`、`demoNameKey`）も消し、グループ作成から渡す作ったメンバーの番号（router の state）は API の応答で確かめる。端末が覚えるメンバーだけは `localStorage` に残す：Q-017）
+- [x] `localStorage` の読み書きを API（Hono＋D1）に置き換える（2026-10-23 に済んだ。`web/src/data/store.ts` の中身を替える。3-4 の仮の形（どのグループIDでも仮のグループ、覚えていなければ「たろう」として参加したことにする、`tabikaigi-dev-visits:` のキー、`data/demo.ts`）は必ず消す。読めなかったときの文も決め直す。3-5 の仮の形（作成・参加の localStorage、`tabikaigi-dev-group:` のキー、`data/ids.ts`、`demoNameKey`）も消し、グループ作成から渡す作ったメンバーの番号（router の state）は API の応答で確かめる。端末が覚えるメンバーだけは `localStorage` に残す：Q-017）
   - 小分け（2026-10-23 にユーザーと決めた。上から順に、1つずつプルリクエストにする）。API は Phase 1 で作ってあり（[api](design/api.md)）、この項目は画面の側（`web/src/data/`）を替える。ログインと紐づけ（Phase 3）、リアルタイム（次の項目）は入れない
   - [x] 4-1 `feat/web-turnstile`（2026-10-23。手元で試験用の鍵のウィジェットが出て、トークンが取れるまで押せないことを確かめた）：ボット対策（Turnstile）のウィジェットの部品。グループ作成と参加の「作る」「参加する」の上に置き、送るたびに新しいトークンを取る（screens の「参加の画面」）。部品を入れずに Cloudflare の読み込み用のスクリプトで作る。手元では Cloudflare の試験用の鍵（いつも通る）を使う。まだ API には送らない
-  - [ ] 4-2 `feat/web-api`：`web/src/data/` の中身を API に替える（開く、「行った」の付け外し、作る、参加する）。`X-Tabikaigi: 1` を付ける。応答の `error` ごとの文と行き先は screens の「API の応答と画面の動き」と「知らせ」のとおり（`404 group_not_found` で端末の覚えを忘れてエラー、`409 already_member`、`group_full`、`name_taken`、`turnstile_failed`、`429`、`503`、JSON でない応答）。3-4・3-5 の仮の形（上の括弧の中）を消す。手元の `.dev.vars` に試験用の秘密の鍵を入れてから始める（運営者が入れる）。API・配信に触れるので `access-reviewer` に頼む
-  - [ ] 4-3 確かめ：手元の `wrangler dev` で、2つのブラウザ（または通常とプライベート）を使い、作る → 招待URLを開く → 参加する → 塗る → もう片方で開き直すと見える、を通す。同じ名前の確認、満員（20人）、消えたグループ（404）も。結果を roadmap に書く（コードの変更がなければプルリクエストは作らず、4-2 の中で済ませてもよい）
+  - [x] 4-2 `feat/web-api`（2026-10-23。`access-reviewer` は高なし。通信は20秒で切る（仮の値））：`web/src/data/` の中身を API に替える（開く、「行った」の付け外し、作る、参加する）。`X-Tabikaigi: 1` を付ける。応答の `error` ごとの文と行き先は screens の「API の応答と画面の動き」と「知らせ」のとおり（`404 group_not_found` で端末の覚えを忘れてエラー、`409 already_member`、`group_full`、`name_taken`、`turnstile_failed`、`429`、`503`、JSON でない応答）。3-4・3-5 の仮の形（上の括弧の中）を消す。手元の `.dev.vars` に試験用の秘密の鍵を入れてから始める（運営者が入れる）。API・配信に触れるので `access-reviewer` に頼む
+  - [x] 4-3 確かめ（2026-10-23。4-2 の中で済ませた：手元の `wrangler dev` とアプリ内のブラウザで、端末の覚えを消して別の人として開き直す形で、作る → 参加 → 塗る → もう1人の「行った」が API から読める、同じ名前の確認、ひらがなとカタカナは別の人、満員（20人）、消えたグループ（404）、消されたメンバーを通した。手元の `.wrangler` の D1 が読み取りだけになっていたので、作業用のフォルダに D1 を作って確かめた（原因は〔未〕））：手元の `wrangler dev` で、2つのブラウザ（または通常とプライベート）を使い、作る → 招待URLを開く → 参加する → 塗る → もう片方で開き直すと見える、を通す。同じ名前の確認、満員（20人）、消えたグループ（404）も。結果を roadmap に書く（コードの変更がなければプルリクエストは作らず、4-2 の中で済ませてもよい）
 - [ ] iPhone の Safari と Chrome で、しばらく開かないと `localStorage` とログインの状態が消えるかを実機で確かめる（Q-017）
 - [ ] 本物の招待URL（匿名認証は使わない：ADR 0003）
 - [ ] グループ設定：グループ名の変更、管理できる人、メンバーの削除、グループの削除、退出（最後の1人ならグループも削除）
@@ -148,7 +148,7 @@
   - 〔未〕Turnstile のウィジェットのドメインの制限と、応答の `hostname` を確かめるか（[api](design/api.md)）
   - 〔未〕Durable Objects の動いている時間（GB 秒）と眠れる書き方の効き方
   - 〔未〕無料枠を超えたときに API が実際に返すエラー（D1・Workers・Durable Objects）。D1 の枠切れのエラーの文が分かったら、API の 503 に `reason: "quota"` を付けて「一時的な失敗」と分ける（いまは全部 `temporary`：[api](design/api.md)）
-- [ ] 最初の本番のデプロイ（[deploy](design/deploy.md) の「最初のデプロイ」）と、そこにある〔未〕の確かめ（配信の設定：GET 以外・大文字・`%61pi`・`//api/…`・`/api` で Worker が動かないか、動くなら WAF の式を `lower(…)` で広げる、独自ドメインを `wrangler.jsonc` の `routes` に書くか、管理画面のセキュリティのイベントに残るパス（architecture の「ログに残るもの」に足す）。2026-10-21 の `access-reviewer` #1・#5・#9・#10。トークンの権限、本物の D1 の書き出し、わざと失敗するマイグレーション、Time Travel の巻き戻しと取り消し、バックアップからの作り直し、`rollback` で静的アセットが戻るか、デプロイで部屋の接続が切れるか）。どれも公開の前に必須
+- [ ] 最初の本番のデプロイ（[deploy](design/deploy.md) の「最初のデプロイ」）と、そこにある〔未〕の確かめ（配信の設定：GET 以外・大文字・`%61pi`・`//api/…`・`/api` で Worker が動かないか、動くなら WAF の式を `lower(…)` で広げる、独自ドメインを `wrangler.jsonc` の `routes` に書くか、管理画面のセキュリティのイベントに残るパス（architecture の「ログに残るもの」に足す）。2026-10-21 の `access-reviewer` #1・#5・#9・#10。Turnstile の確認の通信にグループIDを含む URL が入るか（2026-10-23 の `access-reviewer` #1：architecture の「ログに残るもの」）。トークンの権限、本物の D1 の書き出し、わざと失敗するマイグレーション、Time Travel の巻き戻しと取り消し、バックアップからの作り直し、`rollback` で静的アセットが戻るか、デプロイで部屋の接続が切れるか）。どれも公開の前に必須
 - [ ] 公開の前に、相談・確かめ（Phase 1 で決めたことの確かめ）：
   - 〔未〕個人情報保護法相談ダイヤルに、運営者の氏名・住所を「請求があれば遅滞なく回答する」と書く形でよいかを電話で聞く（ユーザーが行う。[privacy](design/privacy.md)）
   - 〔未〕招待URLを LINE と X で実際に送り、OGP のカードの表示を確かめる。変えたら LINE の Page Poker で覚えたものを消す（[architecture](design/architecture.md) の「招待URLのプレビュー（OGP）」）

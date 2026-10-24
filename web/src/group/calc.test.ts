@@ -15,6 +15,7 @@ import {
   prefVisitors,
   REGIONS,
   rememberedIsMissing,
+  resolveMe,
   shortPrefName,
   visitedByMember,
   withPending,
@@ -227,6 +228,34 @@ describe("rememberedIsMissing：覚えていたメンバーがグループにい
   it("いれば false。覚えていなければ（初めて開いたのと同じ）false", () => {
     expect(rememberedIsMissing(members, 2)).toBe(false);
     expect(rememberedIsMissing(members, null)).toBe(false);
+  });
+});
+
+describe("resolveMe：グループを開いたときの自分のメンバー", () => {
+  it("覚えている番号が紐づいていないメンバーなら、その人", () => {
+    expect(resolveMe(members, 2, null)).toEqual({ meId: 2, lostMember: false });
+  });
+
+  it("覚えている番号がいなければ、自分はいなくて、覚えを忘れる（REQ-025）", () => {
+    expect(resolveMe(members, 9, null)).toEqual({ meId: null, lostMember: true });
+  });
+
+  it("覚えている番号のメンバーが紐づいていれば、覚えを消さずに参加のシート（2026-10-23 の仮の動き）", () => {
+    expect(resolveMe([A, member(2, "い", { linked: true }), C], 2, null)).toEqual({ meId: null, lostMember: false });
+  });
+
+  it("ログイン済みで紐づいたメンバー（isMe）がいれば、覚えている番号より先", () => {
+    expect(resolveMe([A, member(2, "い", { linked: true, isMe: true }), C], 9, null)).toEqual({ meId: 2, lostMember: false });
+  });
+
+  it("覚えていなければ、作ったメンバーの番号を使う。グループにいない・紐づいているときは使わない", () => {
+    expect(resolveMe(members, null, 1)).toEqual({ meId: 1, lostMember: false });
+    expect(resolveMe(members, null, 9)).toEqual({ meId: null, lostMember: false });
+    expect(resolveMe([member(1, "あ", { linked: true })], null, 1)).toEqual({ meId: null, lostMember: false });
+  });
+
+  it("覚えていなくて、作ったメンバーの番号もなければ、自分はいない（初めて開いたのと同じ）", () => {
+    expect(resolveMe(members, null, null)).toEqual({ meId: null, lostMember: false });
   });
 });
 

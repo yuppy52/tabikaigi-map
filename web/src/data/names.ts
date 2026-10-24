@@ -23,9 +23,3 @@ export function checkName(input: string, max: number): string | null {
   const name = trimName(input);
   return name.length > 0 && visibleLength(name) <= max ? name : null;
 }
-
-// 仮の保存（API につなぐまで）で「同じ名前」かを比べる形。前後の空白を取り、NFKC と小文字にそろえるだけ。
-// 本当の比べ方（REQ-011：絵文字の部品や続いた空白も見る）は API の nameKey が正本。API につないだら使わない
-export function demoNameKey(name: string): string {
-  return trimName(name).normalize("NFKC").toLowerCase();
-}

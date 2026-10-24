@@ -2,11 +2,12 @@ import { useId, useRef, useState, type FormEvent } from "react";
 import { Link } from "react-router";
 import { memberColor } from "../data/memberColors";
 import { checkName, MEMBER_NAME_MAX } from "../data/names";
+import { failureOf } from "../data/api";
 import { joinGroup, rememberMember } from "../data/store";
 import type { GroupMember } from "../data/types";
 import { FooterLinks } from "../Footer";
 import { Avatar } from "../group/Avatar";
-import { BAD_NAME, errorText, SAVE_FAILED } from "../messages";
+import { BAD_NAME, joinErrorOf, NAME_NEEDS_LOGIN, SAVE_FAILED } from "../messages";
 import { TurnstileWidget, type TurnstileHandle } from "../turnstile/TurnstileWidget";
 import { NameField } from "./NameField";
 import { Sheet } from "./Sheet";
@@ -15,10 +16,13 @@ type Props = {
   groupId: string;
   groupName: string;
   members: readonly GroupMember[];
-  // 端末が覚えていたメンバーがグループにいなかった（REQ-025）。そのときは「前回の名前が見つかりませんでした」を出す
-  lostMember: boolean;
+  // シートの一番上に出す文。覚えていたメンバーがいなかった（REQ-025「前回の名前が見つかりませんでした」）、
+  // 自分のメンバーが紐づいた・削除された（「行った」の付け外しで分かったとき）。なければ出さない
+  notice: string | null;
   // 入れたとき（新しいメンバー、または同じ名前の確認で「続ける」）。番号と、出す知らせの文
   onJoined: (memberId: number, toast: string) => void;
+  // 参加できないと分かったとき（グループが削除された、満員）。グループの画面がエラーの画面に替える
+  onGone: (why: "deleted" | "full") => void;
 };
 
 // 同じ名前の確認の途中なら、その人（番号と名前）
@@ -26,8 +30,10 @@ type Confirm = { memberId: number; name: string } | null;
 
 // 参加のシート（REQ-002・REQ-004・REQ-012、モックの openJoin('join')）。グループ名と参加中のメンバーの名前を見せて、名前を入れてもらう。
 // 名前を入れるまで閉じられない。同じ名前の紐づいていないメンバーがいたら「この人として続けますか？」と聞き、
-// 続けるならそのメンバーとして覚え（新しく作らない）、続けないなら名前の入力に戻る
-export function JoinSheet({ groupId, groupName, members, lostMember, onJoined }: Props) {
+// 続けるならそのメンバーとして覚え（新しく作らない）、続けないなら名前の入力に戻る。
+// 紐づいたメンバーと同じ名前なら「この名前で入るにはログインが必要です」（ログインへの入口は Phase 3 で置く）。
+// 失敗の文と行き先は messages の joinErrorOf（screens の「API の応答と画面の動き」）
+export function JoinSheet({ groupId, groupName, members, notice, onJoined, onGone }: Props) {
   const titleId = useId();
   const [name, setName] = useState("");
   const [nameError, setNameError] = useState<string | null>(null);
@@ -58,9 +64,9 @@ export function JoinSheet({ groupId, groupName, members, lostMember, onJoined }:
           onJoined(result.memberId, `${groupName} に参加しました`);
           return;
         }
-        // 紐づいたメンバーと同じ名前（REQ-013）は、ログインの項目で作る。それまでは表にない失敗として扱う
+        // 紐づいたメンバーと同じ名前（REQ-013）。別の名前を入れてもらう（ログインへの入口は Phase 3）
         if (result.linked) {
-          setFormError(SAVE_FAILED);
+          setFormError(NAME_NEEDS_LOGIN);
           return;
         }
         // 表示する名前は、すでにいるメンバーの名前（入れた名前と、全角・半角や大文字・小文字が違うことがある）
@@ -70,9 +76,10 @@ export function JoinSheet({ groupId, groupName, members, lostMember, onJoined }:
       (err: unknown) => {
         resetTurnstile();
         setBusy(false);
-        const text = errorText(err);
-        if (text === BAD_NAME) setNameError(text);
-        else setFormError(text);
+        const action = joinErrorOf(failureOf(err));
+        if (action.kind === "field") setNameError(action.text);
+        else if (action.kind === "form") setFormError(action.text);
+        else onGone(action.kind);
       },
     );
   };
@@ -83,7 +90,7 @@ export function JoinSheet({ groupId, groupName, members, lostMember, onJoined }:
     const { memberId, name: sameName } = confirm;
     rememberMember(groupId, { memberId, name: sameName }).then(
       () => onJoined(memberId, `${sameName} さんとして続きから`),
-      // 覚えられなかったら、確認を閉じて文を出す（シートは閉じられないので、黙っていると何もできなくなる）
+      // いまの rememberMember は書けなくても成功で返す（覚えられないだけで、この間は入れる）。中身を替えて失敗が返るようになっても、黙らずに文を出す
       () => {
         setConfirm(null);
         setFormError(SAVE_FAILED);
@@ -93,7 +100,7 @@ export function JoinSheet({ groupId, groupName, members, lostMember, onJoined }:
 
   return (
     <Sheet labelledBy={titleId} onClose={null}>
-      {lostMember && <p className="err">前回の名前が見つかりませんでした</p>}
+      {notice !== null && <p className="err">{notice}</p>}
       <p className="sub" style={{ margin: "0 0 6px" }}>
         招待リンクから開きました
       </p>
