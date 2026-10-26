@@ -8,6 +8,7 @@ import { createGroup, joinGroup, readGroup, setAccountVisit, setMemberVisit, tou
 import { isGroupId } from "./ids";
 import { deleteGroup, deleteMember, leaveMember, linkMember, renameGroup, renameMember, setManageBy, type Refused } from "./manage";
 import { listMyGroups, listMyVisits, withdraw } from "./account";
+import { notifyRoom } from "./room-entry";
 import { checkName, GROUP_NAME, MEMBER_NAME } from "./names";
 import { TurnstileUnavailableError, type TurnstileVerifier } from "./turnstile";
 
@@ -177,7 +178,11 @@ export function createApp(deps: Deps) {
     const memberId = parseMemberId(c.req.param("memberId") ?? "");
     const pref = parsePref(c.req.param("pref") ?? "");
     if (memberId === null || pref === null) return fail(c, 400, "bad_request");
-    return writeResponse(c, await setMemberVisit(c.env.DB, c.req.param("groupId")!, memberId, pref, visited));
+    const groupId = c.req.param("groupId")!;
+    const r = await setMemberVisit(c.env.DB, groupId, memberId, pref, visited);
+    // 書けたら（付いていた・外れていたときも成功なので）部屋に配る。断ったときは配らない
+    if (r.ok) notifyRoom(c.executionCtx, c.env, groupId, { type: "visit", memberId, pref, visited });
+    return writeResponse(c, r);
   };
   app.put("/groups/:groupId/members/:memberId/visits/:pref", memberVisit(true));
   app.delete("/groups/:groupId/members/:memberId/visits/:pref", memberVisit(false));
@@ -188,6 +193,7 @@ export function createApp(deps: Deps) {
     if (error) return error;
     const pref = parsePref(c.req.param("pref") ?? "");
     if (pref === null) return fail(c, 400, "bad_request");
+    // 部屋には、まだ配らない（紐づいたメンバーがいる全グループの部屋に、それぞれのメンバーの番号で配るのは Phase 3）
     return writeResponse(c, await setAccountVisit(c.env.DB, c.req.param("groupId")!, user.uid, pref, visited));
   };
   app.put("/groups/:groupId/my-visits/:pref", myVisit(true));
@@ -203,7 +209,11 @@ export function createApp(deps: Deps) {
     const memberId = memberIdOf(c);
     const body = await readBody(c);
     if (memberId === null || (body.visits !== "merge" && body.visits !== "discard")) return fail(c, 400, "bad_request");
-    return writeResponse(c, await linkMember(c.env.DB, c.req.param("groupId"), memberId, user.uid, body.visits === "merge"));
+    const groupId = c.req.param("groupId");
+    const r = await linkMember(c.env.DB, groupId, memberId, user.uid, body.visits === "merge");
+    // そのメンバーの「行った」がアカウントのものに入れ替わるので、ほかの画面に取り直してもらう（architecture の「部屋が配るもの」）
+    if (r.ok) notifyRoom(c.executionCtx, c.env, groupId, { type: "refetch" });
+    return writeResponse(c, r);
   });
 
   // 自分に紐づいたメンバーの名前を変える（REQ-014・REQ-015）
@@ -229,7 +239,10 @@ export function createApp(deps: Deps) {
   app.delete("/groups/:groupId/members/:memberId", async (c) => {
     const memberId = memberIdOf(c);
     if (memberId === null) return fail(c, 400, "bad_request");
-    const r = await deleteMember(c.env.DB, c.req.param("groupId"), memberId, c.get("user")?.uid ?? null);
+    const groupId = c.req.param("groupId");
+    const r = await deleteMember(c.env.DB, groupId, memberId, c.get("user")?.uid ?? null);
+    // ほかの人の画面が、消されたことに気づくように取り直してもらう（Q-020）
+    if (r.ok) notifyRoom(c.executionCtx, c.env, groupId, { type: "refetch" });
     return writeResponse(c, r, r.ok ? { ok: true, groupDeleted: r.groupDeleted } : undefined);
   });
 
@@ -251,7 +264,11 @@ export function createApp(deps: Deps) {
 
   // グループを削除する（REQ-047）
   app.delete("/groups/:groupId", async (c) => {
-    return writeResponse(c, await deleteGroup(c.env.DB, c.req.param("groupId"), c.get("user")?.uid ?? null));
+    const groupId = c.req.param("groupId");
+    const r = await deleteGroup(c.env.DB, groupId, c.get("user")?.uid ?? null);
+    // ほかの人の画面が、消されたことに気づくように取り直してもらう（Q-020）
+    if (r.ok) notifyRoom(c.executionCtx, c.env, groupId, { type: "refetch" });
+    return writeResponse(c, r);
   });
 
   // グループ一覧（REQ-032）
