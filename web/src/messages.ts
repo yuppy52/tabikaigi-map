@@ -89,3 +89,14 @@ export function joinErrorOf(f: Failure): JoinErrorAction {
   if (isRefused(f, 409, "group_full")) return { kind: "full" };
   return { kind: "form", text: writeFailureText(f) };
 }
+
+// リアルタイムの帯（screens の「知らせ」の「リアルタイムの知らせが数秒以上つながらない」）
+export const REALTIME_DOWN = "自動で更新されていません";
+export const REALTIME_RELOAD = "読み直す";
+
+// 裏でグループを読み直したとき（「取り直して」、知らないメンバーの変更、つなぎ直し、画面に戻った、帯の「読み直す」）の失敗 → 動き。
+// グループが削除されていたら、覚えを忘れてエラーの画面（deleted）。それ以外（通信エラー、いまは使えない、429 など）は、
+// いまの画面のまま（quiet。screens の「リアルタイムで読み直したときの失敗」：2026-10-26 の仮の動き）
+export function backgroundLoadErrorOf(f: Failure): "deleted" | "quiet" {
+  return isRefused(f, 404, "group_not_found") ? "deleted" : "quiet";
+}

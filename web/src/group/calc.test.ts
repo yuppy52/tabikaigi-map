@@ -1,7 +1,7 @@
 // グループの画面の計算のテスト。グループIDの形（screens の「API の応答と画面の動き」）、
 // まとめの数え方（REQ-016・REQ-053・REQ-020）、県の詳細の並び（REQ-019）、送っている途中の表示（screens の「知らせ」）を確かめる
 import { describe, expect, it } from "vitest";
-import type { GroupMember, Visit } from "../data/types";
+import type { GroupMember, GroupView, Visit } from "../data/types";
 import {
   countVisitedByAnyone,
   defaultFocusMember,
@@ -9,6 +9,7 @@ import {
   initialOf,
   inviteUrl,
   isGroupId,
+  meRemoved,
   memberFills,
   membersByCount,
   prefsOf,
@@ -16,9 +17,12 @@ import {
   REGIONS,
   rememberedIsMissing,
   resolveMe,
+  RoomVisitLog,
+  roomVisitAction,
   shortPrefName,
   visitedByMember,
   withPending,
+  withRoomVisits,
 } from "./calc";
 import { PREF_IDS } from "../map/colors";
 
@@ -267,5 +271,92 @@ describe("inviteUrl：招待URL", () => {
     expect(inviteUrl("http://localhost:5173", "abcdefghijABCDEFGHIJ01")).toBe(
       "http://localhost:5173/g/abcdefghijABCDEFGHIJ01?openExternalBrowser=1",
     );
+  });
+});
+
+describe("roomVisitAction・meRemoved：部屋から届いたとき（architecture の「部屋が配るもの」、screens の「知らせ」）", () => {
+  const members = [member(1, "ゆう"), member(2, "あき")];
+
+  it("知っているメンバーの付け外しは反映、知らないメンバー（あとから参加した人）は読み直す", () => {
+    expect(roomVisitAction(members, 2)).toBe("apply");
+    expect(roomVisitAction(members, 3)).toBe("refetch");
+    expect(roomVisitAction([], 1)).toBe("refetch");
+  });
+
+  it("読み直したグループに自分がいなければ、削除された。参加の前（自分がいない）なら false", () => {
+    expect(meRemoved(members, 1)).toBe(false);
+    expect(meRemoved(members, 3)).toBe(true);
+    expect(meRemoved(members, null)).toBe(false);
+  });
+});
+
+describe("withRoomVisits：読み直しの結果に、その間に届いた付け外しを入れ直す", () => {
+  const view = (visits: Visit[]): GroupView => ({
+    group: { name: "旅", manageBy: "everyone", ownerOnly: false },
+    members: [member(1, "ゆう"), member(2, "あき")],
+    visits,
+  });
+
+  it("届いた順に入れる（付けて外したら外れたまま、外して付けたら付いたまま）", () => {
+    const got = withRoomVisits(view([{ memberId: 1, pref: 13 }]), [
+      { memberId: 2, pref: 1, visited: true },
+      { memberId: 2, pref: 1, visited: false },
+      { memberId: 1, pref: 13, visited: false },
+      { memberId: 1, pref: 13, visited: true },
+      { memberId: 1, pref: 47, visited: true },
+    ]);
+    expect(got.visits).toEqual(
+      expect.arrayContaining([
+        { memberId: 1, pref: 13 },
+        { memberId: 1, pref: 47 },
+      ]),
+    );
+    expect(got.visits).toHaveLength(2);
+  });
+
+  it("結果のグループにいないメンバーの分は入れない", () => {
+    expect(withRoomVisits(view([]), [{ memberId: 9, pref: 13, visited: true }]).visits).toEqual([]);
+  });
+
+  it("届いたものがなければ、結果をそのまま返す", () => {
+    const v = view([{ memberId: 1, pref: 13 }]);
+    expect(withRoomVisits(v, [])).toBe(v);
+  });
+});
+
+describe("RoomVisitLog：読み直しが飛んでいる間に届いた付け外しを覚える", () => {
+  const a = { memberId: 1, pref: 1, visited: true };
+  const b = { memberId: 1, pref: 2, visited: true };
+  const c = { memberId: 2, pref: 3, visited: false };
+
+  it("読み直しを始めた後に届いた分だけを返す。飛んでいないときに届いた分は覚えない", () => {
+    const log = new RoomVisitLog();
+    log.record(a);
+    const mark = log.start();
+    log.record(b);
+    log.record(c);
+    expect(log.finish(mark)).toEqual([b, c]);
+  });
+
+  it("読み直しが重なったら、それぞれ自分が始めた後の分を返す（戻る順が入れ替わっても）", () => {
+    const log = new RoomVisitLog();
+    const first = log.start();
+    log.record(a);
+    const second = log.start();
+    log.record(b);
+    expect(log.finish(second)).toEqual([b]);
+    log.record(c);
+    expect(log.finish(first)).toEqual([a, b, c]);
+  });
+
+  it("飛んでいる読み直しがなくなったら覚えを捨て、次の読み直しには前の分を入れない", () => {
+    const log = new RoomVisitLog();
+    const m1 = log.start();
+    log.record(a);
+    expect(log.finish(m1)).toEqual([a]);
+    log.record(b); // 飛んでいないので覚えない
+    const m2 = log.start();
+    log.record(c);
+    expect(log.finish(m2)).toEqual([c]);
   });
 });

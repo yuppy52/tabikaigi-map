@@ -5,7 +5,21 @@ import { failureOf } from "../data/api";
 import { applyVisit, fetchGroup, forgetMember, readRememberedMember, rememberMember, saveVisit } from "../data/store";
 import type { GroupView } from "../data/types";
 import { FooterLinks, MapCredit } from "../Footer";
-import { GROUP_DELETED, GROUP_FULL, loadErrorOf, LOST_MEMBER, NAME_NEEDS_LOGIN, RELOAD, visitErrorOf } from "../messages";
+import { connectRoom, type RoomConnection } from "../data/room";
+import {
+  backgroundLoadErrorOf,
+  GROUP_DELETED,
+  GROUP_FULL,
+  LOAD_FAILED,
+  loadErrorOf,
+  LOST_MEMBER,
+  memberRemovedText,
+  NAME_NEEDS_LOGIN,
+  REALTIME_DOWN,
+  REALTIME_RELOAD,
+  RELOAD,
+  visitErrorOf,
+} from "../messages";
 import type { CreatedState } from "../sheets/CreateGroupScreen";
 import { InviteSheet } from "../sheets/InviteSheet";
 import { JoinSheet } from "../sheets/JoinSheet";
@@ -17,11 +31,15 @@ import {
   countVisitedByAnyone,
   defaultFocusMember,
   inviteUrl,
+  meRemoved,
   memberFills,
   membersByCount,
   prefsOf,
   REGIONS,
   resolveMe,
+  RoomVisitLog,
+  roomVisitAction,
+  withRoomVisits,
   shortPrefName,
   visitedByMember,
   withPending,
@@ -144,6 +162,104 @@ export function GroupScreen({ groupId }: { groupId: string }) {
     fetchGroup(groupId).then((view) => setLoaded((d) => (d.status === "ready" ? { ...d, view } : d)), showLoadError);
   };
 
+  // ---- リアルタイム（部屋）。参加した後（自分のメンバーが決まっている）だけつなぎ、画面を離れたら・参加のシートに戻ったら切る ----
+  // 帯（つながっていない状態が5秒続いた）を出すか
+  const [banner, setBanner] = useState(false);
+  // 部屋から届いたときに、いまの中身を見るための写し（届くのは描画の外なので）
+  const loadedRef = useRef(loaded);
+  useEffect(() => {
+    loadedRef.current = loaded;
+  }, [loaded]);
+  // 裏の読み直しの番号。後から始めた読み直しの結果だけを使う（応答の順番が入れ替わっても、古い中身で上書きしない）
+  const reloadSeq = useRef(0);
+  // 読み直しが飛んでいる間に部屋から届いた付け外し（届いた順）。読み直しは、始めた後に届いた分を結果に入れ直す
+  // （読み直しの中身は、その付け外しより前に D1 を読んだものかもしれず、そのまま使うと届いた変更が消えるため）
+  const visitLog = useRef(new RoomVisitLog());
+  const roomRef = useRef<RoomConnection | null>(null);
+
+  // 裏でグループを読み直す（「取り直して」、知らないメンバーの変更、つなぎ直し、画面に戻った、帯の「読み直す」）。
+  // 自分のメンバーがいなくなっていたら、覚えを忘れて参加のシートに「（名前）さんはグループから削除されました」。
+  // グループが削除されていたら、覚えを忘れてエラーの画面。それ以外の失敗は、いまの画面のまま（screens の「リアルタイムで読み直したときの失敗」）。
+  // 返す値：その失敗（いまの画面のまま）なら false。帯の「読み直す」は、false のときに知らせを出す
+  const reloadQuietly = useCallback((): Promise<boolean> => {
+    const seq = ++reloadSeq.current;
+    const mark = visitLog.current.start();
+    return fetchGroup(groupId).then(
+      (fetched) => {
+        const view = withRoomVisits(fetched, visitLog.current.finish(mark));
+        if (seq !== reloadSeq.current) return true;
+        const d = loadedRef.current;
+        if (d.status === "ready" && meRemoved(view.members, d.meId)) {
+          const name = d.view.members.find((m) => m.id === d.meId)?.name ?? "";
+          void forgetMember(groupId);
+          setLoaded((cur) =>
+            cur.status === "ready" && cur.meId === d.meId
+              ? { ...cur, view, meId: null, notice: memberRemovedText(name), toast: null, invite: false }
+              : cur,
+          );
+        } else {
+          setLoaded((cur) => (cur.status === "ready" ? { ...cur, view } : cur));
+        }
+        return true;
+      },
+      (e: unknown) => {
+        visitLog.current.finish(mark);
+        if (seq !== reloadSeq.current) return true;
+        if (backgroundLoadErrorOf(failureOf(e)) === "quiet") return false;
+        if (loadedRef.current.status === "ready") {
+          void forgetMember(groupId);
+          setLoaded({ status: "failed", text: GROUP_DELETED, retry: false });
+        }
+        return true;
+      },
+    );
+  }, [groupId]);
+
+  // 部屋から「行った」の付け外しが届いたとき：知っているメンバーなら、最後に保存できた「行った」に入れる
+  // （送っている途中の県でも入れる。失敗して戻すときに、届いた変更が消えないように：screens の「行った」の付け外し）。知らないメンバーなら読み直す
+  const onRoomVisit = useCallback(
+    (memberId: number, pref: number, visited: boolean) => {
+      const d = loadedRef.current;
+      if (d.status !== "ready") return;
+      visitLog.current.record({ memberId, pref, visited });
+      if (roomVisitAction(d.view.members, memberId) === "refetch") {
+        void reloadQuietly();
+        return;
+      }
+      setLoaded((cur) =>
+        cur.status === "ready" ? { ...cur, view: { ...cur.view, visits: applyVisit(cur.view.visits, memberId, pref, visited) } } : cur,
+      );
+    },
+    [reloadQuietly],
+  );
+
+  // 参加した後だけ部屋につなぐ。画面に戻ったとき（visibilitychange で visible）は、つながっていれば読み直し、切れていればすぐにつなぐ
+  const meIdNow = loaded.status === "ready" ? loaded.meId : null;
+  useEffect(() => {
+    if (meIdNow === null) return;
+    const room = connectRoom(groupId, { onVisit: onRoomVisit, onRefetch: () => void reloadQuietly(), onBanner: setBanner });
+    roomRef.current = room;
+    // つながっていれば読み直す。切れていれば、すぐにつなぐだけ（つながったとき＝2回目以降の ready で読み直されるので、2回読まない）
+    const onVisible = () => {
+      if (document.visibilityState !== "visible") return;
+      if (room.isConnected()) void reloadQuietly();
+      else room.reconnectNow();
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => {
+      document.removeEventListener("visibilitychange", onVisible);
+      room.close();
+      roomRef.current = null;
+      setBanner(false);
+    };
+  }, [groupId, meIdNow, onRoomVisit, reloadQuietly]);
+
+  // 帯の「読み直す」：グループを読み直し、つなぎ直しの回数を数え直してすぐにつなぐ。読み直しが失敗したら false（画面が知らせを出す）
+  const onBannerReload = (): Promise<boolean> => {
+    roomRef.current?.reconnectNow();
+    return reloadQuietly();
+  };
+
   if (loaded.status === "loading") {
     return (
       <main className="wrap">
@@ -188,6 +304,8 @@ export function GroupScreen({ groupId }: { groupId: string }) {
         inert={joining}
         initialToast={loaded.toast}
         initialInvite={loaded.invite ? "fresh" : null}
+        banner={banner}
+        onBannerReload={onBannerReload}
         onSaved={(memberId, pref, visited) =>
           setLoaded((d) =>
             d.status === "ready" ? { ...d, view: { ...d.view, visits: applyVisit(d.view.visits, memberId, pref, visited) } } : d,
@@ -228,10 +346,26 @@ type BodyProps = {
   onRejoin: (text: string) => void;
   onDeleted: () => void;
   onReload: () => void;
+  // リアルタイムの帯を出すか、帯の「読み直す」（失敗したら false）
+  banner: boolean;
+  onBannerReload: () => Promise<boolean>;
 };
 
 // 読み終わった後のグループの画面。タブ・まとめ・地図・凡例・全員まだの県・地方ごとの一覧・県の詳細のシート・知らせ
-function GroupBody({ groupId, view, meId, inert, initialToast, initialInvite, onSaved, onRejoin, onDeleted, onReload }: BodyProps) {
+function GroupBody({
+  groupId,
+  view,
+  meId,
+  inert,
+  initialToast,
+  initialInvite,
+  onSaved,
+  onRejoin,
+  onDeleted,
+  onReload,
+  banner,
+  onBannerReload,
+}: BodyProps) {
   const { members } = view;
   // 自分がいなければ（端末が覚えていない）、わたし は選べないので みんな から始める（モックの最初の画面と同じ）
   const [tab, setTab] = useState<Tab>(meId !== null ? "mine" : "all");
@@ -324,6 +458,22 @@ function GroupBody({ groupId, view, meId, inert, initialToast, initialInvite, on
 
   return (
     <div className="wrap" inert={inert}>
+      {/* リアルタイムの帯（screens の「知らせ」。見た目は Phase 3 で整える）。読み直せなかったら知らせ「読み込めませんでした…」（仮の動き 2026-10-26） */}
+      {banner && (
+        <div className="rtbanner" role="status">
+          <span>{REALTIME_DOWN}</span>
+          <button
+            type="button"
+            onClick={() => {
+              void onBannerReload().then((ok) => {
+                if (!ok) showToast(LOAD_FAILED);
+              });
+            }}
+          >
+            {REALTIME_RELOAD}
+          </button>
+        </div>
+      )}
       <header className="top">
         <div className="gname disp">
           <small>グループ</small>
