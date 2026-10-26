@@ -1,4 +1,4 @@
-// 旅会議マップの Cloudflare の設定（API と D1、画面の配信。部屋（Durable Objects）はその項目で足す）
+// 旅会議マップの Cloudflare の設定（API と D1、画面の配信、リアルタイムの部屋（Durable Objects））
 {
   "name": "tabikaigi-map",
   "main": "api/src/index.ts",
@@ -27,6 +27,12 @@
     "head_sampling_rate": 1,
     "logs": { "invocation_logs": false }
   },
+  // グループごとの「部屋」（Durable Objects。リアルタイム：NFR-003）。クラスは api/src/room.ts。
+  // Free で使えるのは SQLite 版だけなので new_sqlite_classes で作る（本番に当てた tag は書き換えず、足すときは新しい tag にする）
+  "durable_objects": {
+    "bindings": [{ "name": "GROUP_ROOM", "class_name": "GroupRoom" }]
+  },
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["GroupRoom"] }],
   // D1（データベース）。本番のデータベースはまだ作っていない。作ったら database_id を差し替える
   "d1_databases": [
     {
