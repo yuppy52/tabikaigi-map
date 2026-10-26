@@ -1,7 +1,8 @@
 // グループの画面の計算（部品の外に切り出してテストする：.claude/rules/web.md）。
 // 数え方はモック（tools/template.html）の renderSummary・renderList・openPrefSheet と同じ
 import { PREF_IDS } from "../map/colors";
-import type { GroupMember, Visit } from "../data/types";
+import { applyVisit } from "../data/store";
+import type { GroupMember, GroupView, Visit } from "../data/types";
 
 // グループIDの形（英数字22文字：data-model の groups.id、api/src/ids.ts と同じ）。違えば API を呼ばずにエラーにする
 export function isGroupId(s: string): boolean {
@@ -120,4 +121,61 @@ export function memberFills(prefs: readonly number[], color: string): Record<num
 // 丸いアイコンに出す、名前の最初の1文字（絵文字などの2つで1文字のものも割らない）
 export function initialOf(name: string): string {
   return Array.from(name)[0] ?? "";
+}
+
+// 部屋から「行った」の付け外しが届いたとき：画面の知っているメンバーなら反映（apply）、知らないメンバーならグループを読み直す（refetch。
+// architecture の「部屋が配るもの」：参加は配られないので、新しく入った人の変更はこうして気づく）
+export function roomVisitAction(members: readonly GroupMember[], memberId: number): "apply" | "refetch" {
+  return members.some((m) => m.id === memberId) ? "apply" : "refetch";
+}
+
+// 裏で読み直したグループに、自分のメンバーがもういないか（screens の「自分のメンバーが削除されていた」）。自分がいない（参加の前）なら false
+export function meRemoved(members: readonly GroupMember[], meId: number | null): boolean {
+  return meId !== null && !members.some((m) => m.id === meId);
+}
+
+// 部屋から届いた「行った」の付け外し1件
+export type RoomVisit = { memberId: number; pref: number; visited: boolean };
+
+// 裏の読み直しの結果に、読み直しを始めてから結果が戻るまでに部屋から届いた付け外しを、届いた順に入れ直す
+// （読み直しの中身は、その付け外しより前に D1 を読んだものかもしれないので、そのまま使うと届いた変更が消える）。
+// 結果のグループにいないメンバーの分は入れない（削除された人。知らないメンバーの分は、別の読み直しで入る）
+export function withRoomVisits(view: GroupView, visits: readonly RoomVisit[]): GroupView {
+  let next = view.visits;
+  for (const v of visits) {
+    if (view.members.some((m) => m.id === v.memberId)) next = applyVisit(next, v.memberId, v.pref, v.visited);
+  }
+  return next === view.visits ? view : { ...view, visits: next };
+}
+
+// 読み直しが飛んでいる間に部屋から届いた付け外しを、届いた順に覚えるところ（withRoomVisits に渡す分を作る）。
+// start で読み直しを始めた印（通し番号）を受け取り、finish でその印から後に届いた分を受け取る。
+// 読み直しが重なっても、それぞれ自分が始めた後の分だけを受け取る。飛んでいる読み直しがなくなったら覚えを捨てる（溜め続けない）
+export class RoomVisitLog {
+  private log: RoomVisit[] = [];
+  // log[0] の通し番号
+  private base = 0;
+  private inFlight = 0;
+
+  // 読み直しを始めた。返す印を finish に渡す
+  start(): number {
+    this.inFlight++;
+    return this.base + this.log.length;
+  }
+
+  // 部屋から付け外しが届いた。飛んでいる読み直しがなければ覚えない
+  record(v: RoomVisit): void {
+    if (this.inFlight > 0) this.log.push(v);
+  }
+
+  // 読み直しが戻った（成功でも失敗でも、1回の start に1回呼ぶ）。始めた後に届いた分を返す
+  finish(mark: number): RoomVisit[] {
+    const since = this.log.slice(Math.max(0, mark - this.base));
+    this.inFlight = Math.max(0, this.inFlight - 1);
+    if (this.inFlight === 0) {
+      this.base += this.log.length;
+      this.log = [];
+    }
+    return since;
+  }
 }

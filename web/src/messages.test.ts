@@ -3,6 +3,7 @@
 import { describe, expect, it } from "vitest";
 import { refused, type Failure } from "./data/api";
 import {
+  backgroundLoadErrorOf,
   BAD_NAME,
   createErrorText,
   GROUP_DELETED,
@@ -122,5 +123,17 @@ describe("joinErrorOf：参加の失敗のときの動き", () => {
   it("ログイン済みだけで起きる 409 already_member・group_limit は表にない値（「保存できませんでした」）", () => {
     expect(joinErrorOf(refused(409, "already_member"))).toEqual({ kind: "form", text: SAVE_FAILED });
     expect(joinErrorOf(refused(409, "group_limit"))).toEqual({ kind: "form", text: SAVE_FAILED });
+  });
+});
+
+describe("backgroundLoadErrorOf：裏でグループを読み直したときの失敗（screens の「リアルタイムで読み直したときの失敗」）", () => {
+  it("404 group_not_found は削除のエラーの画面へ", () => {
+    expect(backgroundLoadErrorOf(refused(404, "group_not_found"))).toBe("deleted");
+  });
+
+  it("通信エラー、いまは使えない、429、表にない値は、いまの画面のまま", () => {
+    for (const f of [network, temporary, quota, rateLimited, refused(400, "bad_request"), refused(200, "bad_response")]) {
+      expect(backgroundLoadErrorOf(f)).toBe("quiet");
+    }
   });
 });
