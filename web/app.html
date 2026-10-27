@@ -7,6 +7,16 @@
     <meta name="robots" content="noindex" />
     <meta name="referrer" content="no-referrer" />
     <title>旅会議マップ</title>
+    <!-- 招待URLを LINE などで送ったときのカード（architecture の「招待URLのプレビュー（OGP）」）。
+         LINE のクローラーは JavaScript を動かさないので、全グループ共通の固定の値を HTML に直接書く。
+         og:url は書かない（グループごとに URL が違うため）。画像は https の絶対の URL（www なし） -->
+    <meta property="og:title" content="旅会議マップ" />
+    <meta property="og:description" content="友達と行った都道府県を塗って、次の旅行先を決めよう" />
+    <meta property="og:type" content="website" />
+    <meta property="og:image" content="https://tabikaigi-map.com/ogp.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta name="twitter:card" content="summary_large_image" />
   </head>
   <body>
     <div id="root"></div>
