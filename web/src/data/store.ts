@@ -185,3 +185,15 @@ export async function saveVisit(groupId: string, memberId: number, pref: number,
 export function readRememberedMember(groupId: string): Promise<RememberedMember | null> {
   return Promise.resolve(pickRememberedMember(readItem(MEMBERS_KEY), groupId));
 }
+
+// グループ名を変える（PUT /api/groups/{groupId}/name：REQ-046）。変えられたら、保存した名前（前後の空白を取った名前。API も同じに取る）を返す。
+// 名前が決まりに合わないと分かっていれば、API を呼ばずに bad_name で失敗する（入力の手助け。正本は API）。
+// 成功の形（{ ok: true }）でなければ、表にない値（bad_response）の失敗にする
+export async function renameGroup(groupId: string, groupName: string): Promise<string> {
+  const name = checkName(groupName, GROUP_NAME_MAX);
+  if (name === null) throw new ApiError(refused(400, "bad_name"));
+  const r = await callApi("PUT", `${groupPath(groupId)}/name`, { name });
+  if (!r.ok) throw new ApiError(r.failure);
+  if (!isRecord(r.body) || r.body.ok !== true) throw new ApiError(refused(r.status, BAD_RESPONSE));
+  return name;
+}

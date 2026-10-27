@@ -213,6 +213,27 @@ header.top {
   white-space: nowrap;
   text-decoration: none;
 }
+/* ヘッダーの自分の名前（メニューを開く。モックの .me-chip）。スマホ幅で並びがはみ出さないように、長い名前は省く */
+.me-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: none;
+  background: var(--surface);
+  border-radius: 999px;
+  padding: 4px 10px 4px 4px;
+  font-size: 13px;
+  box-shadow: 0 0 0 1px var(--line);
+  max-width: 120px;
+  min-width: 0;
+  flex: none;
+}
+.me-chip span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 .dot {
   width: 22px;
   height: 22px;
@@ -616,6 +637,62 @@ header.top {
 /* シェアのボタンは「閉じる」の上に、少し間をあけて置く */
 .primary.share {
   margin-block: 0 10px;
+}
+
+/* メニューとグループ設定のシート（ワイヤーフレームの 7・8） */
+.menu {
+  display: flex;
+  flex-direction: column;
+}
+.menu button,
+.menu a {
+  display: block;
+  width: 100%;
+  text-align: left;
+  background: none;
+  border: none;
+  border-top: 1px solid var(--line);
+  padding: 14px 4px;
+  font-size: 15px;
+  color: var(--ink);
+  text-decoration: none;
+}
+.setrow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-block: 0 12px;
+  font-size: 15px;
+}
+.setval {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.setbtns {
+  display: flex;
+  gap: 8px;
+  margin-block: 0 14px;
+}
+.setmembers h3 {
+  font-size: 13px;
+  color: var(--ink2);
+  margin: 4px 0 6px;
+}
+.setmembers ul {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 15px;
+}
+.setmembers li {
+  overflow-wrap: anywhere;
+}
+.setnote {
+  margin-block: 6px 0;
 }
 
 /* 知らせ（スマホ幅で横にはみ出さないように、幅を画面の中に収めて折り返す） */

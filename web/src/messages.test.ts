@@ -10,8 +10,11 @@ import {
   joinErrorOf,
   LOAD_FAILED,
   loadErrorOf,
+  OWNER_ONLY,
   RATE_LIMITED,
+  renameErrorOf,
   SAVE_FAILED,
+  switchMemberNote,
   TURNSTILE_FAILED,
   UNAVAILABLE,
   visitErrorOf,
@@ -135,5 +138,43 @@ describe("backgroundLoadErrorOf：裏でグループを読み直したときの�
     for (const f of [network, temporary, quota, rateLimited, refused(400, "bad_request"), refused(200, "bad_response")]) {
       expect(backgroundLoadErrorOf(f)).toBe("quiet");
     }
+  });
+});
+
+describe("renameErrorOf：グループ名の変更が失敗したとき（screens の「API の応答と画面の動き」）", () => {
+  it("400 bad_name は、入力欄の下に名前の決まりの文（その場で入れ直す）", () => {
+    expect(renameErrorOf(refused(400, "bad_name"))).toEqual({ kind: "field", text: BAD_NAME });
+  });
+
+  it("403 not_allowed は「作成者だけが変えられます」で、グループを読み直す", () => {
+    expect(renameErrorOf(refused(403, "not_allowed"))).toEqual({ kind: "toast", text: "作成者だけが変えられます", reload: true });
+    expect(OWNER_ONLY).toBe("作成者だけが変えられます");
+  });
+
+  it("404 group_not_found は、削除のエラーの画面へ", () => {
+    expect(renameErrorOf(refused(404, "group_not_found"))).toEqual({ kind: "deleted" });
+  });
+
+  it("画面の不具合（400 bad_request・413・404 not_found・形の違う応答）は「保存できませんでした」で、グループを読み直す", () => {
+    for (const f of [refused(400, "bad_request"), refused(413, "bad_request"), refused(404, "not_found"), refused(200, "bad_response")]) {
+      expect(renameErrorOf(f)).toEqual({ kind: "toast", text: SAVE_FAILED, reload: true });
+    }
+  });
+
+  it("通信エラー・一時的な 503 は「保存できませんでした」、枠切れは「いまは混み合っていて…」、429 は「少し待って…」。どれも読み直さない", () => {
+    expect(renameErrorOf(network)).toEqual({ kind: "toast", text: SAVE_FAILED, reload: false });
+    expect(renameErrorOf(temporary)).toEqual({ kind: "toast", text: SAVE_FAILED, reload: false });
+    expect(renameErrorOf(quota)).toEqual({ kind: "toast", text: UNAVAILABLE, reload: false });
+    expect(renameErrorOf(rateLimited)).toEqual({ kind: "toast", text: RATE_LIMITED, reload: false });
+  });
+
+  it("表にない値（401 login_required など）は「保存できませんでした」", () => {
+    expect(renameErrorOf(refused(401, "login_required"))).toEqual({ kind: "toast", text: SAVE_FAILED, reload: false });
+  });
+});
+
+describe("switchMemberNote：「ほかのメンバーに切り替える」に添える一言（REQ-056）", () => {
+  it("自分の名前を入れる", () => {
+    expect(switchMemberNote("あゆ")).toBe("あゆさんのデータは消えません。名前の入力に戻ります");
   });
 });
