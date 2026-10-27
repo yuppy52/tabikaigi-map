@@ -8,6 +8,9 @@ import { execFileSync } from 'child_process';
 
 const CHROME = process.env.CHROME || '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
 const OUT = new URL('../assets/ogp.png', import.meta.url);
+// 画面のビルド（dist/）で /ogp.png として配る写し。Vite は web/public/ の中身をそのまま dist/ に写すので、ここにも置く。
+// 作り直したときに2つがずれないように、撮った後に毎回ここへ写す（正本は assets/ogp.png）
+const PUBLIC_COPY = new URL('../web/public/ogp.png', import.meta.url);
 const { W, H, okiBox, p } = JSON.parse(fs.readFileSync(new URL('./paths.json', import.meta.url)));
 
 // 見本として塗る県（都道府県コード → 行った人数の段階 1〜4。モックの濃さの色に合わせる）
@@ -44,4 +47,6 @@ execFileSync(CHROME, [
   '--window-size=1200,630', `--screenshot=${OUT.pathname}`, `file://${src}`,
 ], { stdio: 'ignore' });
 fs.rmSync(dir, { recursive: true });
+fs.copyFileSync(OUT, PUBLIC_COPY);
 console.log(OUT.pathname, fs.statSync(OUT).size, 'bytes');
+console.log(PUBLIC_COPY.pathname, '（写し）');

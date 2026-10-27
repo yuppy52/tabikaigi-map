@@ -28,7 +28,7 @@ tools/paths.json      # 都道府県のSVGパス（gen-map.mjs で生成）
 tools/gen-n03.mjs     # 国土数値情報（行政区域）から TopoJSON を作るスクリプト
 tools/gen-map.mjs     # TopoJSON から SVG パスを作るスクリプト
 tools/build.mjs       # template.html に paths.json を埋め込んで index.html を作る
-tools/gen-ogp.mjs     # OGP の画像（assets/ogp.png）を作る
+tools/gen-ogp.mjs     # OGP の画像（assets/ogp.png）を作る。配る写しを web/public/ogp.png にも書く
 ```
 
 画面を直したら:

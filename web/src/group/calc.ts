@@ -3,6 +3,7 @@
 import { PREF_IDS } from "../map/colors";
 import { applyVisit } from "../data/store";
 import type { GroupMember, GroupView, Visit } from "../data/types";
+import { PARAM as EXTERNAL_BROWSER } from "../lineBrowser";
 
 // グループIDの形（英数字22文字：data-model の groups.id、api/src/ids.ts と同じ）。違えば API を呼ばずにエラーにする
 export function isGroupId(s: string): boolean {
@@ -62,7 +63,7 @@ export function resolveMe(
 
 // 招待URL（REQ-002）。LINE のアプリ内ブラウザで開いても外部ブラウザに移るように ?openExternalBrowser=1 を付ける（auth-flow の「LINE のアプリ内ブラウザ」）
 export function inviteUrl(origin: string, groupId: string): string {
-  return `${origin}/g/${groupId}?openExternalBrowser=1`;
+  return `${origin}/g/${groupId}?${EXTERNAL_BROWSER}=1`;
 }
 
 // そのメンバーの行った県（番号の小さい順、重なりなし）
