@@ -21,8 +21,10 @@ import {
   visitErrorOf,
 } from "../messages";
 import type { CreatedState } from "../sheets/CreateGroupScreen";
+import { GroupSettingsSheet } from "../sheets/GroupSettingsSheet";
 import { InviteSheet } from "../sheets/InviteSheet";
 import { JoinSheet } from "../sheets/JoinSheet";
+import { MenuSheet } from "../sheets/MenuSheet";
 import { everyoneFills, gapPrefIds, heatFill } from "../map/colors";
 import { PREFS } from "../map/geo";
 import { JapanMap } from "../map/JapanMap";
@@ -56,6 +58,9 @@ type Loaded = { status: "loading" } | { status: "failed"; text: string; retry: b
 
 // 招待のシートの状態。fresh は作った直後（見出しが「グループができました」）
 type Invite = "fresh" | "normal" | null;
+
+// ヘッダーの自分の名前から開くシート：メニュー、グループ設定（メニューから）
+type Panel = "menu" | "settings" | null;
 
 const PREF_NAMES = new Map(PREFS.map((p) => [p.id, p.name]));
 const prefName = (id: number) => PREF_NAMES.get(id) ?? "";
@@ -160,6 +165,17 @@ export function GroupScreen({ groupId }: { groupId: string }) {
   // 付け外しが画面の不具合で断られたとき：グループを読み直す（読めなければエラーの画面）
   const onReload = () => {
     fetchGroup(groupId).then((view) => setLoaded((d) => (d.status === "ready" ? { ...d, view } : d)), showLoadError);
+  };
+
+  // グループ設定でグループ名を変えられたとき：画面のグループ名だけを入れ替える（全体は読み直さないので、届いた変更を上書きしない）
+  const onRenamed = (name: string) => {
+    setLoaded((d) => (d.status === "ready" ? { ...d, view: { ...d.view, group: { ...d.view.group, name } } } : d));
+  };
+
+  // 「ほかのメンバーに切り替える」（REQ-056）：確認は出さず、覚えを忘れて、参加（名前の入力）に移る。メンバーは消さない
+  const onSwitchMember = () => {
+    void forgetMember(groupId);
+    setLoaded((d) => (d.status === "ready" ? { ...d, meId: null, notice: null, toast: null, invite: false } : d));
   };
 
   // ---- リアルタイム（部屋）。参加した後（自分のメンバーが決まっている）だけつなぎ、画面を離れたら・参加のシートに戻ったら切る ----
@@ -314,6 +330,9 @@ export function GroupScreen({ groupId }: { groupId: string }) {
         onRejoin={onRejoin}
         onDeleted={onDeleted}
         onReload={onReload}
+        onSettingsReload={() => void reloadQuietly()}
+        onRenamed={onRenamed}
+        onSwitchMember={onSwitchMember}
       />
       {joining && (
         <JoinSheet
@@ -346,6 +365,10 @@ type BodyProps = {
   onRejoin: (text: string) => void;
   onDeleted: () => void;
   onReload: () => void;
+  // グループ設定で断られて読み直すとき（届いた変更を上書きしない裏の読み直し）、グループ名を変えられたとき、ほかのメンバーに切り替えるとき
+  onSettingsReload: () => void;
+  onRenamed: (name: string) => void;
+  onSwitchMember: () => void;
   // リアルタイムの帯を出すか、帯の「読み直す」（失敗したら false）
   banner: boolean;
   onBannerReload: () => Promise<boolean>;
@@ -363,6 +386,9 @@ function GroupBody({
   onRejoin,
   onDeleted,
   onReload,
+  onSettingsReload,
+  onRenamed,
+  onSwitchMember,
   banner,
   onBannerReload,
 }: BodyProps) {
@@ -378,6 +404,7 @@ function GroupBody({
   const [sheetPref, setSheetPref] = useState<number | null>(null);
   const [toast, setToast] = useState<{ text: string; key: number } | null>(initialToast !== null ? { text: initialToast, key: 1 } : null);
   const [invite, setInvite] = useState<Invite>(initialInvite);
+  const [panel, setPanel] = useState<Panel>(null);
 
   const shown = useMemo(() => withPending(view.visits, meId, pending), [view.visits, meId, pending]);
   const me = members.find((m) => m.id === meId) ?? null;
@@ -400,6 +427,7 @@ function GroupBody({
 
   // 付け外しが失敗したときの文と行き先（messages の visitErrorOf）。文に入れる名前は自分のメンバーの名前
   const myName = me?.name ?? "";
+  const myColor = me ? memberColor(me.color) : "";
   const onSaveFailed = (e: unknown) => {
     const action = visitErrorOf(failureOf(e), myName);
     if (action.kind === "toast") {
@@ -447,6 +475,14 @@ function GroupBody({
   };
   const closeSheet = useCallback(() => setSheetPref(null), []);
   const closeInvite = useCallback(() => setInvite(null), []);
+  const openMenu = useCallback(() => setPanel("menu"), []);
+  const openSettings = useCallback(() => setPanel("settings"), []);
+  const closePanel = useCallback(() => setPanel(null), []);
+  // 切り替えるときはシートも閉じる（閉じないと、名前を入れて参加し直した後に、グループ設定がまた開いてしまう）
+  const switchMember = useCallback(() => {
+    setPanel(null);
+    onSwitchMember();
+  }, [onSwitchMember]);
 
   const fills =
     tab === "all"
@@ -498,6 +534,8 @@ function GroupBody({
           </svg>
           招待
         </button>
+        {/* メニュー（screens の「メニューの中身」、ワイヤーフレームの 7）。参加した後だけ出す（モックの me-chip） */}
+        {meId !== null && <MeChip name={myName} color={myColor} onOpen={openMenu} />}
       </header>
 
       <main>
@@ -620,6 +658,27 @@ function GroupBody({
         />
       )}
 
+      {panel === "menu" && meId !== null && (
+        <MenuSheet groupName={view.group.name} myName={myName} onSettings={openSettings} onClose={closePanel} />
+      )}
+
+      {panel === "settings" && meId !== null && (
+        <GroupSettingsSheet
+          groupId={groupId}
+          groupName={view.group.name}
+          ownerOnly={view.group.ownerOnly}
+          members={members}
+          meId={meId}
+          myName={myName}
+          onToast={showToast}
+          onRenamed={onRenamed}
+          onReload={onSettingsReload}
+          onDeleted={onDeleted}
+          onSwitchMember={switchMember}
+          onClose={closePanel}
+        />
+      )}
+
       {/* 知らせ。見た目の知らせは出し入れするが、読み上げ用の入れ物（role="status"）はいつも見えない形で置いておき、中身だけを変える
           （hidden で隠した入れ物は読み上げの対象から外れ、中身が変わっても読まれないことがあるため） */}
       <div className="toast" aria-hidden="true" hidden={!toast}>
@@ -629,6 +688,16 @@ function GroupBody({
         {toast?.text}
       </div>
     </div>
+  );
+}
+
+// ヘッダーの自分の名前のボタン（モックの me-chip）。押すとメニューのシートを開く
+function MeChip({ name, color, onOpen }: { name: string; color: string; onOpen: () => void }) {
+  return (
+    <button className="me-chip" type="button" aria-haspopup="dialog" onClick={onOpen}>
+      <Avatar name={name} color={color} />
+      <span>{name}</span>
+    </button>
   );
 }
 

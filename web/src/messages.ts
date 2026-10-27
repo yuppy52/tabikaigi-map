@@ -1,6 +1,6 @@
 // いくつかの画面で使う文と、API の失敗から文と行き先を選ぶ計算（screens の「API の応答と画面の動き」「知らせ」のとおり。
 // 文を自分で考えない：.claude/rules/web.md）。表にない値は「保存できませんでした。もう一度お試しください」にする
-import type { Failure } from "./data/api";
+import { BAD_RESPONSE, type Failure } from "./data/api";
 
 // 表にない失敗、やり直せる失敗（書き込みの通信エラー、一時的な 503）
 export const SAVE_FAILED = "保存できませんでした。もう一度お試しください";
@@ -88,6 +88,32 @@ export function joinErrorOf(f: Failure): JoinErrorAction {
   if (isRefused(f, 404, "group_not_found")) return { kind: "deleted" };
   if (isRefused(f, 409, "group_full")) return { kind: "full" };
   return { kind: "form", text: writeFailureText(f) };
+}
+
+// グループ設定（screens の「グループ設定の中身」の「形と文」：2026-10-28 にユーザーと決めた）
+// 「作成者のみ」が効いていて管理の操作を出さないときの一言と、403 not_allowed の文（screens の「知らせ」の「やり直しても通らない失敗」）
+export const OWNER_ONLY = "作成者だけが変えられます";
+// グループ名の変更が成功したときの知らせ
+export const GROUP_RENAMED = "グループ名を変更しました";
+// 「ほかのメンバーに切り替える」に添える一言（REQ-056）
+export const switchMemberNote = (name: string) => `${name}さんのデータは消えません。名前の入力に戻ります`;
+
+// グループ名の変更が失敗したときの動き。
+// - field：入力欄の下に text（400 bad_name。その場で入れ直す）
+// - toast：知らせを出す。reload なら、グループを読み直す（403 not_allowed：設定が途中で変わっていることがある。画面の不具合：400・413・404 not_found）
+// - deleted：覚えを忘れて、エラーの画面（グループが削除された）
+export type RenameErrorAction = { kind: "field"; text: string } | { kind: "toast"; text: string; reload: boolean } | { kind: "deleted" };
+
+// グループ名の変更（PUT /api/groups/{groupId}/name）の失敗 → 動き。通信エラー・503・429 は、ほかの書き込みと同じ文で、その場のまま
+export function renameErrorOf(f: Failure): RenameErrorAction {
+  if (isRefused(f, 400, "bad_name")) return { kind: "field", text: BAD_NAME };
+  if (isRefused(f, 403, "not_allowed")) return { kind: "toast", text: OWNER_ONLY, reload: true };
+  if (isRefused(f, 404, "group_not_found")) return { kind: "deleted" };
+  // 成功の状態コードなのに形が違う応答（bad_response）も、画面の不具合と同じに扱う（screens の表の 400 bad_request の行）
+  if (f.kind === "refused" && (f.status === 400 || f.status === 413 || isRefused(f, 404, "not_found") || f.error === BAD_RESPONSE)) {
+    return { kind: "toast", text: SAVE_FAILED, reload: true };
+  }
+  return { kind: "toast", text: writeFailureText(f), reload: false };
 }
 
 // リアルタイムの帯（screens の「知らせ」の「リアルタイムの知らせが数秒以上つながらない」）

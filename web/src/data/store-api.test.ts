@@ -2,7 +2,17 @@
 // fetch と localStorage を差し替えて確かめる（api の「一覧」、auth-flow の「端末が覚えるもの」）
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ApiError, failureOf } from "./api";
-import { createGroup, fetchGroup, joinGroup, parseCreated, parseGroupView, parseJoined, readRememberedMember, saveVisit } from "./store";
+import {
+  createGroup,
+  fetchGroup,
+  joinGroup,
+  parseCreated,
+  parseGroupView,
+  parseJoined,
+  readRememberedMember,
+  renameGroup,
+  saveVisit,
+} from "./store";
 
 const G = "abcdefghijABCDEFGHIJ01";
 
@@ -226,5 +236,55 @@ describe("送り直さないことと、API を呼ばないとき（2026-10-23�
     const f = await failureFrom(createGroup("旅行部", "ゆう", "token"));
     expect(f).toMatchObject({ kind: "refused", error: "bad_response" });
     expect(storage.items.size).toBe(0);
+  });
+});
+
+describe("renameGroup：グループ名を変える（REQ-046）", () => {
+  it("PUT /api/groups/{id}/name に前後の空白を取った名前を送り、保存した名前を返す", async () => {
+    respond(200, { ok: true });
+    expect(await renameGroup(G, " 卒業旅行　")).toBe("卒業旅行");
+    expect(calls[0].input).toBe(`/api/groups/${G}/name`);
+    expect(calls[0].init).toMatchObject({ method: "PUT", headers: { "X-Tabikaigi": "1", "Content-Type": "application/json" } });
+    expect(JSON.parse(calls[0].init.body as string)).toEqual({ name: "卒業旅行" });
+  });
+
+  it("空・21文字なら、API を呼ばずに 400 bad_name。20文字は送る", async () => {
+    respond(200, { ok: true });
+    expect(await failureFrom(renameGroup(G, "　"))).toMatchObject({ kind: "refused", status: 400, error: "bad_name" });
+    expect(await failureFrom(renameGroup(G, "あ".repeat(21)))).toMatchObject({ kind: "refused", status: 400, error: "bad_name" });
+    expect(calls).toHaveLength(0);
+    expect(await renameGroup(G, "あ".repeat(20))).toBe("あ".repeat(20));
+    expect(calls).toHaveLength(1);
+  });
+
+  it("断られたら、その理由の失敗（400 bad_name・403 not_allowed・404 group_not_found）", async () => {
+    for (const [status, error] of [
+      [400, "bad_name"],
+      [403, "not_allowed"],
+      [404, "group_not_found"],
+    ] as const) {
+      respond(status, { error });
+      expect(await failureFrom(renameGroup(G, "旅行部"))).toMatchObject({ kind: "refused", status, error });
+    }
+  });
+
+  it("429・503・通信エラーは、その種類の失敗で、1回しか送らない", async () => {
+    respond(429, "<html>rate</html>");
+    expect(await failureFrom(renameGroup(G, "旅行部"))).toEqual({ kind: "rate_limited" });
+    respond(503, { error: "unavailable", reason: "quota" });
+    expect(await failureFrom(renameGroup(G, "旅行部"))).toEqual({ kind: "unavailable", reason: "quota" });
+    vi.stubGlobal("fetch", (input: string, init: RequestInit) => {
+      calls.push({ input, init });
+      return Promise.reject(new TypeError("network"));
+    });
+    expect(await failureFrom(renameGroup(G, "旅行部"))).toEqual({ kind: "network" });
+    expect(calls).toHaveLength(3);
+  });
+
+  it("200 でも形が違えば（{ ok: true } でない、JSON でない）bad_response の失敗（表にない値）", async () => {
+    respond(200, {});
+    expect(await failureFrom(renameGroup(G, "旅行部"))).toMatchObject({ kind: "refused", error: "bad_response" });
+    respond(200, "<html></html>");
+    expect(await failureFrom(renameGroup(G, "旅行部"))).toMatchObject({ kind: "refused", error: "bad_response" });
   });
 });
