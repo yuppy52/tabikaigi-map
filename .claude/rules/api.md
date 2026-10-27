@@ -18,6 +18,7 @@ API とそのテストを書く・直すときのルール。決まりの正本�
 - 起きないはずの分岐（「作成者のみ」なのに作成者が紐づいていない、など）を通す道を作らない
 - 画面から来た値はすべて疑う：型、整数か、範囲（県は 1〜47）、名前の長さ（見た目の文字数）を API の入口で確かめ、外れたら 400
 - 文字の決まり（見えない文字など）は、自分で一覧を作る前に、Unicode が決めている性質（`Default_Ignorable_Code_Point`、`Extended_Pictographic` など）を使う。守りに例外を作るときは「どの並びの中でなら通すか」まで決め、その外では断る。例外の境目（頭・終わり・2つ続く・違う相手の後ろ）をテストに並べる（[learnings](../../docs/learnings/2026-10-13-invisible-characters-in-names.md)）
+- Hono を通さない入口（部屋の WebSocket など）を作るときは、`app.use`・`app.onError`・`app.notFound` の守りを全部並べ、1つずつ「置き換える」か「要らない（理由）」かを決めて、置き換えたものにテストを書く（[learnings](../../docs/learnings/2026-10-26-bypassing-framework-drops-shared-guards.md)）
 
 ## 応答の形
 
