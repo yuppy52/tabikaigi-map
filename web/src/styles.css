@@ -16,6 +16,8 @@
   --h4: #23579e;
   --accent: #23579e;
   --accent-ink: #ffffff;
+  --danger: #dc2626;
+  --danger-ink: #ffffff;
   --gap-fill: #fde9bd;
   --gap-line: #e39a12;
   --shadow: 0 8px 28px rgba(20, 40, 60, 0.14);
@@ -39,6 +41,8 @@
     --h4: #9cc6f2;
     --accent: #6ea6e6;
     --accent-ink: #0e151b;
+    --danger: #f87171;
+    --danger-ink: #0e151b;
     --gap-fill: #4a3a12;
     --gap-line: #f0b94a;
     --shadow: 0 8px 28px rgba(0, 0, 0, 0.45);
@@ -62,6 +66,8 @@
   --h4: #9cc6f2;
   --accent: #6ea6e6;
   --accent-ink: #0e151b;
+  --danger: #f87171;
+  --danger-ink: #0e151b;
   --gap-fill: #4a3a12;
   --gap-line: #f0b94a;
   --shadow: 0 8px 28px rgba(0, 0, 0, 0.45);
@@ -693,6 +699,70 @@ header.top {
 }
 .setnote {
   margin-block: 6px 0;
+}
+.setmembers li.setrow {
+  margin: 0;
+}
+
+/* 消す操作（赤：NFR-017。ワイヤーフレームの 8・9）。設定のボタンは赤い枠と文字、確認の確定は赤く塗る */
+.danger-line,
+.primary.danger-line {
+  background: var(--surface);
+  color: var(--danger);
+  border: 1px solid var(--danger);
+  box-shadow: none;
+}
+.primary.danger {
+  background: var(--danger);
+  color: var(--danger-ink);
+}
+.setdanger {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-block: 18px 0;
+}
+
+/* 確認ダイアログ（ワイヤーフレームの 9）。グループ設定のシートの上に重ねる */
+.confirm-scrim {
+  z-index: 22;
+}
+.confirm {
+  position: fixed;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 23;
+  width: min(400px, calc(100% - 32px));
+  max-height: calc(100% - 32px);
+  overflow: auto;
+  background: var(--surface);
+  border-radius: 16px;
+  box-shadow: var(--shadow);
+  padding: 18px 16px 16px;
+}
+.confirm:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.confirm h2 {
+  font-size: 18px;
+  margin: 0 0 8px;
+  font-weight: 900;
+  overflow-wrap: anywhere;
+}
+.confirm .sub {
+  color: var(--ink2);
+  font-size: 14px;
+  margin: 0 0 12px;
+}
+.confirm .urlbox .iconbtn {
+  flex: none;
+}
+.confirm-btns {
+  display: flex;
+  gap: 8px;
+  margin-block: 4px 0;
 }
 
 /* 知らせ（スマホ幅で横にはみ出さないように、幅を画面の中に収めて折り返す） */

@@ -109,11 +109,58 @@ export function renameErrorOf(f: Failure): RenameErrorAction {
   if (isRefused(f, 400, "bad_name")) return { kind: "field", text: BAD_NAME };
   if (isRefused(f, 403, "not_allowed")) return { kind: "toast", text: OWNER_ONLY, reload: true };
   if (isRefused(f, 404, "group_not_found")) return { kind: "deleted" };
-  // 成功の状態コードなのに形が違う応答（bad_response）も、画面の不具合と同じに扱う（screens の表の 400 bad_request の行）
-  if (f.kind === "refused" && (f.status === 400 || f.status === 413 || isRefused(f, 404, "not_found") || f.error === BAD_RESPONSE)) {
-    return { kind: "toast", text: SAVE_FAILED, reload: true };
-  }
+  if (isScreenBug(f)) return { kind: "toast", text: SAVE_FAILED, reload: true };
   return { kind: "toast", text: writeFailureText(f), reload: false };
+}
+
+// 画面の不具合（400・413・404 not_found）。成功の状態コードなのに形が違う応答（bad_response）も同じに扱う（screens の表の 400 bad_request の行）
+function isScreenBug(f: Failure): boolean {
+  return f.kind === "refused" && (f.status === 400 || f.status === 413 || isRefused(f, 404, "not_found") || f.error === BAD_RESPONSE);
+}
+
+// メンバーの削除が成功したときの知らせ
+export const memberDeletedText = (name: string) => `${name}さんを削除しました`;
+
+// 退出・メンバーの削除・グループの削除（確認ダイアログの確定）が失敗したときの動き。
+// - toast：知らせを出す。reload なら、ダイアログを閉じてグループを読み直す（設定が途中で変わっていることがある、画面の不具合）。
+//   reload でなければ（通信エラー・503・429）、ダイアログを開いたままにして、もう一度押せるようにする
+// - deleted：覚えを忘れて、エラーの画面（グループが削除された）
+// - rejoin：覚えを忘れて、参加のシートに text を出す（退出で、自分のメンバーがほかの端末で紐づいた）
+// - done：成功したときと同じに扱う（退出・グループの削除で、グループがもうなかった。1回目が届いて応答だけ失われ、やり直したときなど。仮の動き 2026-10-28）
+export type RemoveErrorAction =
+  { kind: "toast"; text: string; reload: boolean } | { kind: "deleted" } | { kind: "rejoin"; text: string } | { kind: "done" };
+
+// 3つの操作で同じになるもの：グループが削除されていた、画面の不具合、通信エラー・503・429・表にない値
+function removeErrorOf(f: Failure): RemoveErrorAction {
+  if (isRefused(f, 404, "group_not_found")) return { kind: "deleted" };
+  if (isScreenBug(f)) return { kind: "toast", text: SAVE_FAILED, reload: true };
+  return { kind: "toast", text: writeFailureText(f), reload: false };
+}
+
+// 退出（POST …/members/{memberId}/leave）の失敗 → 動き。name は自分のメンバーの名前。
+// 403 member_linked は紐づいた文で参加のシート。404 group_not_found は、退出できたときと同じにトップへ（最後の1人の退出が届いて
+// 応答だけ失われ、やり直したとき。どちらにしても抜けたかった結果と同じため：仮の動き 2026-10-28）。
+// 「もういない自分」の退出は API が 200 で返すので、404 member_not_found は来ない（来たら表にない値）。
+// 退出は管理の操作ではないので、403 not_allowed は表にない値として扱う
+export function leaveErrorOf(f: Failure, name: string): RemoveErrorAction {
+  if (isRefused(f, 403, "member_linked")) return { kind: "rejoin", text: memberLinkedText(name) };
+  if (isRefused(f, 404, "group_not_found")) return { kind: "done" };
+  return removeErrorOf(f);
+}
+
+// メンバーの削除（DELETE …/members/{memberId}）の失敗 → 動き。403 not_allowed は「作成者だけが変えられます」と読み直し。
+// 「もういない相手」の削除は API が 200 で返すので、404 member_not_found は来ない（来たら表にない値）
+export function deleteMemberErrorOf(f: Failure): RemoveErrorAction {
+  if (isRefused(f, 403, "not_allowed")) return { kind: "toast", text: OWNER_ONLY, reload: true };
+  return removeErrorOf(f);
+}
+
+// グループの削除（DELETE /api/groups/{groupId}）の失敗 → 動き。403 not_allowed は「作成者だけが変えられます」と読み直し。
+// 404 group_not_found は、削除できたときと同じにトップへ（1回目が届いて応答だけ失われ、やり直したとき：仮の動き 2026-10-28）
+export function deleteGroupErrorOf(f: Failure): RemoveErrorAction {
+  if (isRefused(f, 403, "not_allowed")) return { kind: "toast", text: OWNER_ONLY, reload: true };
+  if (isRefused(f, 404, "group_not_found")) return { kind: "done" };
+  return removeErrorOf(f);
 }
 
 // リアルタイムの帯（screens の「知らせ」の「リアルタイムの知らせが数秒以上つながらない」）

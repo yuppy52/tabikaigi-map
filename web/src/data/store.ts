@@ -197,3 +197,34 @@ export async function renameGroup(groupId: string, groupName: string): Promise<s
   if (!isRecord(r.body) || r.body.ok !== true) throw new ApiError(refused(r.status, BAD_RESPONSE));
   return name;
 }
+
+// 退出・メンバーの削除の成功の応答（200 { ok: true, groupDeleted }）を読む。形が違えば null
+export function parseRemoved(body: unknown): { groupDeleted: boolean } | null {
+  if (!isRecord(body) || body.ok !== true || typeof body.groupDeleted !== "boolean") return null;
+  return { groupDeleted: body.groupDeleted };
+}
+
+// 自分で退出する（POST /api/groups/{groupId}/members/{memberId}/leave：REQ-049・REQ-050）。
+// 最後の1人ならグループも消え、groupDeleted が true。端末の覚えは変えない（忘れるのは画面の側：screens の「操作の後に開く画面」）
+export async function leaveGroup(groupId: string, memberId: number): Promise<{ groupDeleted: boolean }> {
+  const r = await callApi("POST", `${groupPath(groupId)}/members/${memberId}/leave`);
+  if (!r.ok) throw new ApiError(r.failure);
+  const removed = parseRemoved(r.body);
+  if (!removed) throw new ApiError(refused(r.status, BAD_RESPONSE));
+  return removed;
+}
+
+// ほかのメンバーを削除する（DELETE /api/groups/{groupId}/members/{memberId}：REQ-048）。応答の形は退出と同じ。
+// groupDeleted は使わない（相手が最後の1人＝自分が同時に消されていたときだけ true になり、次の読み直しの 404 で削除の画面に移るため）
+export async function deleteMember(groupId: string, memberId: number): Promise<void> {
+  const r = await callApi("DELETE", `${groupPath(groupId)}/members/${memberId}`);
+  if (!r.ok) throw new ApiError(r.failure);
+  if (!parseRemoved(r.body)) throw new ApiError(refused(r.status, BAD_RESPONSE));
+}
+
+// グループを削除する（DELETE /api/groups/{groupId}：REQ-047）。成功の形（{ ok: true }）でなければ、表にない値（bad_response）の失敗にする
+export async function deleteGroup(groupId: string): Promise<void> {
+  const r = await callApi("DELETE", groupPath(groupId));
+  if (!r.ok) throw new ApiError(r.failure);
+  if (!isRecord(r.body) || r.body.ok !== true) throw new ApiError(refused(r.status, BAD_RESPONSE));
+}

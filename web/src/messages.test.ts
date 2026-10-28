@@ -4,6 +4,10 @@ import { describe, expect, it } from "vitest";
 import { refused, type Failure } from "./data/api";
 import {
   backgroundLoadErrorOf,
+  deleteGroupErrorOf,
+  deleteMemberErrorOf,
+  leaveErrorOf,
+  memberDeletedText,
   BAD_NAME,
   createErrorText,
   GROUP_DELETED,
@@ -176,5 +180,58 @@ describe("renameErrorOf：グループ名の変更が失敗したとき（screen
 describe("switchMemberNote：「ほかのメンバーに切り替える」に添える一言（REQ-056）", () => {
   it("自分の名前を入れる", () => {
     expect(switchMemberNote("あゆ")).toBe("あゆさんのデータは消えません。名前の入力に戻ります");
+  });
+});
+
+describe("leaveErrorOf・deleteMemberErrorOf・deleteGroupErrorOf：退出・メンバーの削除・グループの削除が失敗したとき", () => {
+  const all = [(f: Failure) => leaveErrorOf(f, "ゆう"), deleteMemberErrorOf, deleteGroupErrorOf];
+
+  it("404 group_not_found：メンバーの削除は削除のエラーの画面へ。退出・グループの削除は、できたときと同じにトップへ（やり直したら、1回目で消えていた：仮の動き）", () => {
+    expect(deleteMemberErrorOf(refused(404, "group_not_found"))).toEqual({ kind: "deleted" });
+    expect(leaveErrorOf(refused(404, "group_not_found"), "ゆう")).toEqual({ kind: "done" });
+    expect(deleteGroupErrorOf(refused(404, "group_not_found"))).toEqual({ kind: "done" });
+  });
+
+  it("通信エラー・一時的な 503 は「保存できませんでした」、枠切れは「いまは混み合っていて…」、429 は「少し待って…」。どれも読み直さない（ダイアログは開いたまま）", () => {
+    for (const errorOf of all) {
+      expect(errorOf(network)).toEqual({ kind: "toast", text: SAVE_FAILED, reload: false });
+      expect(errorOf(temporary)).toEqual({ kind: "toast", text: SAVE_FAILED, reload: false });
+      expect(errorOf(quota)).toEqual({ kind: "toast", text: UNAVAILABLE, reload: false });
+      expect(errorOf(rateLimited)).toEqual({ kind: "toast", text: RATE_LIMITED, reload: false });
+    }
+  });
+
+  it("画面の不具合（400 bad_request・413・404 not_found・形の違う応答）は「保存できませんでした」で、グループを読み直す", () => {
+    for (const errorOf of all) {
+      for (const f of [refused(400, "bad_request"), refused(413, "bad_request"), refused(404, "not_found"), refused(200, "bad_response")]) {
+        expect(errorOf(f)).toEqual({ kind: "toast", text: SAVE_FAILED, reload: true });
+      }
+    }
+  });
+
+  it("メンバーの削除・グループの削除の 403 not_allowed は「作成者だけが変えられます」で、グループを読み直す", () => {
+    expect(deleteMemberErrorOf(refused(403, "not_allowed"))).toEqual({ kind: "toast", text: OWNER_ONLY, reload: true });
+    expect(deleteGroupErrorOf(refused(403, "not_allowed"))).toEqual({ kind: "toast", text: OWNER_ONLY, reload: true });
+  });
+
+  it("退出の 403 member_linked は、紐づいた文で参加のシート", () => {
+    expect(leaveErrorOf(refused(403, "member_linked"), "ゆう")).toEqual({
+      kind: "rejoin",
+      text: "ゆうさんはアカウントに紐づきました。ログインして入ってください",
+    });
+  });
+
+  it("404 member_not_found は来ない応答（もういない人は API が 200 で返す）。来たら成功に見せず、表にない値（「保存できませんでした」）", () => {
+    expect(leaveErrorOf(refused(404, "member_not_found"), "ゆう")).toEqual({ kind: "toast", text: SAVE_FAILED, reload: false });
+    expect(deleteMemberErrorOf(refused(404, "member_not_found"))).toEqual({ kind: "toast", text: SAVE_FAILED, reload: false });
+  });
+
+  it("退出は管理の操作ではないので、403 not_allowed は表にない値（「保存できませんでした」）。グループの削除の member_not_found も表にない値", () => {
+    expect(leaveErrorOf(refused(403, "not_allowed"), "ゆう")).toEqual({ kind: "toast", text: SAVE_FAILED, reload: false });
+    expect(deleteGroupErrorOf(refused(404, "member_not_found"))).toEqual({ kind: "toast", text: SAVE_FAILED, reload: false });
+  });
+
+  it("メンバーの削除の知らせは「（名前）さんを削除しました」", () => {
+    expect(memberDeletedText("けん")).toBe("けんさんを削除しました");
   });
 });

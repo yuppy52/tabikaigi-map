@@ -178,6 +178,31 @@ export function GroupScreen({ groupId }: { groupId: string }) {
     setLoaded((d) => (d.status === "ready" ? { ...d, meId: null, notice: null, toast: null, invite: false } : d));
   };
 
+  // 退出・グループの削除ができたとき（screens の「操作の後に開く画面」）：覚えを忘れて、トップに移る（ログインなしのため）。知らせは出さない。
+  // トップはアプリの外のページなので、ページごと開き直す（ヘッダーの「トップへ」と同じ）
+  // 移る途中か。自分で消したグループの「取り直して」が自分にも届くので、移る前に裏の読み直しが 404 で削除の画面を出さないようにする
+  const leaving = useRef(false);
+  const onLeftGroup = () => {
+    leaving.current = true;
+    void forgetMember(groupId).then(() => window.location.assign("/"));
+  };
+
+  // グループ設定でほかのメンバーを削除できたとき：そのメンバーと「行った」を画面から消す（全体は読み直さないので、届いた変更を上書きしない）
+  const onMemberDeleted = (memberId: number) => {
+    setLoaded((d) =>
+      d.status === "ready"
+        ? {
+            ...d,
+            view: {
+              ...d.view,
+              members: d.view.members.filter((m) => m.id !== memberId),
+              visits: d.view.visits.filter((v) => v.memberId !== memberId),
+            },
+          }
+        : d,
+    );
+  };
+
   // ---- リアルタイム（部屋）。参加した後（自分のメンバーが決まっている）だけつなぎ、画面を離れたら・参加のシートに戻ったら切る ----
   // 帯（つながっていない状態が5秒続いた）を出すか
   const [banner, setBanner] = useState(false);
@@ -203,7 +228,7 @@ export function GroupScreen({ groupId }: { groupId: string }) {
     return fetchGroup(groupId).then(
       (fetched) => {
         const view = withRoomVisits(fetched, visitLog.current.finish(mark));
-        if (seq !== reloadSeq.current) return true;
+        if (seq !== reloadSeq.current || leaving.current) return true;
         const d = loadedRef.current;
         if (d.status === "ready" && meRemoved(view.members, d.meId)) {
           const name = d.view.members.find((m) => m.id === d.meId)?.name ?? "";
@@ -220,7 +245,7 @@ export function GroupScreen({ groupId }: { groupId: string }) {
       },
       (e: unknown) => {
         visitLog.current.finish(mark);
-        if (seq !== reloadSeq.current) return true;
+        if (seq !== reloadSeq.current || leaving.current) return true;
         if (backgroundLoadErrorOf(failureOf(e)) === "quiet") return false;
         if (loadedRef.current.status === "ready") {
           void forgetMember(groupId);
@@ -333,6 +358,8 @@ export function GroupScreen({ groupId }: { groupId: string }) {
         onSettingsReload={() => void reloadQuietly()}
         onRenamed={onRenamed}
         onSwitchMember={onSwitchMember}
+        onLeftGroup={onLeftGroup}
+        onMemberDeleted={onMemberDeleted}
       />
       {joining && (
         <JoinSheet
@@ -369,6 +396,9 @@ type BodyProps = {
   onSettingsReload: () => void;
   onRenamed: (name: string) => void;
   onSwitchMember: () => void;
+  // グループ設定で退出・グループの削除ができたとき、ほかのメンバーを削除できたとき
+  onLeftGroup: () => void;
+  onMemberDeleted: (memberId: number) => void;
   // リアルタイムの帯を出すか、帯の「読み直す」（失敗したら false）
   banner: boolean;
   onBannerReload: () => Promise<boolean>;
@@ -389,6 +419,8 @@ function GroupBody({
   onSettingsReload,
   onRenamed,
   onSwitchMember,
+  onLeftGroup,
+  onMemberDeleted,
   banner,
   onBannerReload,
 }: BodyProps) {
@@ -483,6 +515,14 @@ function GroupBody({
     setPanel(null);
     onSwitchMember();
   }, [onSwitchMember]);
+  // グループ設定の退出で、自分のメンバーが紐づいていたと分かったとき：シートを閉じてから、参加のシートに文を出す
+  const rejoinFromSettings = useCallback(
+    (text: string) => {
+      setPanel(null);
+      onRejoin(text);
+    },
+    [onRejoin],
+  );
 
   const fills =
     tab === "all"
@@ -670,11 +710,15 @@ function GroupBody({
           members={members}
           meId={meId}
           myName={myName}
+          inviteUrl={inviteUrl(window.location.origin, groupId)}
           onToast={showToast}
           onRenamed={onRenamed}
           onReload={onSettingsReload}
           onDeleted={onDeleted}
           onSwitchMember={switchMember}
+          onLeftGroup={onLeftGroup}
+          onMemberDeleted={onMemberDeleted}
+          onRejoin={rejoinFromSettings}
           onClose={closePanel}
         />
       )}

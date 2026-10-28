@@ -4,11 +4,15 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ApiError, failureOf } from "./api";
 import {
   createGroup,
+  deleteGroup,
+  deleteMember,
   fetchGroup,
   joinGroup,
+  leaveGroup,
   parseCreated,
   parseGroupView,
   parseJoined,
+  parseRemoved,
   readRememberedMember,
   renameGroup,
   saveVisit,
@@ -286,5 +290,105 @@ describe("renameGroup：グループ名を変える（REQ-046）", () => {
     expect(await failureFrom(renameGroup(G, "旅行部"))).toMatchObject({ kind: "refused", error: "bad_response" });
     respond(200, "<html></html>");
     expect(await failureFrom(renameGroup(G, "旅行部"))).toMatchObject({ kind: "refused", error: "bad_response" });
+  });
+});
+
+describe("parseRemoved：退出・メンバーの削除の応答を読む", () => {
+  it("{ ok: true, groupDeleted } なら groupDeleted を返す。形が違えば null", () => {
+    expect(parseRemoved({ ok: true, groupDeleted: true })).toEqual({ groupDeleted: true });
+    expect(parseRemoved({ ok: true, groupDeleted: false })).toEqual({ groupDeleted: false });
+    expect(parseRemoved({ ok: true })).toBeNull();
+    expect(parseRemoved({ ok: false, groupDeleted: false })).toBeNull();
+    expect(parseRemoved(null)).toBeNull();
+  });
+});
+
+describe("leaveGroup：退出する（REQ-049・REQ-050）", () => {
+  it("POST /api/groups/{id}/members/{memberId}/leave を本文なしで呼び、groupDeleted を返す", async () => {
+    respond(200, { ok: true, groupDeleted: true });
+    expect(await leaveGroup(G, 12)).toEqual({ groupDeleted: true });
+    expect(calls[0].input).toBe(`/api/groups/${G}/members/12/leave`);
+    expect(calls[0].init).toMatchObject({ method: "POST", headers: { "X-Tabikaigi": "1" } });
+    expect(calls[0].init.body).toBeUndefined();
+  });
+
+  it("端末の覚えは変えない（忘れるのは画面の側）", async () => {
+    storage.items.set("tabikaigi-members", JSON.stringify({ [G]: { memberId: 12, name: "ゆう" } }));
+    respond(200, { ok: true, groupDeleted: false });
+    await leaveGroup(G, 12);
+    expect(await readRememberedMember(G)).toEqual({ memberId: 12, name: "ゆう" });
+  });
+
+  it("断られたら、その理由の失敗（403 member_linked・404 group_not_found）", async () => {
+    for (const [status, error] of [
+      [403, "member_linked"],
+      [404, "group_not_found"],
+    ] as const) {
+      respond(status, { error });
+      expect(await failureFrom(leaveGroup(G, 12))).toMatchObject({ kind: "refused", status, error });
+    }
+  });
+
+  it("200 でも形が違えば bad_response の失敗", async () => {
+    respond(200, { ok: true });
+    expect(await failureFrom(leaveGroup(G, 12))).toMatchObject({ kind: "refused", error: "bad_response" });
+  });
+});
+
+describe("deleteMember：メンバーを削除する（REQ-048）", () => {
+  it("DELETE /api/groups/{id}/members/{memberId} を本文なしで呼ぶ", async () => {
+    respond(200, { ok: true, groupDeleted: false });
+    await deleteMember(G, 13);
+    expect(calls[0].input).toBe(`/api/groups/${G}/members/13`);
+    expect(calls[0].init).toMatchObject({ method: "DELETE", headers: { "X-Tabikaigi": "1" } });
+    expect(calls[0].init.body).toBeUndefined();
+  });
+
+  it("断られたら、その理由の失敗（403 not_allowed・404 group_not_found）。429・通信エラーはその種類", async () => {
+    for (const [status, error] of [
+      [403, "not_allowed"],
+      [404, "group_not_found"],
+    ] as const) {
+      respond(status, { error });
+      expect(await failureFrom(deleteMember(G, 13))).toMatchObject({ kind: "refused", status, error });
+    }
+    respond(429, "<html>rate</html>");
+    expect(await failureFrom(deleteMember(G, 13))).toEqual({ kind: "rate_limited" });
+    vi.stubGlobal("fetch", () => Promise.reject(new TypeError("network")));
+    expect(await failureFrom(deleteMember(G, 13))).toEqual({ kind: "network" });
+  });
+
+  it("200 でも形が違えば bad_response の失敗", async () => {
+    respond(200, {});
+    expect(await failureFrom(deleteMember(G, 13))).toMatchObject({ kind: "refused", error: "bad_response" });
+  });
+});
+
+describe("deleteGroup：グループを削除する（REQ-047）", () => {
+  it("DELETE /api/groups/{id} を本文なしで呼ぶ", async () => {
+    respond(200, { ok: true });
+    await deleteGroup(G);
+    expect(calls[0].input).toBe(`/api/groups/${G}`);
+    expect(calls[0].init).toMatchObject({ method: "DELETE", headers: { "X-Tabikaigi": "1" } });
+    expect(calls[0].init.body).toBeUndefined();
+  });
+
+  it("断られたら、その理由の失敗（403 not_allowed・404 group_not_found）。503 はその種類", async () => {
+    for (const [status, error] of [
+      [403, "not_allowed"],
+      [404, "group_not_found"],
+    ] as const) {
+      respond(status, { error });
+      expect(await failureFrom(deleteGroup(G))).toMatchObject({ kind: "refused", status, error });
+    }
+    respond(503, { error: "unavailable", reason: "temporary" });
+    expect(await failureFrom(deleteGroup(G))).toEqual({ kind: "unavailable", reason: "temporary" });
+  });
+
+  it("200 でも形が違えば（{ ok: true } でない、JSON でない）bad_response の失敗", async () => {
+    respond(200, {});
+    expect(await failureFrom(deleteGroup(G))).toMatchObject({ kind: "refused", error: "bad_response" });
+    respond(200, "<html></html>");
+    expect(await failureFrom(deleteGroup(G))).toMatchObject({ kind: "refused", error: "bad_response" });
   });
 });
