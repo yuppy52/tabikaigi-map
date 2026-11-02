@@ -15,6 +15,7 @@ paths:
 - 人が入れた文字（名前、グループ名）は JSX の `{…}` で出す。`dangerouslySetInnerHTML` は使わない（名前に HTML を入れられると、ほかのメンバーの画面で動いてしまうため）
 - データの読み書きは `web/src/data/` の関数（Promise を返す）だけを通す。画面の部品から `localStorage` や API を直接呼ばない（保存先を替えても画面を変えずに済むように）
 - 計算（色の濃さ、数え方、まだ誰も行っていない県など）は、部品の外の関数に切り出す。テストはこの関数にだけ書く（`web/src/**/*.test.ts`、`npm test` の `web` の組。部品の動きのテストは書かない：[architecture](../../docs/design/architecture.md) の「開発環境」）
+- 検索に出すページ（素の HTML）のスクリプトは React を使わないので、決まった文を `textContent` で入れてよい。`innerHTML` は使わず、人が入れた文字は画面に出さない
 
 ## 守ること
 
@@ -37,3 +38,4 @@ paths:
 
 - `npm run dev` で画面（5173 番）と API（8787 番）を一緒に起こし、`http://localhost:5173/app.html` を開く。`/api` への要求は Vite が API に回す
 - 開発中の Vite（5173 番）でも `/g/…` などのアプリの URL は開ける（`vite.config.ts` のプラグインが `web/public/_redirects` を読んで同じ書き換えをする。URL の一覧は `_redirects` だけに書く）。`noindex` などのヘッダー（`_headers`）は開発中の Vite では付かない。配信の動きは、`npm run build` をしてから `wrangler dev`（8787 番。配るのは最後にビルドした `dist/`）で確かめる（ADR 0010）
+- 開発中の Vite では、ないページ（`/guide` など）を開くとトップが返る（本番は 404）。ページがあるかどうかは、`npm run build` の後に `wrangler dev` で見る

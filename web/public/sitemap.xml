@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- 検索に出すページの一覧（architecture の「検索に出すページと出さないページ」）。アプリの画面は載せない。使い方・プライバシーポリシーはページを作るときに足す -->
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url>
+    <loc>https://tabikaigi-map.com/</loc>
+  </url>
+</urlset>

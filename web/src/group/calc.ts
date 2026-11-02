@@ -5,10 +5,8 @@ import { applyVisit } from "../data/store";
 import type { GroupMember, GroupView, Visit } from "../data/types";
 import { PARAM as EXTERNAL_BROWSER } from "../lineBrowser";
 
-// グループIDの形（英数字22文字：data-model の groups.id、api/src/ids.ts と同じ）。違えば API を呼ばずにエラーにする
-export function isGroupId(s: string): boolean {
-  return /^[A-Za-z0-9]{22}$/.test(s);
-}
+// グループIDの形（英数字22文字）。中身は groupId.ts（トップからも使うため）。画面の部品はここから読む
+export { isGroupId } from "../groupId";
 
 // 一覧で使う短い県名（モックの short）。北海道はそのまま、ほかは末尾の「都・府・県」を取る
 export function shortPrefName(name: string): string {

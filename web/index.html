@@ -1,0 +1,120 @@
+<!doctype html>
+<!-- トップ（/）。検索に出す素の HTML（ADR 0004、architecture の「検索に出すページと出さないページ」）。
+     noindex と no-referrer の meta は付けない（検索に出すため。Referrer-Policy は既定のまま）。
+     React・Firebase・Turnstile は読み込まない。動くのは招待URLを貼る欄のスクリプト（src/pages/top.ts）だけ。
+     文は screens の「トップの中身」（2026-10-31 に決めた）。見た目と文言は Phase 3 で整える -->
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>旅会議マップ｜友達と行った都道府県を塗って、次の旅行先を決めよう</title>
+    <!-- 検索結果の説明（仮の値：一言の説明と同じ文） -->
+    <!-- 検索エンジンに、正の URL はここだと伝える（/index.html や引数つきの URL も同じ中身を返すため。NFR-019） -->
+    <link rel="canonical" href="https://tabikaigi-map.com/" />
+    <meta name="description" content="友達と行った都道府県を塗って、次の旅行先を決めよう" />
+    <!-- 共有したときのカード。app.html と同じ値に、トップだけ og:url を足す（仮の値） -->
+    <meta property="og:title" content="旅会議マップ" />
+    <meta property="og:description" content="友達と行った都道府県を塗って、次の旅行先を決めよう" />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://tabikaigi-map.com/" />
+    <meta property="og:image" content="https://tabikaigi-map.com/ogp.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <script type="module" src="/src/pages/top.ts"></script>
+  </head>
+  <body>
+    <main class="page">
+      <header class="hero">
+        <h1>旅会議マップ</h1>
+        <p class="lead">友達と行った都道府県を塗って、次の旅行先を決めよう</p>
+        <!-- alt は仮の値 -->
+        <img src="/ogp.png" width="1200" height="630" alt="旅会議マップの画面の例：行った県が塗られた日本地図" />
+      </header>
+
+      <!-- 特徴3つ -->
+      <section>
+        <ul class="cards">
+          <li>
+            <h2>登録なしで使える</h2>
+            <p>名前を入れるだけ。アカウントは要りません。</p>
+          </li>
+          <li>
+            <h2>みんなで地図を塗る</h2>
+            <p>行った県を押すと、グループの地図にすぐ出ます。</p>
+          </li>
+          <li>
+            <h2>全員まだ行っていない県が分かる</h2>
+            <p>次の旅行先の候補が一目で分かります。</p>
+          </li>
+        </ul>
+      </section>
+
+      <!-- 使い方の3ステップ -->
+      <section>
+        <ol class="steps">
+          <li>
+            <span class="num" aria-hidden="true">1</span>
+            <div>
+              <h2>作る</h2>
+              <p>グループ名と自分の名前を入れる</p>
+            </div>
+          </li>
+          <li>
+            <span class="num" aria-hidden="true">2</span>
+            <div>
+              <h2>招待する</h2>
+              <p>招待URLを LINE などで送る</p>
+            </div>
+          </li>
+          <li>
+            <span class="num" aria-hidden="true">3</span>
+            <div>
+              <h2>塗る</h2>
+              <p>行った県を押す</p>
+            </div>
+          </li>
+        </ol>
+      </section>
+
+      <a class="cta" href="/new">グループを作る</a>
+
+      <!-- 招待URLを貼る欄。入力欄に name を付けない（スクリプトが読めなかったときに送信されても、貼った文字が URL に載らないように） -->
+      <section class="invite" aria-labelledby="invite-title">
+        <h2 id="invite-title">招待URLをもらった人</h2>
+        <form id="invite-form" novalidate>
+          <div class="invite-row">
+            <input
+              id="invite-input"
+              type="text"
+              inputmode="url"
+              autocomplete="off"
+              autocapitalize="off"
+              spellcheck="false"
+              placeholder="招待URLを貼る"
+              aria-labelledby="invite-title"
+              aria-describedby="invite-error"
+            />
+            <button type="submit">開く</button>
+          </div>
+          <p id="invite-error" class="invite-error" role="alert"></p>
+        </form>
+      </section>
+
+      <footer>
+        <nav class="footlinks" aria-label="このサイトについて">
+          <a href="/guide">使い方</a>
+          <a href="/privacy">プライバシーポリシー</a>
+          <a href="/contact">お問い合わせ</a>
+        </nav>
+        <!-- 地図データの出典（screens の「画面のルール」。web/src/Footer.tsx の MapCredit と同じ文とリンク） -->
+        <p class="credit">
+          地図：「国土数値情報（行政区域データ）」（国土交通省）を加工して作成（<a
+            href="https://nlftp.mlit.go.jp/ksj/gml/datalist/KsjTmplt-N03-2025.html"
+            >国土交通省国土数値情報ダウンロードサイト</a
+          >）
+        </p>
+      </footer>
+    </main>
+  </body>
+</html>

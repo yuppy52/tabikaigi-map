@@ -1,0 +1,6 @@
+# 検索エンジンへの案内（architecture の「検索に出すページと出さないページ」）。
+# どのパスも禁止しない：アプリの画面（/g/* など）も禁止すると、検索エンジンが noindex（_headers）を読めず、URL だけが載ることがあるため
+User-agent: *
+Allow: /
+
+Sitemap: https://tabikaigi-map.com/sitemap.xml
