@@ -1,0 +1,76 @@
+/* 色の変数（ライト・ダーク）。アプリの画面（styles.css）と検索に出すページ（pages/page.css）で同じものを使う。
+   値はモック（tools/template.html）をそのまま写した（見た目は Phase 3 で整える） */
+
+/* ライト（ふだん） */
+:root {
+  --sea: #e6edf1;
+  --bg: #f3f6f8;
+  --surface: #ffffff;
+  --ink: #1b2630;
+  --ink2: #5b6b77;
+  --line: #d3dce2;
+  --land: #ffffff;
+  --border: #a9b8c2;
+  --h1: #d5e5f4;
+  --h2: #98bfe6;
+  --h3: #5890ce;
+  --h4: #23579e;
+  --accent: #23579e;
+  --accent-ink: #ffffff;
+  --danger: #dc2626;
+  --danger-ink: #ffffff;
+  --gap-fill: #fde9bd;
+  --gap-line: #e39a12;
+  --shadow: 0 8px 28px rgba(20, 40, 60, 0.14);
+  color-scheme: light;
+}
+
+/* 端末がダークのとき（data-theme="light" で明るくしていなければ） */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --sea: #0e151b;
+    --bg: #121a21;
+    --surface: #1a242d;
+    --ink: #e6edf2;
+    --ink2: #95a5b1;
+    --line: #2c3a45;
+    --land: #233039;
+    --border: #445662;
+    --h1: #1f3a57;
+    --h2: #2e5f93;
+    --h3: #4f89cc;
+    --h4: #9cc6f2;
+    --accent: #6ea6e6;
+    --accent-ink: #0e151b;
+    --danger: #f87171;
+    --danger-ink: #0e151b;
+    --gap-fill: #4a3a12;
+    --gap-line: #f0b94a;
+    --shadow: 0 8px 28px rgba(0, 0, 0, 0.45);
+    color-scheme: dark;
+  }
+}
+
+/* data-theme="dark" で選んだとき */
+:root[data-theme="dark"] {
+  --sea: #0e151b;
+  --bg: #121a21;
+  --surface: #1a242d;
+  --ink: #e6edf2;
+  --ink2: #95a5b1;
+  --line: #2c3a45;
+  --land: #233039;
+  --border: #445662;
+  --h1: #1f3a57;
+  --h2: #2e5f93;
+  --h3: #4f89cc;
+  --h4: #9cc6f2;
+  --accent: #6ea6e6;
+  --accent-ink: #0e151b;
+  --danger: #f87171;
+  --danger-ink: #0e151b;
+  --gap-fill: #4a3a12;
+  --gap-line: #f0b94a;
+  --shadow: 0 8px 28px rgba(0, 0, 0, 0.45);
+  color-scheme: dark;
+}

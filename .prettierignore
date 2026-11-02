@@ -2,7 +2,7 @@
 # 日本語の表が崩れる
 *.md
 # ビルド結果と、モックの道具・生成物（作り直すと差分が出るため）
-index.html
+/index.html
 tools/
 *.drawio.svg
 # 画面のビルド結果
