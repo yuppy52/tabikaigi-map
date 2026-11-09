@@ -1,6 +1,6 @@
 # 要件IDの対応表
 
-状態：下書き（2026-11-06：ログインをやめた（[ADR 0013](../adr/0013-drop-login.md)）ので作り直した。なくした要件の行を消し、要件の節の名前を requirements に合わせた。作り直しは手元のスクリプト（リポジトリにはない）で行い、状態の行と「要件に対応しない設計」は手で直した。2026-10-15：`/review-docs` を受けて作り直し、要件に対応しない設計に目印のヘッダー・health・Turnstile を足した。2026-10-13：[api](api.md) に紐づけ・管理・退会などを足したので作り直した。2026-10-13：[api](api.md) を足して作り直した。2026-10-12：`/review-docs`（24件）を受けて、見出しの要件IDを数え、冒頭で名前を挙げただけのものを外し、「要件に対応しない設計」を足した。2026-10-12：要件IDの対応を付けるために作った）
+状態：下書き（2026-11-09：参加の画面で名前を選ぶ形にした（REQ-012）のと、L-1 の `/review-docs` の直しに合わせて、REQ-007・REQ-012・REQ-024・REQ-025・REQ-046・REQ-047・REQ-056・NFR-006・NFR-018 の行を手で直した（作り直しのスクリプトが手元に残っていなかったため。変えた節の要件IDを grep で確かめた）。2026-11-06：ログインをやめた（[ADR 0013](../adr/0013-drop-login.md)）ので作り直した。なくした要件の行を消し、要件の節の名前を requirements に合わせた。作り直しは手元のスクリプト（リポジトリにはない）で行い、状態の行と「要件に対応しない設計」は手で直した。2026-10-15：`/review-docs` を受けて作り直し、要件に対応しない設計に目印のヘッダー・health・Turnstile を足した。2026-10-13：[api](api.md) に紐づけ・管理・退会などを足したので作り直した。2026-10-13：[api](api.md) を足して作り直した。2026-10-12：`/review-docs`（24件）を受けて、見出しの要件IDを数え、冒頭で名前を挙げただけのものを外し、「要件に対応しない設計」を足した。2026-10-12：要件IDの対応を付けるために作った）
 
 各要件（[requirements](../requirements.md) の REQ・NFR）を、設計書と ADR のどこで扱っているかの一覧。設計書の本文に書いた要件ID（`（REQ-012）` の形）を集めて作った。括弧の中は節の名前。画面の配置は [ワイヤーフレーム](wireframes.drawio.svg)、構成は [構成図](architecture.drawio.svg) も見る。
 
@@ -21,12 +21,12 @@
 
 | ID | 要件（要約） | 設計での扱い |
 |---|---|---|
-| REQ-007 | 名前はグループごとに入力する | —（入力の欄は [screens](screens.md) の「参加の画面」。2026-11-06 にアカウントの表示名を持たない話がなくなり、設計書に REQ-007 を書く場所がなくなった） |
+| REQ-007 | 名前はグループごとに入力する | [screens](screens.md)（参加の画面） |
 | REQ-008 | 1つのグループの中で、名前は重複させない | [api](api.md)（一覧）<br/>[permissions](permissions.md)（グループの中の操作） |
 | REQ-009 | 名前の決まり：前後の空白を取り除いてから数えて、1〜10文字 | [api](api.md)（共通の決まり）<br/>[data-model](data-model.md)（members（メンバー）） |
 | REQ-010 | グループ名の決まり：前後の空白を取り除いてから数えて、1〜20文字 | [api](api.md)（共通の決まり）<br/>[data-model](data-model.md)（ER図、groups（グループ））<br/>[permissions](permissions.md)（グループの中の操作） |
 | REQ-011 | 「同じ名前」かどうかは、全角と半角（英数字・記号・空白・カタカナ）、英字の大文… | [api](api.md)（共通の決まり）<br/>[data-model](data-model.md)（ER図、members（メンバー））<br/>[0003-backend-selection](../adr/0003-backend-selection.md)（保存先で守るもの（NFR-006）、C で書き直すときの方針（2026-10-04 の `doc-reviewer` の指摘から）） |
-| REQ-012 | 参加するときに、すでにいるメンバーと同じ名前を入れたら、「（名前）さんはすでに… | [api](api.md)（一覧、参加で同じ名前がいたとき）<br/>[auth-flow](auth-flow.md)（端末が覚えるもの（Q-017）、名前で参加する）<br/>[permissions](permissions.md)（グループの中の操作）<br/>[screens](screens.md)（参加の画面、確認ダイアログ、API の応答と画面の動き）<br/>[0013-drop-login](../adr/0013-drop-login.md)（結果と注意） |
+| REQ-012 | 参加の画面では、参加中のメンバーの名前を並べる。自分の名前をタップすれば… | [api](api.md)（一覧、参加で同じ名前がいたとき）<br/>[auth-flow](auth-flow.md)（端末が覚えるもの（Q-017）、名前で参加する）<br/>[permissions](permissions.md)（グループの中の操作）<br/>[screens](screens.md)（画面一覧、画面遷移図、参加の画面、API の応答と画面の動き）<br/>[0013-drop-login](../adr/0013-drop-login.md)（結果と注意） |
 | REQ-015 | メンバーの名前は、誰も変えられない（本人を区別できないため） | [data-model](data-model.md)（members（メンバー）、メンバーの番号で操作する API の共通の決まり）<br/>[permissions](permissions.md)（グループの中の操作） |
 
 ## 地図
@@ -49,17 +49,17 @@
 |---|---|---|
 | REQ-022 | 名前がそのまま本人になる | [permissions](permissions.md)（グループの中の操作、画面だけで止めているもの） |
 | REQ-023 | 「行った」はグループのメンバーごとに持ち、そのグループの誰でも編集できる | [api](api.md)（一覧）<br/>[permissions](permissions.md)（グループの中の操作、画面だけで止めているもの） |
-| REQ-024 | 端末に前回の名前が残っていて、グループの今のメンバーと合えば、名前を入力し直さ… | [auth-flow](auth-flow.md)（名前で参加する）<br/>[screens](screens.md)（画面遷移図） |
-| REQ-025 | 端末に残っていた名前がグループの今の状態と合わない（その人が削除された、など）… | [auth-flow](auth-flow.md)（端末が覚えるもの（Q-017）、名前で参加する）<br/>[data-model](data-model.md)（members（メンバー））<br/>[screens](screens.md)（参加の画面） |
-| REQ-056 | メンバーを変更する：端末が覚えている名前を忘れて、名前の入力に戻れる | [auth-flow](auth-flow.md)（端末が覚えるもの（Q-017））<br/>[screens](screens.md)（グループ設定の中身、確認ダイアログ、操作の後に開く画面） |
+| REQ-024 | 端末に前回の名前が残っていて、グループの今のメンバーと合えば、参加の画面を出さ… | [auth-flow](auth-flow.md)（名前で参加する）<br/>[permissions](permissions.md)（人の区別）<br/>[screens](screens.md)（画面遷移図、参加の画面） |
+| REQ-025 | 端末に残っていた名前がグループの今の状態と合わない（その人が削除された、など）… | [auth-flow](auth-flow.md)（端末が覚えるもの（Q-017）、名前で参加する）<br/>[data-model](data-model.md)（members（メンバー））<br/>[permissions](permissions.md)（人の区別）<br/>[screens](screens.md)（参加の画面） |
+| REQ-056 | メンバーを変更する：端末が覚えている名前を忘れて、参加の画面に戻れる | [auth-flow](auth-flow.md)（端末が覚えるもの（Q-017）、名前で参加する）<br/>[permissions](permissions.md)（グループの中の操作）<br/>[screens](screens.md)（グループ設定の中身、確認ダイアログ、操作の後に開く画面） |
 | REQ-026 | グループの切り替えはない | [screens](screens.md)（グループの画面の中身） |
 
 ## メンバーとグループの管理
 
 | ID | 要件（要約） | 設計での扱い |
 |---|---|---|
-| REQ-046 | メンバーは誰でも、グループ名を変えられる | [api](api.md)（一覧）<br/>[permissions](permissions.md)（グループの中の操作）<br/>[screens](screens.md)（グループ設定の中身） |
-| REQ-047 | メンバーは誰でも、グループを削除できる | [api](api.md)（一覧）<br/>[data-model](data-model.md)（members（メンバー）、退出・削除）<br/>[permissions](permissions.md)（グループの中の操作）<br/>[screens](screens.md)（グループ設定の中身、確認ダイアログ） |
+| REQ-046 | メンバーは誰でも、グループ名を変えられる | [api](api.md)（一覧）<br/>[data-model](data-model.md)（グループ名の変更・グループの削除）<br/>[permissions](permissions.md)（グループの中の操作）<br/>[screens](screens.md)（グループ設定の中身） |
+| REQ-047 | メンバーは誰でも、グループを削除できる | [api](api.md)（一覧）<br/>[data-model](data-model.md)（members（メンバー）、退出・削除、グループ名の変更・グループの削除）<br/>[permissions](permissions.md)（グループの中の操作）<br/>[screens](screens.md)（グループ設定の中身、確認ダイアログ） |
 | REQ-048 | メンバーは誰でも、ほかのメンバーをグループから削除できる | [api](api.md)（一覧）<br/>[data-model](data-model.md)（退出・削除）<br/>[permissions](permissions.md)（グループの中の操作）<br/>[screens](screens.md)（グループ設定の中身、確認ダイアログ、知らせ） |
 | REQ-049 | メンバーは、自分でグループから退出できる | [api](api.md)（一覧）<br/>[data-model](data-model.md)（退出・削除）<br/>[permissions](permissions.md)（グループの中の操作）<br/>[screens](screens.md)（確認ダイアログ） |
 | REQ-050 | 最後の1人が退出するときは、「グループも削除されます」と確認し、グループも削除… | [api](api.md)（一覧）<br/>[data-model](data-model.md)（退出・削除）<br/>[permissions](permissions.md)（グループの中の操作）<br/>[screens](screens.md)（確認ダイアログ） |
@@ -87,7 +87,7 @@
 | ID | 要件（要約） | 設計での扱い |
 |---|---|---|
 | NFR-005 | グループIDは推測できない文字列にする | [architecture](architecture.md)（検索に出すページと出さないページ（NFR-019、NFR-005））<br/>[data-model](data-model.md)（groups（グループ）、グループを開く）<br/>[permissions](permissions.md)（グループの外の操作）<br/>[0003-backend-selection](../adr/0003-backend-selection.md)（保存先で守るもの（NFR-006）、リアルタイムの共有（2026-10-04 調査、NFR-003）、C で書き直すときの方針（2026-10-04 の `doc-reviewer` の指摘から））<br/>[0004-frontend-react-typescript](../adr/0004-frontend-react-typescript.md)（検索に出す・出さない（NFR-019）） |
-| NFR-006 | 次のことは、画面を改造されても破られないように、データの保存先の側で守る | [architecture](architecture.md)（構成図）<br/>[auth-flow](auth-flow.md)（名前で参加する）<br/>[data-model](data-model.md)（考え方、groups（グループ）、members（メンバー）、参加する、保存先で守るもの（NFR-006）との対応）<br/>[permissions](permissions.md)（グループの外の操作、グループの中の操作、テスト）<br/>[0003-backend-selection](../adr/0003-backend-selection.md)（保存先で守るもの（NFR-006）、2026-10-04 の見直し：案 C を第一候補にする、2026-10-03 の推奨（案 A）、2026-10-04 にユーザーと決めたこと、決定の前に確かめること、リアルタイムの共有（2026-10-04 調査、NFR-003）、決めたら直すもの） |
+| NFR-006 | 次のことは、画面を改造されても破られないように、データの保存先の側で守る | [architecture](architecture.md)（構成図）<br/>[auth-flow](auth-flow.md)（名前で参加する）<br/>[data-model](data-model.md)（考え方、groups（グループ）、members（メンバー）、メンバーの番号で操作する API の共通の決まり、参加する、保存先で守るもの（NFR-006）との対応）<br/>[permissions](permissions.md)（グループの外の操作、グループの中の操作、テスト）<br/>[0003-backend-selection](../adr/0003-backend-selection.md)（保存先で守るもの（NFR-006）、2026-10-04 の見直し：案 C を第一候補にする、2026-10-03 の推奨（案 A）、2026-10-04 にユーザーと決めたこと、決定の前に確かめること、リアルタイムの共有（2026-10-04 調査、NFR-003）、決めたら直すもの） |
 | NFR-007 | アプリが保存する個人情報は、メンバーの名前、行った都道府県、問い合わせの内容（… | [architecture](architecture.md)（ログに残るもの（NFR-007・NFR-008・NFR-013））<br/>[data-model](data-model.md)（考え方）<br/>[privacy](privacy.md)（前提（仮定を含む））<br/>[0003-backend-selection](../adr/0003-backend-selection.md)（運用（NFR-010〜NFR-013、NFR-017、Q-031）） |
 | NFR-008 | プライバシーポリシーを公開し、どの画面からもすぐ（1回の操作で）開けるようにする | [architecture](architecture.md)（運用、ログに残るもの（NFR-007・NFR-008・NFR-013））<br/>[deploy](deploy.md)（ふだんのデプロイ（表を変えないとき））<br/>[privacy](privacy.md)（書く項目）<br/>[screens](screens.md)（画面一覧、グループの画面の中身、画面のルール）<br/>[0003-backend-selection](../adr/0003-backend-selection.md)（運用（NFR-010〜NFR-013、NFR-017、Q-031）、規約（広告：Q-029）、決定の前に確かめること、C で書き直すときの方針（2026-10-04 の `doc-reviewer` の指摘から）） |
 
@@ -107,7 +107,7 @@
 | NFR-012 | 無料枠を超えたとき：データの保存や読み込みが止まったときは、利用者に「いまは使… | [architecture](architecture.md)（無料枠を超えたとき（NFR-009・NFR-012）、運用）<br/>[screens](screens.md)（画面一覧、知らせ）<br/>[0001-backend-firebase](../adr/0001-backend-firebase.md)（見直しの理由（2026-10-02））<br/>[0003-backend-selection](../adr/0003-backend-selection.md)（想定規模（NFR-015）に収まるか、運用（NFR-010〜NFR-013、NFR-017、Q-031）、決定の前に確かめること） |
 | NFR-013 | エラーの把握：利用者の画面で起きたエラー（保存の失敗、画面が動かないなど）を、… | [architecture](architecture.md)（使うサービス、運用、エラーの送り方（Q-027）、ログに残るもの（NFR-007・NFR-008・NFR-013））<br/>[0001-backend-firebase](../adr/0001-backend-firebase.md)（見直しの理由（2026-10-02））<br/>[0003-backend-selection](../adr/0003-backend-selection.md)（運用（NFR-010〜NFR-013、NFR-017、Q-031）、決定の前に確かめること）<br/>[0006-error-tracking-sentry](../adr/0006-error-tracking-sentry.md)（背景） |
 | NFR-014 | 運用の手間：運営者1人で回せる形にする | [architecture](architecture.md)（運用）<br/>[0001-backend-firebase](../adr/0001-backend-firebase.md)（見直しの理由（2026-10-02））<br/>[0003-backend-selection](../adr/0003-backend-selection.md)（作るもの・続ける作業、2026-10-03 の推奨（案 A））<br/>[0006-error-tracking-sentry](../adr/0006-error-tracking-sentry.md)（背景、決定）<br/>[0010-plain-vite-with-wrangler-dev](../adr/0010-plain-vite-with-wrangler-dev.md)（決定） |
-| NFR-018 | 削除の依頼への対応：利用者は、問い合わせ用のフォームから、データを消してほしい… | [api](api.md)（まだ作っていないもの）<br/>[architecture](architecture.md)（運用）<br/>[data-model](data-model.md)（メールアドレス、持たないもの）<br/>[permissions](permissions.md)（運営者）<br/>[privacy](privacy.md)（書く項目）<br/>[screens](screens.md)（画面一覧、画面のルール）<br/>[0001-backend-firebase](../adr/0001-backend-firebase.md)（見直しの理由（2026-10-02））<br/>[0003-backend-selection](../adr/0003-backend-selection.md)（調査の前提と仮定、2026-10-04 にユーザーと決めたこと） |
+| NFR-018 | 削除の依頼への対応：利用者は、問い合わせ用のフォームから、データを消してほしい… | [api](api.md)（まだ作っていないもの）<br/>[architecture](architecture.md)（運用）<br/>[data-model](data-model.md)（メールアドレス、持たないもの、問い合わせ（NFR-018））<br/>[permissions](permissions.md)（運営者）<br/>[privacy](privacy.md)（書く項目）<br/>[screens](screens.md)（画面一覧、画面のルール）<br/>[0001-backend-firebase](../adr/0001-backend-firebase.md)（見直しの理由（2026-10-02））<br/>[0003-backend-selection](../adr/0003-backend-selection.md)（調査の前提と仮定、2026-10-04 にユーザーと決めたこと） |
 
 ## 要件に対応しない設計
 

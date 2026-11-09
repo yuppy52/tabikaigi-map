@@ -16,7 +16,7 @@
 
 公開までの順番（項目の中身は下の Phase 2）：
 
-1. **いまここ**：ログインをやめる。L-1 ドキュメント → L-2 API と表 → L-3 画面 → L-4 図 → L-5 Firebase のプロジェクトを消す（ユーザー）
+1. **いまここ**：ログインをやめる。L-1 ドキュメント → L-2 API と表 → L-3 画面 → L-3b 参加の画面で名前を選ぶ → L-4 図 → L-5 Firebase のプロジェクトを消す（ユーザー）
 2. 検索に出すページ。7-1 トップは済み。次は 7-2 使い方、7-3 プライバシーポリシー、7-4 確かめとモックの削除
 3. 問い合わせのフォーム
 4. 公開の前の安全の確かめ（CodeQL、Strix）を調べて、入れるかを決める
@@ -140,7 +140,8 @@
   - [ ] L-1 `docs/drop-login`：ADR 0013、requirements（なくした要件を欠番に）、use-cases、glossary、design 一式（permissions・data-model・api・auth-flow・screens・privacy・architecture・traceability）、open-questions、roadmap、CLAUDE.md、`.claude/` のルールとエージェント
   - [ ] L-2 `feat/drop-login-api`：API から ID トークンの確かめ（`firebase-auth.ts`）、アカウント（`account.ts`）、ログインの入口8つ、作成者・管理できる人・紐づいたメンバーの確かめを消す。`0001_init.sql` から `accounts`・`account_visits`・`members.uid`・`is_owner`・`groups.manage_by` と、それに関わるトリガー・索引を消す（まだ本番で流していないので書き換えてよい）。`jose` と `wrangler.jsonc` の `FIREBASE_PROJECT_ID` を消す。消す・変えるテストは先にユーザーに見せる。手元の D1 を作り直す。API と D1 の制約なので `access-reviewer` に頼む
   - [ ] L-3 `feat/drop-login-web`：画面の型・API の呼び出し・文言から、ログイン・作成者・管理できる人（`manageBy`・`ownerOnly`・`isOwner`・`linked`・`isMe`、`403 member_linked`・`not_allowed`）を消す。グループ設定の「管理できる人」の文をなくす。`_headers`・`_redirects` から `/account`・`/login`・`/groups`・`/me` を消す（配信の設定なので `access-reviewer` に頼む）
-  - [ ] L-4 構成図とワイヤーフレーム（draw.io）から、Firebase とログインの画面を消す
+  - [ ] L-3b `feat/join-pick-member`：参加のシートを、参加中のメンバーの名前を選ぶか「新しく参加する」で名前を入れる形にする（REQ-012・Q-035。2026-11-09 にモックを見てユーザーと決めた）。中身と文は [screens](design/screens.md) の「参加の画面」と「API の応答と画面の動き」の `409 name_taken`。「メンバーを変更する」の一言も直す。アプリ内のブラウザで、ふつう・前回の名前がない・新しく参加・もういる名前・20人・入った後の6つを確かめる
+  - [ ] L-4 構成図とワイヤーフレーム（draw.io）から、Firebase とログインの画面を消す。参加の枠を名前を選ぶ形にする
   - [ ] L-5 運営者が Firebase のプロジェクト `tabikaigi-map` を消す（L-2・L-3 の後。手順はそのときに案内する）
 - [ ] 検索に出すページ（トップ、使い方、プライバシーポリシー）を素の HTML で作る。アプリの画面に `noindex`、sitemap（Google Search Console は、検索から来る人の数を知りたくなったら登録する：Q-025）（NFR-019、[architecture](design/architecture.md) の「検索に出すページと出さないページ」）
   - 小分け（2026-10-31 にユーザーと決めた。推奨どおり。上から順に、1つずつプルリクエストにする）。トップの文と画像、Phase 2 ではアカウントの入口を出さないことは screens の「トップと URL」。使い方とポリシーの文は長いので、その項目を始めるときに決める
@@ -148,7 +149,7 @@
   - [ ] 7-2 `feat/pages-guide`：使い方（`/guide`）。よくある質問の答えの文は、始めるときに決める
   - [ ] 7-3 `feat/pages-privacy`：プライバシーポリシー（`/privacy`）。文は [privacy](design/privacy.md) の表から下書きして決める。運営者として書くハンドルネームもこのときに決める
   - [ ] 7-4 確かめ：ビルドして `wrangler dev` で、3つのページに `noindex` が付かず、アプリの画面には付くこと、375px の見た目。終わったらモック（`index.html`、`tools/template.html`）を消す
-- [ ] 問い合わせのフォーム（NFR-018。`/contact`、API＋D1＋Turnstile）：2026-10-04 に決めていたが、ロードマップの項目から抜けていた。プライバシーポリシーに書く窓口（苦情の申出先、消してほしいときの頼み方）になるので、公開の前に作る（2026-10-31 にユーザーと決めた。推奨どおり。選ばなかった案：当面はアプリ用のメールアドレスをポリシーに書く（NFR-018 を変え、迷惑メールが届き、メールのサービスが送り先に増える））。表の形は data-model の「問い合わせ」、始めるときに小分けにする
+- [ ] 問い合わせのフォーム（NFR-018。`/contact`、API＋D1＋Turnstile）：2026-10-04 に決めていたが、ロードマップの項目から抜けていた。プライバシーポリシーに書く窓口（苦情の申出先、消してほしいときの頼み方）になるので、公開の前に作る（2026-10-31 にユーザーと決めた。推奨どおり。選ばなかった案：当面はアプリ用のメールアドレスをポリシーに書く（NFR-018 を変え、迷惑メールが届き、メールのサービスが送り先に増える））。始めるときに小分けにする。**始める前にユーザーと決める**（2026-11-09：L-1 の `/review-docs` #6）：表の列、本文の長さの上限、見えない文字の扱い（REQ-009 にそろえるか）、返信先（任意）がないときに画面に出す一言（「返信先がないと、済んだことをお知らせできません」など）、対応が済んでから3か月で消す方法。決めたら data-model の「問い合わせ」と screens に書く
 - [ ] 基本設計で Phase 2 に回した確かめ（〔未〕。どれも公開の前に必須）：
   - 〔未〕Cloudflare Web Analytics が切れているか（Q-025。Firebase の Google アナリティクスの連携は、プロジェクトを消す（L-5）ので確かめない）
   - 〔未〕グループを開くときの `last_opened_on` の0行の更新が書き込みに数えられないか（`meta.rows_written`。Q-025）
