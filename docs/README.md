@@ -8,16 +8,16 @@
 | [glossary.md](glossary.md) | 用語集（言葉の意味をそろえる） | レビュー待ち |
 | [use-cases.md](use-cases.md) | ユースケース（誰が何をするか）。要件の元になる | レビュー待ち |
 | [open-questions.md](open-questions.md) | 未決事項の一覧（ID・影響先・決める段階） | レビュー待ち |
-| [requirements.md](requirements.md) | 要件定義（何を作るか、何を作らないか） | レビュー待ち（2026-11-06：ログインをやめた（ADR 0013）ので、ログインと作成者の記述を消した） |
+| [requirements.md](requirements.md) | 要件定義（何を作るか、何を作らないか） | レビュー待ち（2026-11-10：参加の画面を名前を選ぶ形にし（Q-035）、L-1 の `/review-docs` を2回反映した。2026-11-06：ログインをやめた（ADR 0013）ので、ログインと作成者の記述を消した） |
 | [design/architecture.md](design/architecture.md) | システム構成図（清書：[architecture.drawio.svg](design/architecture.drawio.svg)）、使うサービスと無料枠、運用（監視、エラー、使い切られる対策）、開発環境 | 下書き（2026-11-06：ログインをやめた（ADR 0013）ので、ログインと作成者の記述を消した） |
-| [design/data-model.md](design/data-model.md) | ER図、D1 のテーブル、保存先で守るもの（NFR-006）の対応 | 下書き（2026-11-06：ログインをやめた（ADR 0013）ので、ログインと作成者の記述を消した） |
-| [design/auth-flow.md](design/auth-flow.md) | 名前で入る流れと、端末が覚えるもの | 下書き（2026-11-06：ログインをやめたので、名前で入る流れだけにした） |
-| [design/api.md](design/api.md) | API の一覧（URL、本文、応答、断るときの理由） | 下書き（2026-11-06：ログインをやめた（ADR 0013）ので、ログインと作成者の記述を消した） |
-| [design/permissions.md](design/permissions.md) | 権限マトリクス（誰が何をできるか、どこで守るか） | 下書き（2026-11-06：ログインをやめた（ADR 0013）ので、ログインと作成者の記述を消した） |
-| [design/screens.md](design/screens.md) | 画面一覧と画面遷移図、グループの画面の中身、確認ダイアログ、知らせ（ワイヤーフレーム：[wireframes.drawio.svg](design/wireframes.drawio.svg)） | 下書き（2026-11-06：ログインをやめた（ADR 0013）ので、ログインと作成者の記述を消した） |
+| [design/data-model.md](design/data-model.md) | ER図、D1 のテーブル、保存先で守るもの（NFR-006）の対応 | 下書き（2026-11-10：参加の画面を名前を選ぶ形にし（Q-035）、L-1 の `/review-docs` を2回反映した。2026-11-06：ログインをやめた（ADR 0013）ので、ログインと作成者の記述を消した） |
+| [design/auth-flow.md](design/auth-flow.md) | 名前で入る流れと、端末が覚えるもの | 下書き（2026-11-10：参加の画面を名前を選ぶ形にし（Q-035）、L-1 の `/review-docs` を2回反映した。2026-11-06：ログインをやめたので、名前で入る流れだけにした） |
+| [design/api.md](design/api.md) | API の一覧（URL、本文、応答、断るときの理由） | 下書き（2026-11-10：参加の画面を名前を選ぶ形にし（Q-035）、L-1 の `/review-docs` を2回反映した。2026-11-06：ログインをやめた（ADR 0013）ので、ログインと作成者の記述を消した） |
+| [design/permissions.md](design/permissions.md) | 権限マトリクス（誰が何をできるか、どこで守るか） | 下書き（2026-11-10：参加の画面を名前を選ぶ形にし（Q-035）、L-1 の `/review-docs` を2回反映した。2026-11-06：ログインをやめた（ADR 0013）ので、ログインと作成者の記述を消した） |
+| [design/screens.md](design/screens.md) | 画面一覧と画面遷移図、グループの画面の中身、確認ダイアログ、知らせ（ワイヤーフレーム：[wireframes.drawio.svg](design/wireframes.drawio.svg)） | 下書き（2026-11-10：参加の画面を名前を選ぶ形にし（Q-035）、L-1 の `/review-docs` を2回反映した。2026-11-06：ログインをやめた（ADR 0013）ので、ログインと作成者の記述を消した） |
 | [design/privacy.md](design/privacy.md) | プライバシーポリシーに書くこと（法律の調べた結果とチェックリスト） | 下書き（2026-11-06：ログインをやめた（ADR 0013）ので、ログインと作成者の記述を消した） |
 | [design/deploy.md](design/deploy.md) | デプロイとテーブル定義の変更（マイグレーション）の手順書。鍵の作り方、バックアップ、戻し方 | 下書き（2026-10-16：作った） |
-| [design/traceability.md](design/traceability.md) | 要件IDの対応表（各 REQ・NFR を設計書のどこで扱うか） | 下書き（2026-11-06：ログインをやめた（ADR 0013）ので、ログインと作成者の記述を消した） |
+| [design/traceability.md](design/traceability.md) | 要件IDの対応表（各 REQ・NFR を設計書のどこで扱うか） | 下書き（2026-11-10：参加の画面を名前を選ぶ形にし（Q-035）、L-1 の `/review-docs` を2回反映した。2026-11-06：ログインをやめた（ADR 0013）ので、ログインと作成者の記述を消した） |
 | [adr/](adr/) | 技術選定などの決定の記録（ADR）。2026-10-12 に 0006（エラーの把握：Sentry）、2026-10-16 に 0007（地図データ：国土数値情報）、0008（デプロイとステージング）、0009（lint：ESLint＋Prettier）、2026-10-19 に 0010（画面は素の Vite、API は wrangler dev）、2026-10-22 に 0011（画面の切り替え：React Router）、2026-10-26 に 0012（リアルタイムのつなぎ直し、予備の問い合わせは作らない）、2026-11-06 に 0013（ログインをやめる）を足した | — |
 | [../spike/](../spike/README.md) | 案 C を小さく試した試作と結果（docs の外。ADR 0003 の根拠） | — |
 | [learnings/](learnings/) | 学びの記録（ハマったこと、レビューの指摘）。`/compound` で書く | — |

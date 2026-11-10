@@ -140,7 +140,7 @@
   - [ ] L-1 `docs/drop-login`：ADR 0013、requirements（なくした要件を欠番に）、use-cases、glossary、design 一式（permissions・data-model・api・auth-flow・screens・privacy・architecture・traceability）、open-questions、roadmap、CLAUDE.md、`.claude/` のルールとエージェント
   - [ ] L-2 `feat/drop-login-api`：API から ID トークンの確かめ（`firebase-auth.ts`）、アカウント（`account.ts`）、ログインの入口8つ、作成者・管理できる人・紐づいたメンバーの確かめを消す。`0001_init.sql` から `accounts`・`account_visits`・`members.uid`・`is_owner`・`groups.manage_by` と、それに関わるトリガー・索引を消す（まだ本番で流していないので書き換えてよい）。`jose` と `wrangler.jsonc` の `FIREBASE_PROJECT_ID` を消す。消す・変えるテストは先にユーザーに見せる。手元の D1 を作り直す。API と D1 の制約なので `access-reviewer` に頼む
   - [ ] L-3 `feat/drop-login-web`：画面の型・API の呼び出し・文言から、ログイン・作成者・管理できる人（`manageBy`・`ownerOnly`・`isOwner`・`linked`・`isMe`、`403 member_linked`・`not_allowed`）を消す。グループ設定の「管理できる人」の文をなくす。`_headers`・`_redirects` から `/account`・`/login`・`/groups`・`/me` を消す（配信の設定なので `access-reviewer` に頼む）
-  - [ ] L-3b `feat/join-pick-member`：参加のシートを、参加中のメンバーの名前を選ぶか「新しく参加する」で名前を入れる形にする（REQ-012・Q-035。2026-11-09 にモックを見てユーザーと決めた）。中身と文は [screens](design/screens.md) の「参加の画面」と「API の応答と画面の動き」の `409 name_taken`。「メンバーを変更する」の一言も直す。アプリ内のブラウザで、ふつう・前回の名前がない・新しく参加・もういる名前・20人・入った後の6つを確かめる
+  - [ ] L-3b `feat/join-pick-member`：参加のシートを、参加中のメンバーの名前を選ぶか「新しく参加する」で名前を入れる形にする（REQ-012・Q-035。2026-11-09 にモックを見てユーザーと決めた）。中身と文は [screens](design/screens.md) の「参加の画面」と「API の応答と画面の動き」の `409 name_taken`。「メンバーを変更する」の一言も直す。アプリ内のブラウザで、ふつう・前回の名前がない・新しく参加・もういる名前（全角・半角が違う名前も）・20人・入った後の6つと、名前を入れている間に満員になる・ほぼ同時に同じ名前で入る（一覧にいない `name_taken`）・通信エラー・送る間にグループが消える・Safari で覚えが消えた後（「前回の名前が〜」を出さない）の5つを確かめる（2026-11-10：L-1 の2回目の `/review-docs` #16）
   - [ ] L-4 構成図とワイヤーフレーム（draw.io）から、Firebase とログインの画面を消す。参加の枠を名前を選ぶ形にする
   - [ ] L-5 運営者が Firebase のプロジェクト `tabikaigi-map` を消す（L-2・L-3 の後。手順はそのときに案内する）
 - [ ] 検索に出すページ（トップ、使い方、プライバシーポリシー）を素の HTML で作る。アプリの画面に `noindex`、sitemap（Google Search Console は、検索から来る人の数を知りたくなったら登録する：Q-025）（NFR-019、[architecture](design/architecture.md) の「検索に出すページと出さないページ」）
@@ -181,5 +181,6 @@
 ## Phase 4：βテスト → 拡張
 
 - [ ] 実際の友達グループで試す
+- [ ] 文言と見た目を整えるときに、グループ作成で通信エラーになったときの扱い（いまはエラーの画面）を、参加の名前の入力（その場でやり直す）とそろえるか決める（2026-11-10：L-1 の2回目の `/review-docs` #14。前からあった違い）
 - [ ] 運営者用の管理画面を作る（多くの人に使ってもらえるかを確かめるため。MVP の次に優先して作る：Q-030）
 - 拡張の候補：広告（友達以外にも使われ始めてから。Q-029）、行き先の投票、訪問のレベル分け（通過・宿泊・住んだ）、市区町村単位、グループごとの OGP
