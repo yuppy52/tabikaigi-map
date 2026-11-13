@@ -5,15 +5,11 @@ import { beforeAll, describe, expect, it } from "vitest";
 import { roomKey } from "../src/ids";
 import { CLOSE_NOT_ALLOWED, HELLO_TIMEOUT_MS, MAX_CONNECTIONS, MAX_HELLO_LENGTH } from "../src/room";
 import { connectRoom } from "../src/room-entry";
-import { call, create, join, setup, token } from "./helpers";
+import { call, create, join, setup } from "./helpers";
 
 beforeAll(setup);
 
 const ORIGIN = "https://example.com";
-
-let n = 0;
-/** テストごとに別の uid を使う（テストどうしでデータベースを共有しているため） */
-const newUid = () => `uid-r-${++n}-${Date.now()}`;
 
 /** 部屋のスタブ（テストから部屋の中を覗く・眠らせる・アラームを動かす） */
 const stubOf = async (groupId: string) => env.GROUP_ROOM.get(env.GROUP_ROOM.idFromName(await roomKey(groupId)));
@@ -222,8 +218,11 @@ describe("部屋への入口（architecture の「部屋への接続の確かめ
     expect(await bad.json()).toEqual({ error: "not_allowed" });
     const notWs = await SELF.fetch(url, { headers: { Origin: ORIGIN } });
     expect(notWs.status).toBe(426);
+    expect(await notWs.json()).toEqual({ error: "bad_request" });
     // 部屋の外の API は、いままでどおり目印のヘッダーが要る
-    expect((await SELF.fetch(`${ORIGIN}/api/groups/${groupId}`)).status).toBe(400);
+    const noMark = await SELF.fetch(`${ORIGIN}/api/groups/${groupId}`);
+    expect(noMark.status).toBe(400);
+    expect(await noMark.json()).toEqual({ error: "bad_request" });
   });
 });
 
@@ -512,69 +511,42 @@ describe("書けた後に部屋へ知らせる（architecture の「部屋が配
     expect(a.received[1]).toEqual({ type: "refetch" });
   });
 
-  it("紐づけで refetch が届く（「行った」がアカウントのものに入れ替わるため）", async () => {
-    const { groupId, memberId } = await create();
-    const a = await connectReady(groupId);
-    const r = await call("POST", `/api/groups/${groupId}/members/${memberId}/link`, {
-      token: await token(newUid()),
-      body: { visits: "merge" },
-    });
-    expect(r.status).toBe(200);
-    await until(() => a.received.length === 2);
-    expect(a.received[1]).toEqual({ type: "refetch" });
-  });
-
-  it("参加・退出・名前の変更・グループ名の変更・ログイン済みの人の「行った」では配らない", async () => {
+  it("参加・退出・グループ名の変更では配らない", async () => {
     const { groupId } = await create();
-    const uid = newUid();
-    const t = await token(uid);
     const a = await connectReady(groupId);
-    const j = await join(groupId, "はなこ", t);
+    const j = await join(groupId, "はなこ");
     expect(j.status).toBe(201);
-    expect((await call("PUT", `/api/groups/${groupId}/members/${j.json.memberId}/name`, { token: t, body: { name: "はな" } })).status).toBe(
-      200,
-    );
-    expect((await call("PUT", `/api/groups/${groupId}/my-visits/9`, { token: t })).status).toBe(200);
     expect((await call("PUT", `/api/groups/${groupId}/name`, { body: { name: "旅の会" } })).status).toBe(200);
-    expect((await call("POST", `/api/groups/${groupId}/members/${j.json.memberId}/leave`, { token: t })).status).toBe(200);
+    expect((await call("POST", `/api/groups/${groupId}/members/${j.json.memberId}/leave`)).status).toBe(200);
     await pause();
     expect(a.received).toEqual([{ type: "ready" }]);
   });
 
-  it("断られた書き込み（403・404）では配らない（NFR-006 (1)(5)）", async () => {
-    // 「作成者のみ」のグループ
-    const owner = await token(newUid());
-    const g = await create("ゆう", { token: owner });
-    expect((await call("PUT", `/api/groups/${g.groupId}/manage-by`, { token: owner, body: { manageBy: "owner" } })).status).toBe(200);
-    const linked = await join(g.groupId, "じろう", await token(newUid()));
+  it("断られた書き込み（400・404）では配らない（NFR-006 (14)）", async () => {
+    const g = await create();
     const free = await join(g.groupId, "さぶろう");
     const other = await create();
     const a = await connectReady(g.groupId);
 
-    // 紐づいたメンバーの「行った」を、ログインなしで付ける → 403
-    expect(await putVisit(g.groupId, linked.json.memberId, 10)).toEqual({ status: 403, json: { error: "member_linked" } });
-    // 紐づいたメンバーの「行った」を、ログインなしで外す → 403
-    expect(await call("DELETE", `/api/groups/${g.groupId}/members/${linked.json.memberId}/visits/10`)).toEqual({
-      status: 403,
-      json: { error: "member_linked" },
-    });
-    // よそのグループのメンバーの番号 → 404
+    // よそのグループのメンバーの番号で付ける・外す → 404
     expect(await putVisit(g.groupId, other.memberId, 10)).toEqual({ status: 404, json: { error: "member_not_found" } });
+    expect(await call("DELETE", `/api/groups/${g.groupId}/members/${other.memberId}/visits/10`)).toEqual({
+      status: 404,
+      json: { error: "member_not_found" },
+    });
     // 県の番号が範囲の外 → 400
     expect(await putVisit(g.groupId, free.json.memberId, 48)).toEqual({ status: 400, json: { error: "bad_request" } });
-    // 管理できる人でない人がメンバー・グループを消す → 403
-    expect(await call("DELETE", `/api/groups/${g.groupId}/members/${free.json.memberId}`)).toEqual({
-      status: 403,
-      json: { error: "not_allowed" },
+    // メンバーの番号の形が違う削除 → 400
+    expect(await call("DELETE", `/api/groups/${g.groupId}/members/abc`)).toEqual({ status: 400, json: { error: "bad_request" } });
+    // よそのグループのメンバーの番号・いない番号の削除 → 200 で成功するが、何も消えていないので配らない
+    expect(await call("DELETE", `/api/groups/${g.groupId}/members/${other.memberId}`)).toEqual({
+      status: 200,
+      json: { ok: true, groupDeleted: false },
     });
-    expect(await call("DELETE", `/api/groups/${g.groupId}`)).toEqual({ status: 403, json: { error: "not_allowed" } });
-    // ほかの人に紐づいたメンバーを紐づける → 403
-    expect(
-      await call("POST", `/api/groups/${g.groupId}/members/${linked.json.memberId}/link`, {
-        token: await token(newUid()),
-        body: { visits: "merge" },
-      }),
-    ).toEqual({ status: 403, json: { error: "member_linked" } });
+    expect(await call("DELETE", `/api/groups/${g.groupId}/members/999999999`)).toEqual({
+      status: 200,
+      json: { ok: true, groupDeleted: false },
+    });
     await pause();
     expect(a.received).toEqual([{ type: "ready" }]);
 
@@ -582,6 +554,16 @@ describe("書けた後に部屋へ知らせる（architecture の「部屋が配
     expect((await putVisit(g.groupId, free.json.memberId, 10)).status).toBe(200);
     await until(() => a.received.length === 2);
     expect(a.received[1]).toEqual({ type: "visit", memberId: free.json.memberId, pref: 10, visited: true });
+    // 実在する番号の削除なら refetch が届く。同じ番号の2回目（もういない）は 200 でも配らない
+    expect((await call("DELETE", `/api/groups/${g.groupId}/members/${free.json.memberId}`)).status).toBe(200);
+    await until(() => a.received.length === 3);
+    expect(a.received[2]).toEqual({ type: "refetch" });
+    expect(await call("DELETE", `/api/groups/${g.groupId}/members/${free.json.memberId}`)).toEqual({
+      status: 200,
+      json: { ok: true, groupDeleted: false },
+    });
+    await pause();
+    expect(a.received).toHaveLength(3);
   });
 
   it("部屋に知らせるのに失敗しても、書き込みは成功で返り、D1 に残る（ADR 0003）", async () => {

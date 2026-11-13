@@ -1,47 +1,31 @@
 // API の本体（Hono）。URL と応答の一覧は docs/design/api.md。
-// 外の仕組み（Google の公開鍵、Turnstile）は引数で受け取り、テストで差し替えられるようにしている
+// ログインはない（ADR 0013）。外の仕組み（Turnstile）は引数で受け取り、テストで差し替えられるようにしている
 import { Hono, type Context, type Next } from "hono";
 import { bodyLimit } from "hono/body-limit";
 import type { ContentfulStatusCode } from "hono/utils/http-status";
-import { InvalidTokenError, KeyUnavailableError, verifyFirebaseIdToken, type KeyProvider, type VerifiedUser } from "./firebase-auth";
-import { createGroup, joinGroup, readGroup, setAccountVisit, setMemberVisit, touchGroup } from "./groups";
+import { createGroup, joinGroup, readGroup, setMemberVisit, touchGroup } from "./groups";
 import { isGroupId } from "./ids";
-import { deleteGroup, deleteMember, leaveMember, linkMember, renameGroup, renameMember, setManageBy, type Refused } from "./manage";
-import { listMyGroups, listMyVisits, withdraw } from "./account";
+import { deleteGroup, deleteMember, leaveMember, renameGroup } from "./manage";
 import { notifyRoom } from "./room-entry";
 import { checkName, GROUP_NAME, MEMBER_NAME } from "./names";
 import { TurnstileUnavailableError, type TurnstileVerifier } from "./turnstile";
 
-export type Deps = { getKey: KeyProvider; verifyTurnstile: TurnstileVerifier };
+export type Deps = { verifyTurnstile: TurnstileVerifier };
 
-/** ログイン済み（メールアドレスの確認が済んだ）人。それ以外は null（ログインなしとして扱う） */
-type Vars = { user: VerifiedUser | null };
-type C = Context<{ Bindings: Env; Variables: Vars }>;
+type C = Context<{ Bindings: Env }>;
 
 /** 決まった形のエラー（画面は error の値で知らせを読み分ける：docs/design/screens.md の「知らせ」） */
 function fail(c: C, status: ContentfulStatusCode, error: string, extra: Record<string, unknown> = {}) {
   return c.json({ error, ...extra }, status);
 }
 
-/** ログインが要る API で使う。ログイン済みの人がいなければ（ログインなし・確認待ち）401 の応答を返す */
-function requireUser(c: C): { user: VerifiedUser; error?: undefined } | { user?: undefined; error: Response } {
-  const user = c.get("user");
-  return user ? { user } : { error: fail(c, 401, "login_required") };
-}
-
 /** 断った理由（groups.ts・manage.ts が返すもの） */
-type Reason = Refused | "already_member" | "group_limit" | "group_full" | "name_taken";
+type Reason = "group_not_found" | "member_not_found";
 
-/** 断った理由ごとの状態コード（「ない」は 404、「権限がない」は 403、「ほかと重なる・上限」は 409）。理由を足したら型の確かめで漏れに気づく */
+/** 断った理由ごとの状態コード（「ない」は 404）。理由を足したら型の確かめで漏れに気づく */
 const STATUS: Record<Reason, ContentfulStatusCode> = {
   group_not_found: 404,
   member_not_found: 404,
-  member_linked: 403,
-  not_allowed: 403,
-  already_member: 409,
-  group_limit: 409,
-  group_full: 409,
-  name_taken: 409,
 };
 
 /** 書き込みの結果を応答にする（0行だったときの理由は、groups.ts・manage.ts で読み直して分けてある） */
@@ -49,9 +33,6 @@ function writeResponse(c: C, r: { ok: true } | { ok: false; reason: Reason }, bo
   if (r.ok) return c.json(body);
   return fail(c, STATUS[r.reason], r.reason);
 }
-
-/** 退会の直前にログインし直したとみなす時間（秒）。ID トークンの auth_time がこれより古ければ断る（NFR-006 (6)） */
-export const REAUTH_SECONDS = 5 * 60;
 
 /** URL の県の番号（1〜47 の整数だけ） */
 function parsePref(s: string): number | null {
@@ -68,7 +49,7 @@ function parseMemberId(s: string): number | null {
 }
 
 export function createApp(deps: Deps) {
-  const app = new Hono<{ Bindings: Env; Variables: Vars }>().basePath("/api");
+  const app = new Hono<{ Bindings: Env }>().basePath("/api");
 
   // 本文は小さいものしか送らない。大きな本文を送りつけられても読まずに断る
   app.use(bodyLimit({ maxSize: 4 * 1024, onError: (c) => c.json({ error: "bad_request" }, 413) }));
@@ -77,33 +58,6 @@ export function createApp(deps: Deps) {
   // ブラウザはこのヘッダーを勝手に付けないので、D1 を読まずに断れる（読み取りの無料枠を使い切らせない。/api/health は除く）
   app.use(async (c, next) => {
     if (c.req.path !== "/api/health" && c.req.header("X-Tabikaigi") !== "1") return fail(c, 400, "bad_request");
-    return next();
-  });
-
-  // 設定の入れ忘れ（Firebase のプロジェクトID）は、全部 401 にせず 503 で止めて気づけるようにする
-  app.use(async (c, next) => {
-    if (!c.env.FIREBASE_PROJECT_ID) return fail(c, 503, "unavailable", { reason: "temporary" });
-    return next();
-  });
-
-  // ID トークンの確かめ。付いていなければログインなし。付いているのに確かめられなければ、ログインなしに落とさず止める（NFR-006 (10)）
-  app.use(async (c, next) => {
-    const auth = c.req.header("Authorization");
-    if (auth === undefined) {
-      c.set("user", null);
-      return next();
-    }
-    const token = auth.startsWith("Bearer ") ? auth.slice(7) : "";
-    if (!token) return fail(c, 401, "invalid_token");
-    try {
-      const user = await verifyFirebaseIdToken(token, c.env.FIREBASE_PROJECT_ID, deps.getKey);
-      // 確認待ち（email_verified が false）の人は、ログインなしとして扱う（REQ-057）
-      c.set("user", user.emailVerified ? user : null);
-    } catch (e) {
-      if (e instanceof InvalidTokenError) return fail(c, 401, "invalid_token");
-      if (e instanceof KeyUnavailableError) return fail(c, 503, "unavailable", { reason: "temporary" });
-      throw e;
-    }
     return next();
   });
 
@@ -134,8 +88,7 @@ export function createApp(deps: Deps) {
     if (!groupName.ok || !name.ok) return fail(c, 400, "bad_name");
     const blocked = await checkTurnstile(c, body.turnstileToken);
     if (blocked) return blocked;
-    const r = await createGroup(c.env.DB, groupName.name, name.name, c.get("user")?.uid ?? null);
-    if (!r.ok) return fail(c, 409, r.reason);
+    const r = await createGroup(c.env.DB, groupName.name, name.name);
     return c.json({ groupId: r.groupId, memberId: r.memberId }, 201);
   });
 
@@ -155,17 +108,18 @@ export function createApp(deps: Deps) {
     if (!name.ok) return fail(c, 400, "bad_name");
     const blocked = await checkTurnstile(c, body.turnstileToken);
     if (blocked) return blocked;
-    const r = await joinGroup(c.env.DB, c.req.param("groupId"), name.name, c.get("user")?.uid ?? null);
+    const r = await joinGroup(c.env.DB, c.req.param("groupId"), name.name);
     if (r.ok) return c.json({ memberId: r.memberId }, 201);
     if (r.reason === "group_not_found") return fail(c, 404, r.reason);
-    if (r.reason === "name_taken") return fail(c, 409, r.reason, { memberId: r.memberId, linked: r.linked });
+    // 同じ名前の人がいれば、その人の番号を返す（画面が「（名前）さんとして入る」を出す：REQ-012）
+    if (r.reason === "name_taken") return fail(c, 409, r.reason, { memberId: r.memberId });
     return fail(c, 409, r.reason);
   });
 
   // グループを開く。最後に開かれた日の更新は、応答の後で別に流し、失敗しても無視する（Q-025）
   app.get("/groups/:groupId", async (c) => {
     const groupId = c.req.param("groupId");
-    const view = await readGroup(c.env.DB, groupId, c.get("user")?.uid ?? null);
+    const view = await readGroup(c.env.DB, groupId);
     if (!view) return fail(c, 404, "group_not_found");
     c.executionCtx.waitUntil(
       touchGroup(c.env.DB, groupId).catch((e) => console.warn("last_opened_on の更新に失敗（無視する）", String(e))),
@@ -173,7 +127,7 @@ export function createApp(deps: Deps) {
     return c.json(view);
   });
 
-  // ログインなしのメンバーの「行った」を付ける・外す（REQ-016・REQ-023）
+  // メンバーの「行った」を付ける・外す（REQ-016・REQ-023）
   const memberVisit = (visited: boolean) => async (c: C) => {
     const memberId = parseMemberId(c.req.param("memberId") ?? "");
     const pref = parsePref(c.req.param("pref") ?? "");
@@ -187,111 +141,43 @@ export function createApp(deps: Deps) {
   app.put("/groups/:groupId/members/:memberId/visits/:pref", memberVisit(true));
   app.delete("/groups/:groupId/members/:memberId/visits/:pref", memberVisit(false));
 
-  // ログイン済みの人の「行った」を付ける・外す（REQ-030）。アカウントに書く
-  const myVisit = (visited: boolean) => async (c: C) => {
-    const { user, error } = requireUser(c);
-    if (error) return error;
-    const pref = parsePref(c.req.param("pref") ?? "");
-    if (pref === null) return fail(c, 400, "bad_request");
-    // 部屋には、まだ配らない（紐づいたメンバーがいる全グループの部屋に、それぞれのメンバーの番号で配るのは Phase 3）
-    return writeResponse(c, await setAccountVisit(c.env.DB, c.req.param("groupId")!, user.uid, pref, visited));
-  };
-  app.put("/groups/:groupId/my-visits/:pref", myVisit(true));
-  app.delete("/groups/:groupId/my-visits/:pref", myVisit(false));
-
   /** URL のメンバーの番号を読む。形が違えば null */
   const memberIdOf = (c: C) => parseMemberId(c.req.param("memberId") ?? "");
 
-  // メンバーをアカウントに紐づける（REQ-037〜REQ-040・REQ-043）。visits：merge（合算）か discard（アカウントのデータを使う）
-  app.post("/groups/:groupId/members/:memberId/link", async (c) => {
-    const { user, error } = requireUser(c);
-    if (error) return error;
-    const memberId = memberIdOf(c);
-    const body = await readBody(c);
-    if (memberId === null || (body.visits !== "merge" && body.visits !== "discard")) return fail(c, 400, "bad_request");
-    const groupId = c.req.param("groupId");
-    const r = await linkMember(c.env.DB, groupId, memberId, user.uid, body.visits === "merge");
-    // そのメンバーの「行った」がアカウントのものに入れ替わるので、ほかの画面に取り直してもらう（architecture の「部屋が配るもの」）
-    if (r.ok) notifyRoom(c.executionCtx, c.env, groupId, { type: "refetch" });
-    return writeResponse(c, r);
-  });
-
-  // 自分に紐づいたメンバーの名前を変える（REQ-014・REQ-015）
-  app.put("/groups/:groupId/members/:memberId/name", async (c) => {
-    const { user, error } = requireUser(c);
-    if (error) return error;
-    const memberId = memberIdOf(c);
-    if (memberId === null) return fail(c, 400, "bad_request");
-    const name = checkName((await readBody(c)).name, MEMBER_NAME);
-    if (!name.ok) return fail(c, 400, "bad_name");
-    return writeResponse(c, await renameMember(c.env.DB, c.req.param("groupId"), memberId, user.uid, name.name));
-  });
-
-  // 自分で退出する（REQ-049・REQ-050）。最後の1人ならグループも消え、groupDeleted: true を返す
+  // 退出する（REQ-049・REQ-050）。最後の1人ならグループも消え、groupDeleted: true を返す
   app.post("/groups/:groupId/members/:memberId/leave", async (c) => {
     const memberId = memberIdOf(c);
     if (memberId === null) return fail(c, 400, "bad_request");
-    const r = await leaveMember(c.env.DB, c.req.param("groupId"), memberId, c.get("user")?.uid ?? null);
+    const r = await leaveMember(c.env.DB, c.req.param("groupId"), memberId);
     return writeResponse(c, r, r.ok ? { ok: true, groupDeleted: r.groupDeleted } : undefined);
   });
 
-  // 管理できる人がメンバーを削除する（REQ-048）
+  // メンバーを削除する（REQ-048・REQ-050）
   app.delete("/groups/:groupId/members/:memberId", async (c) => {
     const memberId = memberIdOf(c);
     if (memberId === null) return fail(c, 400, "bad_request");
     const groupId = c.req.param("groupId");
-    const r = await deleteMember(c.env.DB, groupId, memberId, c.get("user")?.uid ?? null);
-    // ほかの人の画面が、消されたことに気づくように取り直してもらう（Q-020）
-    if (r.ok) notifyRoom(c.executionCtx, c.env, groupId, { type: "refetch" });
+    const r = await deleteMember(c.env.DB, groupId, memberId);
+    // ほかの人の画面が、消されたことに気づくように取り直してもらう（Q-020）。
+    // 本当に1人消えたときだけ配る（いない番号・ほかのグループの番号・2回目は成功でも D1 に書いていないので配らない）
+    if (r.ok && r.removed) notifyRoom(c.executionCtx, c.env, groupId, { type: "refetch" });
     return writeResponse(c, r, r.ok ? { ok: true, groupDeleted: r.groupDeleted } : undefined);
   });
 
-  // グループ名を変える（REQ-046）
+  // グループ名を変える（REQ-046）。メンバーの番号は受け取らず、グループIDだけで通す
   app.put("/groups/:groupId/name", async (c) => {
     const name = checkName((await readBody(c)).name, GROUP_NAME);
     if (!name.ok) return fail(c, 400, "bad_name");
-    return writeResponse(c, await renameGroup(c.env.DB, c.req.param("groupId"), c.get("user")?.uid ?? null, name.name));
+    return writeResponse(c, await renameGroup(c.env.DB, c.req.param("groupId"), name.name));
   });
 
-  // 管理できる人を変える（REQ-045）。ログイン済みの作成者だけ
-  app.put("/groups/:groupId/manage-by", async (c) => {
-    const { user, error } = requireUser(c);
-    if (error) return error;
-    const manageBy = (await readBody(c)).manageBy;
-    if (manageBy !== "everyone" && manageBy !== "owner") return fail(c, 400, "bad_request");
-    return writeResponse(c, await setManageBy(c.env.DB, c.req.param("groupId"), user.uid, manageBy));
-  });
-
-  // グループを削除する（REQ-047）
+  // グループを削除する（REQ-047）。メンバーの番号は受け取らず、グループIDだけで通す
   app.delete("/groups/:groupId", async (c) => {
     const groupId = c.req.param("groupId");
-    const r = await deleteGroup(c.env.DB, groupId, c.get("user")?.uid ?? null);
+    const r = await deleteGroup(c.env.DB, groupId);
     // ほかの人の画面が、消されたことに気づくように取り直してもらう（Q-020）
     if (r.ok) notifyRoom(c.executionCtx, c.env, groupId, { type: "refetch" });
     return writeResponse(c, r);
-  });
-
-  // グループ一覧（REQ-032）
-  app.get("/me/groups", async (c) => {
-    const { user, error } = requireUser(c);
-    if (error) return error;
-    return c.json({ groups: await listMyGroups(c.env.DB, user.uid) });
-  });
-
-  // マイページのアカウントの「行った」（REQ-033）
-  app.get("/me/visits", async (c) => {
-    const { user, error } = requireUser(c);
-    if (error) return error;
-    return c.json({ prefs: await listMyVisits(c.env.DB, user.uid) });
-  });
-
-  // 退会する（REQ-036）。直前にログインし直していなければ断る（改造した画面から、ログインし直さずに呼ばせない）
-  app.delete("/me", async (c) => {
-    const { user, error } = requireUser(c);
-    if (error) return error;
-    if (Date.now() / 1000 - user.authTime > REAUTH_SECONDS) return fail(c, 403, "reauth_required");
-    await withdraw(c.env.DB, user.uid);
-    return c.json({ ok: true });
   });
 
   // 知らない API は JSON で 404
