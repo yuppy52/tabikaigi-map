@@ -11,7 +11,7 @@
     "build:demo": "esbuild demo/main.ts --bundle --format=esm --target=es2022 --outfile=public/demo.js"
   },
   "dependencies": {
-    "hono": "^4.13.13",
+    "hono": "^4.13.16",
     "jose": "^6.2.12"
   },
   "devDependencies": {
