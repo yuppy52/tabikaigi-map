@@ -2,105 +2,10 @@
 // 改造した画面を想定したリクエストが断られること（docs/design/permissions.md の × の欄）と、
 // 通るべき人が通ること（断りすぎていないこと）を確かめる
 import { beforeAll, describe, expect, it } from "vitest";
-import { KeyUnavailableError } from "../src/firebase-auth";
 import { TurnstileUnavailableError } from "../src/turnstile";
-import { call, create, env, join, otherKey, setup, token } from "./helpers";
+import { call, create, env, join, setup } from "./helpers";
 
 beforeAll(setup);
-
-let n = 0;
-/** テストごとに別の uid を使う（テストどうしでデータベースを共有しているため） */
-const newUid = () => `uid-${++n}-${Date.now()}`;
-
-describe("ID トークン（NFR-006 (10)）", () => {
-  const post = async (t: string) =>
-    call("POST", "/api/groups", { token: t, body: { groupName: "偽物", name: "ゆう", turnstileToken: "ok" } });
-
-  it("別の Firebase のプロジェクトのトークン（署名は同じ Google の鍵）は 401", async () => {
-    const r = await post(await token(newUid(), { aud: "evil-project", iss: "https://securetoken.google.com/evil-project" }));
-    expect(r).toEqual({ status: 401, json: { error: "invalid_token" } });
-  });
-
-  it("alg が RS256 でない・知らない kid・sub が空・auth_time が未来は 401", async () => {
-    const t = Math.floor(Date.now() / 1000);
-    const { SignJWT } = await import("jose");
-    const hs = await new SignJWT({ sub: "x" }).setProtectedHeader({ alg: "HS256", kid: "test-kid" }).sign(new Uint8Array(32));
-    expect((await post(hs)).json).toEqual({ error: "invalid_token" });
-    expect((await post(await token(newUid(), {}, undefined, "unknown-kid"))).json).toEqual({ error: "invalid_token" });
-    expect((await post(await token("", {}))).json).toEqual({ error: "invalid_token" });
-    expect((await post(await token(newUid(), { auth_time: t + 3600 }))).json).toEqual({ error: "invalid_token" });
-    const made = await env.DB.prepare("SELECT count(*) AS n FROM groups WHERE name = '偽物'").first<{ n: number }>();
-    expect(made!.n).toBe(0);
-  });
-
-  it("Firebase のプロジェクトIDが設定されていなければ、全部 401 にせず 503 で止める", async () => {
-    const r = await call("POST", "/api/groups", {
-      token: await token(newUid()),
-      env: { FIREBASE_PROJECT_ID: "" as never },
-      body: { groupName: "旅行部", name: "ゆう", turnstileToken: "ok" },
-    });
-    expect(r).toEqual({ status: 503, json: { error: "unavailable", reason: "temporary" } });
-  });
-
-  it("トークンなしはログインなしとして通る", async () => {
-    const r = await call("POST", "/api/groups", { body: { groupName: "旅行部", name: "ゆう", turnstileToken: "ok" } });
-    expect(r.status).toBe(201);
-  });
-
-  it("署名の誤ったトークンは、ログインなしに落とさず 401", async () => {
-    const r = await call("POST", "/api/groups", {
-      token: await token(newUid(), {}, await otherKey()),
-      body: { groupName: "旅行部", name: "ゆう", turnstileToken: "ok" },
-    });
-    expect(r).toEqual({ status: 401, json: { error: "invalid_token" } });
-  });
-
-  it("期限切れのトークンも 401（グループは作られない）", async () => {
-    const t = Math.floor(Date.now() / 1000);
-    const r = await call("POST", "/api/groups", {
-      token: await token(newUid(), { iat: t - 7200, exp: t - 3600 }),
-      body: { groupName: "期限切れ", name: "ゆう", turnstileToken: "ok" },
-    });
-    expect(r.status).toBe(401);
-    const made = await env.DB.prepare("SELECT count(*) AS n FROM groups WHERE name = '期限切れ'").first<{ n: number }>();
-    expect(made!.n).toBe(0);
-  });
-
-  it("Bearer の形でない Authorization も 401（NFR-006 (10)）", async () => {
-    const r = await call("GET", "/api/health", { headers: { Authorization: "Basic abc" } });
-    expect(r.status).toBe(401);
-  });
-
-  it("公開鍵が取れないときは 503（一時的な失敗）", async () => {
-    const r = await call("GET", "/api/health", {
-      token: await token(newUid()),
-      deps: {
-        getKey: async () => {
-          throw new KeyUnavailableError("test");
-        },
-      },
-    });
-    expect(r).toEqual({ status: 503, json: { error: "unavailable", reason: "temporary" } });
-  });
-
-  it("確認待ちの人は、ログインなしとして扱う（作ったメンバーは紐づかない）", async () => {
-    const uid = newUid();
-    const { groupId } = await create("ゆう", { token: await token(uid, { email_verified: false }) });
-    const linked = await env.DB.prepare("SELECT uid FROM members WHERE group_id = ?").bind(groupId).first<{ uid: string | null }>();
-    expect(linked!.uid).toBeNull();
-    expect(await env.DB.prepare("SELECT 1 FROM accounts WHERE uid = ?").bind(uid).first()).toBeNull();
-  });
-
-  it("確認待ちの人が参加しても、紐づかず、アカウントの行も作られない", async () => {
-    const uid = newUid();
-    const { groupId } = await create();
-    const r = await join(groupId, "たろう", await token(uid, { email_verified: false }));
-    expect(r.status).toBe(201);
-    const m = await env.DB.prepare("SELECT uid FROM members WHERE id = ?").bind(r.json.memberId).first<{ uid: string | null }>();
-    expect(m!.uid).toBeNull();
-    expect(await env.DB.prepare("SELECT 1 FROM accounts WHERE uid = ?").bind(uid).first()).toBeNull();
-  });
-});
 
 describe("目印のヘッダー（よそのサイトから読ませない）", () => {
   it("X-Tabikaigi がなければ、D1 を読まずに 400", async () => {
@@ -120,7 +25,7 @@ describe("Turnstile（Q-031）", () => {
     expect(none).toEqual({ status: 403, json: { error: "turnstile_failed" } });
     const { groupId } = await create();
     const bad = await call("POST", `/api/groups/${groupId}/members`, { body: { name: "たろう", turnstileToken: "ng" } });
-    expect(bad.status).toBe(403);
+    expect(bad).toEqual({ status: 403, json: { error: "turnstile_failed" } });
   });
 
   it("Cloudflare に聞けないときは、通さずに 503", async () => {
@@ -137,28 +42,22 @@ describe("Turnstile（Q-031）", () => {
 });
 
 describe("グループを作る（REQ-001）", () => {
-  it("ログインなしで作ると、作成者のメンバー（紐づいていない）になる", async () => {
+  it("作った人は最初のメンバー（色 0）になる。作成者の印は持たない（ADR 0013）", async () => {
     const { groupId, memberId } = await create("ゆう");
     expect(groupId).toMatch(/^[A-Za-z0-9]{22}$/);
     const r = await call("GET", `/api/groups/${groupId}`);
-    expect(r.json.members).toEqual([{ id: memberId, name: "ゆう", color: 0, isOwner: true, linked: false, isMe: false }]);
-  });
-
-  it("ログイン済みで作ると、作成者のメンバーが最初から紐づく", async () => {
-    const t = await token(newUid());
-    const { groupId } = await create("ゆう", { token: t });
-    const r = await call("GET", `/api/groups/${groupId}`, { token: t });
-    expect(r.json.members[0]).toMatchObject({ isOwner: true, linked: true, isMe: true });
+    expect(r.json.members).toEqual([{ id: memberId, name: "ゆう", color: 0 }]);
   });
 
   it("名前とグループ名の決まり（REQ-009・REQ-010）：空白だけ、長すぎは 400", async () => {
     const post = (groupName: unknown, name: unknown) => call("POST", "/api/groups", { body: { groupName, name, turnstileToken: "ok" } });
-    expect((await post("旅行部", "　 ")).status).toBe(400);
-    expect((await post("旅行部", "あ".repeat(11))).status).toBe(400);
-    expect((await post("あ".repeat(21), "ゆう")).status).toBe(400);
-    expect((await post(123, "ゆう")).status).toBe(400);
+    const badName = { status: 400, json: { error: "bad_name" } };
+    expect(await post("旅行部", "　 ")).toEqual(badName);
+    expect(await post("旅行部", "あ".repeat(11))).toEqual(badName);
+    expect(await post("あ".repeat(21), "ゆう")).toEqual(badName);
+    expect(await post(123, "ゆう")).toEqual(badName);
     // 見た目は1文字でも、記号を何百も重ねた名前は 400（データベースのエラーにしない）
-    expect((await post("旅行部", "a" + "́".repeat(300))).json).toEqual({ error: "bad_name" });
+    expect(await post("旅行部", "a" + "́".repeat(300))).toEqual(badName);
     expect((await post("旅行部", "👨‍👩‍👧".repeat(10))).status).toBe(201);
   });
 
@@ -168,22 +67,12 @@ describe("グループを作る（REQ-001）", () => {
     expect(r.json.members[0].name).toBe("ゆう");
   });
 
-  it("11グループ目は 409 group_limit（NFR-006 (13)）", async () => {
-    const t = await token(newUid());
-    for (let i = 0; i < 10; i++) await create("ゆう", { token: t });
-    const r = await call("POST", "/api/groups", { token: t, body: { groupName: "11個目", name: "ゆう", turnstileToken: "ok" } });
-    expect(r).toEqual({ status: 409, json: { error: "group_limit" } });
-    // batch ごと取り消され、0人のグループが残らない（作成者の印のトリガーの前提）
-    const left = await env.DB.prepare("SELECT count(*) AS n FROM groups WHERE name = '11個目'").first<{ n: number }>();
-    expect(left!.n).toBe(0);
-  });
-
   it("大きな本文は読まずに断る", async () => {
     const r = await call("POST", "/api/groups", {
       rawBody: JSON.stringify({ groupName: "旅行部", name: "ゆう", turnstileToken: "ok", pad: "x".repeat(10_000) }),
       headers: { "Content-Type": "application/json" },
     });
-    expect(r.status).toBe(413);
+    expect(r).toEqual({ status: 413, json: { error: "bad_request" } });
   });
 });
 
@@ -209,31 +98,42 @@ describe("参加する（REQ-004・REQ-005・REQ-008）", () => {
     expect(await join(groupId, "21人目")).toEqual({ status: 409, json: { error: "group_full" } });
   });
 
-  it("満員でも、すでにいる名前なら group_full でなく name_taken を返す（戻ってくる人：REQ-005・REQ-012）", async () => {
-    const uid = `uid-full-${Date.now()}`;
-    const t = await token(uid);
-    const { groupId, memberId } = await create("ゆう", { token: t });
+  it("参加の SQL の人数の確かめだけでも、21人目を 409 group_full で断る（トリガーを外して確かめる：NFR-006 (8)）", async () => {
+    const { groupId } = await create();
     for (let i = 2; i <= 20; i++) expect((await join(groupId, `メンバー${i}`)).status).toBe(201);
-    expect(await join(groupId, "メンバー2")).toMatchObject({ status: 409, json: { error: "name_taken", linked: false } });
-    expect(await join(groupId, "ゆう")).toEqual({
-      status: 409,
-      json: { error: "name_taken", memberId, linked: true },
-    });
-    // 全角半角だけが違う名前も、同じ名前として扱う
-    expect(await join(groupId, "ﾒﾝﾊﾞｰ2")).toMatchObject({ status: 409, json: { error: "name_taken" } });
-    // 自分のメンバーがいる人が別の名前で入ろうとしたら already_member（満員より先に）
-    expect(await join(groupId, "べつの名前", t)).toEqual({ status: 409, json: { error: "already_member" } });
+    // 後ろの守り（members_group_full トリガー）を一時的に外す。作り直す SQL は migrations/0001_init.sql と同じ
+    await env.DB.prepare("DROP TRIGGER members_group_full").run();
+    try {
+      expect(await join(groupId, "21人目")).toEqual({ status: 409, json: { error: "group_full" } });
+    } finally {
+      await env.DB.prepare(
+        `CREATE TRIGGER members_group_full
+BEFORE INSERT ON members
+WHEN (SELECT count(*) FROM members WHERE group_id = NEW.group_id) >= 20
+BEGIN
+  SELECT RAISE(ABORT, 'group_full');
+END`,
+      ).run();
+    }
     const count = await env.DB.prepare("SELECT count(*) AS n FROM members WHERE group_id = ?").bind(groupId).first<{ n: number }>();
     expect(count!.n).toBe(20);
   });
 
-  it("満員のとき、よそのグループの同じ名前・よそのグループの自分のメンバーでは group_full（グループの範囲で読み直す）", async () => {
-    const t = await token(`uid-full-other-${Date.now()}`);
-    const other = await create("たろう", { token: t });
+  it("満員でも、すでにいる名前なら group_full でなく name_taken とその人の番号を返す（戻ってくる人：REQ-005・REQ-012）", async () => {
+    const { groupId, memberId } = await create("ゆう");
+    for (let i = 2; i <= 20; i++) expect((await join(groupId, `メンバー${i}`)).status).toBe(201);
+    expect(await join(groupId, "ゆう")).toEqual({ status: 409, json: { error: "name_taken", memberId } });
+    // 全角半角だけが違う名前も、同じ名前として扱う
+    expect(await join(groupId, "ﾒﾝﾊﾞｰ2")).toMatchObject({ status: 409, json: { error: "name_taken" } });
+    const count = await env.DB.prepare("SELECT count(*) AS n FROM members WHERE group_id = ?").bind(groupId).first<{ n: number }>();
+    expect(count!.n).toBe(20);
+  });
+
+  it("満員のとき、よそのグループにだけいる名前では group_full（グループの範囲で読み直す）", async () => {
+    const other = await create("たろう");
     const { groupId } = await create("ゆう");
     for (let i = 2; i <= 20; i++) expect((await join(groupId, `メンバー${i}`)).status).toBe(201);
     expect(await join(groupId, "たろう")).toEqual({ status: 409, json: { error: "group_full" } });
-    expect(await join(groupId, "じろう", t)).toEqual({ status: 409, json: { error: "group_full" } });
     expect(other.memberId).toBeGreaterThan(0);
   });
 
@@ -251,14 +151,9 @@ describe("参加する（REQ-004・REQ-005・REQ-008）", () => {
       const routes: [string, string][] = [
         ["PUT", "/members/1/visits/13"],
         ["DELETE", "/members/1/visits/13"],
-        ["PUT", "/my-visits/13"],
-        ["DELETE", "/my-visits/13"],
-        ["POST", "/members/1/link"],
-        ["PUT", "/members/1/name"],
         ["POST", "/members/1/leave"],
         ["DELETE", "/members/1"],
         ["PUT", "/name"],
-        ["PUT", "/manage-by"],
         ["DELETE", ""],
       ];
       for (const [method, rest] of routes) {
@@ -321,60 +216,36 @@ describe("参加する（REQ-004・REQ-005・REQ-008）", () => {
     expect(row).toEqual({ name: "さぶろう" });
   });
 
-  it("同じ名前（全角半角・大文字小文字の違いも同じ）は 409 name_taken と、その人の番号と紐づいているか（REQ-011・REQ-012）", async () => {
+  it("同じ名前（全角半角・大文字小文字の違いも同じ）は 409 name_taken と、その人の番号（REQ-011・REQ-012）", async () => {
     const { groupId, memberId } = await create("Yu");
-    expect(await join(groupId, "ｙｕ")).toEqual({ status: 409, json: { error: "name_taken", memberId, linked: false } });
-  });
-
-  it("紐づいたメンバーと同じ名前は、linked: true（ほかの人は入れない：REQ-013）", async () => {
-    const t = await token(newUid());
-    const { groupId, memberId } = await create("ゆう", { token: t });
-    expect((await join(groupId, "ゆう")).json).toEqual({ error: "name_taken", memberId, linked: true });
-  });
-
-  it("ログイン済みで参加すると紐づく。同じグループに2人目は 409 already_member（NFR-006 (9)）", async () => {
-    const t = await token(newUid());
-    const { groupId } = await create("ゆう");
-    expect((await join(groupId, "たろう", t)).status).toBe(201);
-    expect(await join(groupId, "じろう", t)).toEqual({ status: 409, json: { error: "already_member" } });
-  });
-
-  it("10グループに入っている人は、11グループ目に参加できない（NFR-006 (13)）", async () => {
-    const t = await token(newUid());
-    for (let i = 0; i < 10; i++) await create("ゆう", { token: t });
-    const { groupId } = await create("はなこ");
-    expect(await join(groupId, "たろう", t)).toEqual({ status: 409, json: { error: "group_limit" } });
+    expect(await join(groupId, "ｙｕ")).toEqual({ status: 409, json: { error: "name_taken", memberId } });
   });
 });
 
 describe("グループを開く", () => {
-  it("ほかのメンバーの uid を返さない。自分かどうかだけ（NFR-007）", async () => {
-    const uidA = newUid();
-    const tA = await token(uidA);
-    const { groupId } = await create("ゆう", { token: tA });
-    await join(groupId, "たろう", await token(newUid()));
-    const r = await call("GET", `/api/groups/${groupId}`, { token: tA });
-    expect(JSON.stringify(r.json)).not.toContain("uid-");
-    expect(r.json.members.map((m: { isMe: boolean; linked: boolean }) => [m.isMe, m.linked])).toEqual([
-      [true, true],
-      [false, true],
-    ]);
-  });
-
-  it("紐づいたメンバーの「行った」はアカウントから、ログインなしのメンバーの「行った」はメンバーから読む", async () => {
-    const t = await token(newUid());
-    const { groupId, memberId: me } = await create("ゆう", { token: t });
+  it("応答は group.name、members（id・name・color を参加した順）、visits だけ（api.md の「グループを開いたときの応答」）", async () => {
+    const { groupId, memberId: yu } = await create("ゆう", { groupName: "開く部" });
     const taro = (await join(groupId, "たろう")).json.memberId as number;
-    await call("PUT", `/api/groups/${groupId}/my-visits/13`, { token: t });
     await call("PUT", `/api/groups/${groupId}/members/${taro}/visits/1`);
+    await call("PUT", `/api/groups/${groupId}/members/${yu}/visits/13`);
+    // よそのグループの「行った」は混ざらない
+    const other = await create("じろう");
+    await call("PUT", `/api/groups/${other.groupId}/members/${other.memberId}/visits/47`);
     const r = await call("GET", `/api/groups/${groupId}`);
-    expect(r.json.visits).toEqual(
-      expect.arrayContaining([
-        { memberId: me, pref: 13 },
-        { memberId: taro, pref: 1 },
-      ]),
-    );
-    expect(r.json.visits).toHaveLength(2);
+    expect(r).toEqual({
+      status: 200,
+      json: {
+        group: { name: "開く部" },
+        members: [
+          { id: yu, name: "ゆう", color: 0 },
+          { id: taro, name: "たろう", color: 1 },
+        ],
+        visits: [
+          { memberId: yu, pref: 13 },
+          { memberId: taro, pref: 1 },
+        ],
+      },
+    });
   });
 
   it("ないグループは 404", async () => {
@@ -403,18 +274,9 @@ describe("グループを開く", () => {
       await env.DB.prepare("DROP TRIGGER test_block_touch").run();
     }
   });
-
-  it("「作成者のみ」は、作成者のメンバーがいるときだけ効く（REQ-051）", async () => {
-    const { groupId, memberId } = await create();
-    await join(groupId, "たろう");
-    await env.DB.prepare("UPDATE groups SET manage_by = 'owner' WHERE id = ?").bind(groupId).run();
-    expect((await call("GET", `/api/groups/${groupId}`)).json.group).toMatchObject({ manageBy: "owner", ownerOnly: true });
-    await env.DB.prepare("DELETE FROM members WHERE id = ?").bind(memberId).run();
-    expect((await call("GET", `/api/groups/${groupId}`)).json.group).toMatchObject({ manageBy: "owner", ownerOnly: false });
-  });
 });
 
-describe("ログインなしのメンバーの「行った」（REQ-016・REQ-023）", () => {
+describe("メンバーの「行った」（REQ-016・REQ-023）", () => {
   it("付けて、2回付けても成功、外せる", async () => {
     const { groupId, memberId } = await create();
     const path = `/api/groups/${groupId}/members/${memberId}/visits/13`;
@@ -425,26 +287,36 @@ describe("ログインなしのメンバーの「行った」（REQ-016・REQ-02
     expect((await call("GET", `/api/groups/${groupId}`)).json.visits).toEqual([]);
   });
 
-  it("紐づいたメンバーの「行った」は、メンバーの番号では書けない（NFR-006 (1)）", async () => {
-    const t = await token(newUid());
-    const { groupId, memberId } = await create("ゆう", { token: t });
-    // 本人のトークンを付けても、ほかの人でも、メンバーの番号では書けない（アカウントの「行った」に書く）
-    expect(await call("PUT", `/api/groups/${groupId}/members/${memberId}/visits/13`)).toEqual({
-      status: 403,
-      json: { error: "member_linked" },
-    });
-    expect((await call("PUT", `/api/groups/${groupId}/members/${memberId}/visits/13`, { token: t })).status).toBe(403);
-    const rows = await env.DB.prepare("SELECT count(*) AS n FROM member_visits WHERE member_id = ?").bind(memberId).first<{ n: number }>();
-    expect(rows!.n).toBe(0);
+  it("同じグループのほかのメンバーの「行った」も付け外しできる（信頼ベース：REQ-022・REQ-023）", async () => {
+    const { groupId } = await create();
+    const taro = (await join(groupId, "たろう")).json.memberId as number;
+    const path = `/api/groups/${groupId}/members/${taro}/visits/5`;
+    expect(await call("PUT", path)).toEqual({ status: 200, json: { ok: true } });
+    expect((await call("GET", `/api/groups/${groupId}`)).json.visits).toEqual([{ memberId: taro, pref: 5 }]);
+    expect(await call("DELETE", path)).toEqual({ status: 200, json: { ok: true } });
+    expect((await call("GET", `/api/groups/${groupId}`)).json.visits).toEqual([]);
   });
 
-  it("別のグループのメンバーの番号では書けない（404）", async () => {
+  it("ほかのグループのメンバーの番号では、付けも外しもできない（404 member_not_found：NFR-006 (14)）", async () => {
     const a = await create();
     const b = await create();
+    const count = async () =>
+      (await env.DB.prepare("SELECT count(*) AS n FROM member_visits WHERE member_id = ? AND pref = 13")
+        .bind(a.memberId)
+        .first<{ n: number }>())!.n;
+    // b のグループIDで、a のメンバーの番号に付ける → 書かれない
     expect(await call("PUT", `/api/groups/${b.groupId}/members/${a.memberId}/visits/13`)).toEqual({
       status: 404,
       json: { error: "member_not_found" },
     });
+    expect(await count()).toBe(0);
+    // a のメンバーが付けた県を、b のグループIDで外す → 消えない
+    expect((await call("PUT", `/api/groups/${a.groupId}/members/${a.memberId}/visits/13`)).status).toBe(200);
+    expect(await call("DELETE", `/api/groups/${b.groupId}/members/${a.memberId}/visits/13`)).toEqual({
+      status: 404,
+      json: { error: "member_not_found" },
+    });
+    expect(await count()).toBe(1);
   });
 
   it("ないグループは group_not_found、いないメンバーは member_not_found", async () => {
@@ -456,65 +328,40 @@ describe("ログインなしのメンバーの「行った」（REQ-016・REQ-02
   it("県の番号とメンバーの番号の形が違えば 400（0、48、小数、文字）", async () => {
     const { groupId, memberId } = await create();
     for (const pref of ["0", "48", "13.5", "1e1", "abc", "013"]) {
-      expect((await call("PUT", `/api/groups/${groupId}/members/${memberId}/visits/${pref}`)).status).toBe(400);
+      expect(await call("PUT", `/api/groups/${groupId}/members/${memberId}/visits/${pref}`)).toEqual({
+        status: 400,
+        json: { error: "bad_request" },
+      });
     }
-    expect((await call("PUT", `/api/groups/${groupId}/members/1.5/visits/13`)).status).toBe(400);
-    expect((await call("PUT", `/api/groups/${groupId}/members/-1/visits/13`)).status).toBe(400);
-  });
-});
-
-describe("ログイン済みの人の「行った」（REQ-030・NFR-006 (2)）", () => {
-  it("ログインしていなければ 401 login_required", async () => {
-    const { groupId } = await create();
-    expect(await call("PUT", `/api/groups/${groupId}/my-visits/13`)).toEqual({ status: 401, json: { error: "login_required" } });
-  });
-
-  it("確認待ちの人は書けない（NFR-006 (10)）", async () => {
-    const uid = newUid();
-    const t = await token(uid);
-    const { groupId } = await create("ゆう", { token: t });
-    const unverified = await token(uid, { email_verified: false });
-    expect(await call("PUT", `/api/groups/${groupId}/my-visits/13`, { token: unverified })).toEqual({
-      status: 401,
-      json: { error: "login_required" },
-    });
-  });
-
-  it("自分のアカウントにだけ書く。全グループで共有される", async () => {
-    const uid = newUid();
-    const t = await token(uid);
-    const a = await create("ゆう", { token: t });
-    const b = await create("ゆう", { token: t });
-    expect((await call("PUT", `/api/groups/${a.groupId}/my-visits/47`, { token: t })).status).toBe(200);
-    expect((await call("GET", `/api/groups/${b.groupId}`)).json.visits).toEqual([{ memberId: b.memberId, pref: 47 }]);
-  });
-
-  it("自分のメンバーがいないグループからは書けない（404 member_not_found）", async () => {
-    const t = await token(newUid());
-    await create("ゆう", { token: t }); // アカウントはある
-    const other = await create("はなこ");
-    expect(await call("PUT", `/api/groups/${other.groupId}/my-visits/13`, { token: t })).toEqual({
-      status: 404,
-      json: { error: "member_not_found" },
-    });
-  });
-
-  it("ほかの人の「行った」は、自分のトークンでは変えられない（書くのは自分の uid の行だけ）", async () => {
-    const uidA = newUid();
-    const tA = await token(uidA);
-    const tB = await token(newUid());
-    const { groupId } = await create("ゆう", { token: tA });
-    await join(groupId, "たろう", tB);
-    await call("PUT", `/api/groups/${groupId}/my-visits/13`, { token: tA });
-    await call("DELETE", `/api/groups/${groupId}/my-visits/13`, { token: tB });
-    const row = await env.DB.prepare("SELECT 1 FROM account_visits WHERE uid = ? AND pref = 13").bind(uidA).first();
-    expect(row).not.toBeNull();
+    expect(await call("PUT", `/api/groups/${groupId}/members/1.5/visits/13`)).toEqual({ status: 400, json: { error: "bad_request" } });
+    expect(await call("PUT", `/api/groups/${groupId}/members/-1/visits/13`)).toEqual({ status: 400, json: { error: "bad_request" } });
   });
 });
 
 describe("そのほか", () => {
   it("知らない API は JSON の 404（api.md の共通の決まり）", async () => {
     expect(await call("GET", "/api/nothing")).toEqual({ status: 404, json: { error: "not_found" } });
+  });
+
+  it("ログインの入口はない。Authorization を付けても扱いは変わらない（ADR 0013）", async () => {
+    const { groupId, memberId } = await create();
+    const gone: [string, string][] = [
+      ["PUT", `/api/groups/${groupId}/my-visits/13`],
+      ["DELETE", `/api/groups/${groupId}/my-visits/13`],
+      ["POST", `/api/groups/${groupId}/members/${memberId}/link`],
+      ["PUT", `/api/groups/${groupId}/members/${memberId}/name`],
+      ["PUT", `/api/groups/${groupId}/manage-by`],
+      ["GET", "/api/me/groups"],
+      ["GET", "/api/me/visits"],
+      ["DELETE", "/api/me"],
+    ];
+    for (const [method, path] of gone) {
+      const res = await call(method, path, method === "GET" ? {} : { body: {} });
+      expect({ method, path, ...res }).toEqual({ method, path, status: 404, json: { error: "not_found" } });
+    }
+    // 形の誤った証明書を付けても、断られずにふつうに通る（確かめる仕組みがない）
+    const r = await call("PUT", `/api/groups/${groupId}/members/${memberId}/visits/13`, { headers: { Authorization: "Bearer broken" } });
+    expect(r).toEqual({ status: 200, json: { ok: true } });
   });
 
   it("データベースが落ちたときは 503 の一時的な失敗（NFR-009・NFR-012）", async () => {
