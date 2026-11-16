@@ -11,13 +11,19 @@ import {
   BAD_NAME,
   createErrorText,
   GROUP_DELETED,
+  GROUP_FULL,
+  joinedText,
   joinErrorOf,
   LOAD_FAILED,
   loadErrorOf,
   RATE_LIMITED,
   renameErrorOf,
   SAVE_FAILED,
+  pickedText,
   switchMemberNote,
+  takenButton,
+  takenText,
+  TAKEN_OTHER,
   TURNSTILE_FAILED,
   UNAVAILABLE,
   visitErrorOf,
@@ -111,7 +117,7 @@ describe("joinErrorOf：参加の失敗のときの動き", () => {
     expect(joinErrorOf(refused(403, "turnstile_failed"))).toEqual({ kind: "form", text: TURNSTILE_FAILED });
   });
 
-  it("404 group_not_found は削除された、409 group_full は満員のエラーの画面", () => {
+  it("404 group_not_found は削除された、409 group_full は満員（読み直して参加の画面に戻す）", () => {
     expect(joinErrorOf(refused(404, "group_not_found"))).toEqual({ kind: "deleted" });
     expect(joinErrorOf(refused(409, "group_full"))).toEqual({ kind: "full" });
   });
@@ -174,7 +180,7 @@ describe("renameErrorOf：グループ名の変更が失敗したとき（screen
 
 describe("switchMemberNote：「ほかのメンバーに切り替える」に添える一言（REQ-056）", () => {
   it("自分の名前を入れる", () => {
-    expect(switchMemberNote("あゆ")).toBe("あゆさんのデータは消えません。名前の入力に戻ります");
+    expect(switchMemberNote("あゆ")).toBe("あゆさんのデータは消えません。名前を選ぶ画面に戻ります");
   });
 });
 
@@ -222,5 +228,25 @@ describe("leaveErrorOf・deleteMemberErrorOf・deleteGroupErrorOf：退出・メ
 
   it("メンバーの削除の知らせは「（名前）さんを削除しました」", () => {
     expect(memberDeletedText("けん")).toBe("けんさんを削除しました");
+  });
+});
+
+describe("参加の画面の文（screens の「参加の画面」：2026-11-09 にユーザーと決めた）", () => {
+  it("新しい名前で参加できたときは、グループ名を入れる", () => {
+    expect(joinedText("北海道旅行")).toBe("北海道旅行 に参加しました");
+  });
+
+  it("名前を選んで入ったときは、選んだ人の名前と、選び直す場所を出す", () => {
+    expect(pickedText("あゆ")).toBe("あゆさんとして開きました。違うときはメニューの『メンバーを変更する』から選び直せます");
+  });
+
+  it("409 name_taken は、その人の名前で文とボタンを作る（REQ-012）", () => {
+    expect(takenText("あゆ")).toBe("あゆさんはもういます。あなたなら、そのまま入れます");
+    expect(takenButton("あゆ")).toBe("あゆさんとして入る");
+    expect(TAKEN_OTHER).toBe("別の人なら、名前を変えてください");
+  });
+
+  it("満員の一言（REQ-005）", () => {
+    expect(GROUP_FULL).toBe("20人いるので、新しくは参加できません");
   });
 });

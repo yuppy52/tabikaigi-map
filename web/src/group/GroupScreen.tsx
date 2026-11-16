@@ -3,20 +3,21 @@ import { useLocation, useNavigate } from "react-router";
 import { memberColor } from "../data/memberColors";
 import { failureOf } from "../data/api";
 import { applyVisit, fetchGroup, forgetMember, readRememberedMember, rememberMember, saveVisit } from "../data/store";
-import type { GroupView } from "../data/types";
+import type { GroupMember, GroupView } from "../data/types";
 import { FooterLinks, MapCredit } from "../Footer";
 import { connectRoom, type RoomConnection } from "../data/room";
 import {
   backgroundLoadErrorOf,
   GROUP_DELETED,
-  GROUP_FULL,
   LOAD_FAILED,
   loadErrorOf,
   LOST_MEMBER,
   memberRemovedText,
+  pickedText,
   REALTIME_DOWN,
   REALTIME_RELOAD,
   RELOAD,
+  TOAST_MS,
   visitErrorOf,
 } from "../messages";
 import type { CreatedState } from "../sheets/CreateGroupScreen";
@@ -64,15 +65,12 @@ type Panel = "menu" | "settings" | null;
 const PREF_NAMES = new Map(PREFS.map((p) => [p.id, p.name]));
 const prefName = (id: number) => PREF_NAMES.get(id) ?? "";
 
-// 知らせ（モックの toast）を出しておく時間
-const TOAST_MS = 1800;
-
 // グループの画面（screens の「グループの画面の中身」。見た目と文はモックのまま）。
 // グループ（API）と、端末が覚えているメンバーを読んでから描く。「行った」の付け外しは、押したらすぐ仮の表示にして保存し、
 // 失敗したら最後に保存できた状態に戻す（screens の「知らせ」）。
 // 端末がこのグループのメンバーを覚えていなければ、上に参加のシートを出す（後ろの画面は押せない。モックの onboarding）。
 // 覚えていたメンバーがグループにいなければ、その覚えを忘れて、参加のシートに「前回の名前が見つかりませんでした」を出す（REQ-025）。
-// 開けなかったとき（削除された、満員、通信エラー、いまは使えない）はエラーの画面（文と行き先は messages の loadErrorOf）
+// 開けなかったとき（削除された、通信エラー、いまは使えない）はエラーの画面（文と行き先は messages の loadErrorOf）
 export function GroupScreen({ groupId }: { groupId: string }) {
   const [loaded, setLoaded] = useState<Loaded>({ status: "loading" });
   // 「もう一度読み込む」を押した回数。変わったら読み直す
@@ -127,8 +125,8 @@ export function GroupScreen({ groupId }: { groupId: string }) {
     };
   }, [groupId, createdMemberId, attempt, showLoadError]);
 
-  // 参加できたら、グループを読み直して（新しいメンバーを入れるため）、そのメンバーとして「わたし」を開く。
-  // 読み直したときにその人が消えていた（「続ける」を押すまでの間に、ほかの端末で起きた）ときは、参加のシートに戻す。
+  // 新しい名前で参加できたら、グループを読み直して（新しいメンバーを入れるため）、そのメンバーとして「わたし」を開く。
+  // 読み直したときにその人が消えていた（参加してから読み直すまでの間に、ほかの端末で起きた）ときは、参加のシートに戻す。
   // 端末に覚える名前は、API に保存された名前にそろえる（入れた名前と全角・半角などが違うことがある）
   const onJoined = (memberId: number, toast: string) => {
     fetchGroup(groupId).then((view) => {
@@ -141,10 +139,28 @@ export function GroupScreen({ groupId }: { groupId: string }) {
     }, showLoadError);
   };
 
-  // 参加できないと分かったとき：削除された（覚えを忘れる）、満員
-  const onGone = (why: "deleted" | "full") => {
-    if (why === "deleted") void forgetMember(groupId);
-    setLoaded({ status: "failed", text: why === "deleted" ? GROUP_DELETED : GROUP_FULL, retry: false });
+  // 参加のシートで、一覧の名前か「（名前）さんとして入る」を押したとき（REQ-012・REQ-024）：そのメンバーとして端末に覚え、
+  // いまの中身のまま「わたし」を開く（入るときには読み直さない。API も呼ばない）。名前は一覧の表示名を覚える（auth-flow の「端末が覚えるもの」）。
+  // 一覧を開いた後にその人が削除されていたら、入った後の読み直しで「（名前）さんはグループから削除されました」になる（screens の「参加の画面」）。
+  // 部屋は最初につながったときには読み直さないので、入った直後に裏で1回読み直す（失敗しても、いまの画面のまま）
+  const onPicked = (member: GroupMember) => {
+    void rememberMember(groupId, { memberId: member.id, name: member.name });
+    setLoaded((d) => (d.status === "ready" ? { ...d, meId: member.id, notice: null, toast: pickedText(member.name), invite: false } : d));
+    void reloadQuietly();
+  };
+
+  // 参加のシートから、グループを読み直す（409 name_taken で一覧にいない人が返った、409 group_full）。
+  // 参加のシートが出ている間（部屋にはつないでいない）だけ、一覧を入れ替える。読めなければ失敗で返す（どうするかは参加のシートが決める）
+  const reloadForJoin = (): Promise<GroupView> =>
+    fetchGroup(groupId).then((view) => {
+      setLoaded((d) => (d.status === "ready" && d.meId === null ? { ...d, view } : d));
+      return view;
+    });
+
+  // 参加しようとしたらグループが削除されていたとき：覚えを忘れて、エラーの画面
+  const onGone = () => {
+    void forgetMember(groupId);
+    setLoaded({ status: "failed", text: GROUP_DELETED, retry: false });
   };
 
   // 付け外しで、自分のメンバーが削除されたと分かったとき：覚えを忘れて、参加のシートに文を出す。
@@ -159,7 +175,7 @@ export function GroupScreen({ groupId }: { groupId: string }) {
   };
 
   // 付け外しで、グループが削除されたと分かったとき：覚えを忘れて、エラーの画面
-  const onDeleted = () => onGone("deleted");
+  const onDeleted = onGone;
 
   // 付け外しが画面の不具合で断られたとき：グループを読み直す（読めなければエラーの画面）
   const onReload = () => {
@@ -171,7 +187,7 @@ export function GroupScreen({ groupId }: { groupId: string }) {
     setLoaded((d) => (d.status === "ready" ? { ...d, view: { ...d.view, group: { ...d.view.group, name } } } : d));
   };
 
-  // 「ほかのメンバーに切り替える」（REQ-056）：確認は出さず、覚えを忘れて、参加（名前の入力）に移る。メンバーは消さない
+  // 「ほかのメンバーに切り替える」（REQ-056）：確認は出さず、覚えを忘れて、参加（名前を選ぶ画面）に移る。メンバーは消さない
   const onSwitchMember = () => {
     void forgetMember(groupId);
     setLoaded((d) => (d.status === "ready" ? { ...d, meId: null, notice: null, toast: null, invite: false } : d));
@@ -367,7 +383,10 @@ export function GroupScreen({ groupId }: { groupId: string }) {
           members={loaded.view.members}
           notice={loaded.notice}
           onJoined={onJoined}
+          onPicked={onPicked}
           onGone={onGone}
+          onReload={reloadForJoin}
+          onLoadError={showLoadError}
         />
       )}
     </>
