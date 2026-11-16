@@ -14,7 +14,6 @@ import {
   joinErrorOf,
   LOAD_FAILED,
   loadErrorOf,
-  OWNER_ONLY,
   RATE_LIMITED,
   renameErrorOf,
   SAVE_FAILED,
@@ -54,11 +53,8 @@ describe("loadErrorOf：グループを開けなかったとき", () => {
 });
 
 describe("visitErrorOf：「行った」の付け外しが失敗したとき", () => {
-  it("403 member_linked は、紐づいた文で参加のシート（覚えを忘れる）", () => {
-    expect(visitErrorOf(refused(403, "member_linked"), "ゆう")).toEqual({
-      kind: "rejoin",
-      text: "ゆうさんはアカウントに紐づきました。ログインして入ってください",
-    });
+  it("403 member_linked（ログインをやめて API が返さなくなった値）は、表にない値（「保存できませんでした」。参加のシートには移らない）", () => {
+    expect(visitErrorOf(refused(403, "member_linked"), "ゆう")).toEqual({ kind: "toast", text: SAVE_FAILED, reload: false });
   });
 
   it("404 member_not_found は、削除された文で参加のシート（REQ-048）", () => {
@@ -150,9 +146,8 @@ describe("renameErrorOf：グループ名の変更が失敗したとき（screen
     expect(renameErrorOf(refused(400, "bad_name"))).toEqual({ kind: "field", text: BAD_NAME });
   });
 
-  it("403 not_allowed は「作成者だけが変えられます」で、グループを読み直す", () => {
-    expect(renameErrorOf(refused(403, "not_allowed"))).toEqual({ kind: "toast", text: "作成者だけが変えられます", reload: true });
-    expect(OWNER_ONLY).toBe("作成者だけが変えられます");
+  it("403 not_allowed（ログインをやめて API が返さなくなった値）は、表にない値（「保存できませんでした」。読み直さない）", () => {
+    expect(renameErrorOf(refused(403, "not_allowed"))).toEqual({ kind: "toast", text: SAVE_FAILED, reload: false });
   });
 
   it("404 group_not_found は、削除のエラーの画面へ", () => {
@@ -184,11 +179,11 @@ describe("switchMemberNote：「ほかのメンバーに切り替える」に添
 });
 
 describe("leaveErrorOf・deleteMemberErrorOf・deleteGroupErrorOf：退出・メンバーの削除・グループの削除が失敗したとき", () => {
-  const all = [(f: Failure) => leaveErrorOf(f, "ゆう"), deleteMemberErrorOf, deleteGroupErrorOf];
+  const all = [(f: Failure) => leaveErrorOf(f), deleteMemberErrorOf, deleteGroupErrorOf];
 
   it("404 group_not_found：メンバーの削除は削除のエラーの画面へ。退出・グループの削除は、できたときと同じにトップへ（やり直したら、1回目で消えていた：仮の動き）", () => {
     expect(deleteMemberErrorOf(refused(404, "group_not_found"))).toEqual({ kind: "deleted" });
-    expect(leaveErrorOf(refused(404, "group_not_found"), "ゆう")).toEqual({ kind: "done" });
+    expect(leaveErrorOf(refused(404, "group_not_found"))).toEqual({ kind: "done" });
     expect(deleteGroupErrorOf(refused(404, "group_not_found"))).toEqual({ kind: "done" });
   });
 
@@ -209,25 +204,19 @@ describe("leaveErrorOf・deleteMemberErrorOf・deleteGroupErrorOf：退出・メ
     }
   });
 
-  it("メンバーの削除・グループの削除の 403 not_allowed は「作成者だけが変えられます」で、グループを読み直す", () => {
-    expect(deleteMemberErrorOf(refused(403, "not_allowed"))).toEqual({ kind: "toast", text: OWNER_ONLY, reload: true });
-    expect(deleteGroupErrorOf(refused(403, "not_allowed"))).toEqual({ kind: "toast", text: OWNER_ONLY, reload: true });
-  });
-
-  it("退出の 403 member_linked は、紐づいた文で参加のシート", () => {
-    expect(leaveErrorOf(refused(403, "member_linked"), "ゆう")).toEqual({
-      kind: "rejoin",
-      text: "ゆうさんはアカウントに紐づきました。ログインして入ってください",
-    });
+  it("403 not_allowed・member_linked（ログインをやめて API が返さなくなった値）は、3つとも表にない値（「保存できませんでした」。ダイアログは開いたまま）", () => {
+    for (const errorOf of all) {
+      expect(errorOf(refused(403, "not_allowed"))).toEqual({ kind: "toast", text: SAVE_FAILED, reload: false });
+      expect(errorOf(refused(403, "member_linked"))).toEqual({ kind: "toast", text: SAVE_FAILED, reload: false });
+    }
   });
 
   it("404 member_not_found は来ない応答（もういない人は API が 200 で返す）。来たら成功に見せず、表にない値（「保存できませんでした」）", () => {
-    expect(leaveErrorOf(refused(404, "member_not_found"), "ゆう")).toEqual({ kind: "toast", text: SAVE_FAILED, reload: false });
+    expect(leaveErrorOf(refused(404, "member_not_found"))).toEqual({ kind: "toast", text: SAVE_FAILED, reload: false });
     expect(deleteMemberErrorOf(refused(404, "member_not_found"))).toEqual({ kind: "toast", text: SAVE_FAILED, reload: false });
   });
 
-  it("退出は管理の操作ではないので、403 not_allowed は表にない値（「保存できませんでした」）。グループの削除の member_not_found も表にない値", () => {
-    expect(leaveErrorOf(refused(403, "not_allowed"), "ゆう")).toEqual({ kind: "toast", text: SAVE_FAILED, reload: false });
+  it("グループの削除の member_not_found も表にない値", () => {
     expect(deleteGroupErrorOf(refused(404, "member_not_found"))).toEqual({ kind: "toast", text: SAVE_FAILED, reload: false });
   });
 

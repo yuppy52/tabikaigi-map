@@ -11,7 +11,6 @@ type Props = {
 
 // メニューのシート（screens の「メニューの中身」、ワイヤーフレームの 7）。ヘッダーの自分の名前のボタンから開く。
 // 見出しはグループ名、その下に「（名前） として参加中」。項目はグループ設定・トップ・プライバシーポリシー・お問い合わせ。
-// 「ログイン」「グループ一覧」「マイページ」は、ログインの画面と一緒に Phase 3 で足す（2026-10-28）。
 // 背景を押すか Esc で閉じる（入れ物は Sheet）。リンクの行き先は一番下のリンク（Footer）と同じ
 export function MenuSheet({ groupName, myName, onSettings, onClose }: Props) {
   const titleId = useId();

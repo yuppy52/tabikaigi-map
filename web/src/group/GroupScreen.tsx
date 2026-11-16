@@ -14,7 +14,6 @@ import {
   loadErrorOf,
   LOST_MEMBER,
   memberRemovedText,
-  NAME_NEEDS_LOGIN,
   REALTIME_DOWN,
   REALTIME_RELOAD,
   RELOAD,
@@ -50,7 +49,7 @@ import { PrefSheet } from "./PrefSheet";
 
 type Tab = "mine" | "all" | "member";
 
-// 読み終わったときの中身。notice：参加のシートの一番上に出す文（REQ-025 の「前回の名前が見つかりませんでした」、紐づいた・削除された）。
+// 読み終わったときの中身。notice：参加のシートの一番上に出す文（REQ-025 の「前回の名前が見つかりませんでした」、削除された）。
 // toast：最初に出す知らせ（参加した直後）。invite：招待のシートを「グループができました」で開く（作った直後）
 type Ready = { status: "ready"; view: GroupView; meId: number | null; notice: string | null; toast: string | null; invite: boolean };
 // failed：エラーの画面（文と、「もう一度読み込む」を出すか）
@@ -129,7 +128,7 @@ export function GroupScreen({ groupId }: { groupId: string }) {
   }, [groupId, createdMemberId, attempt, showLoadError]);
 
   // 参加できたら、グループを読み直して（新しいメンバーを入れるため）、そのメンバーとして「わたし」を開く。
-  // 読み直したときにその人が消えていた・紐づいていた（「続ける」を押すまでの間に、ほかの端末で起きた）ときは、参加のシートに戻す。
+  // 読み直したときにその人が消えていた（「続ける」を押すまでの間に、ほかの端末で起きた）ときは、参加のシートに戻す。
   // 端末に覚える名前は、API に保存された名前にそろえる（入れた名前と全角・半角などが違うことがある）
   const onJoined = (memberId: number, toast: string) => {
     fetchGroup(groupId).then((view) => {
@@ -137,7 +136,7 @@ export function GroupScreen({ groupId }: { groupId: string }) {
       const me = view.members.find((m) => m.id === meId);
       if (me) void rememberMember(groupId, { memberId: me.id, name: me.name });
       else void forgetMember(groupId);
-      const notice = meId !== null ? null : lostMember ? LOST_MEMBER : NAME_NEEDS_LOGIN;
+      const notice = lostMember ? LOST_MEMBER : null;
       setLoaded({ status: "ready", view, meId, notice, toast: meId !== null ? toast : null, invite: false });
     }, showLoadError);
   };
@@ -148,7 +147,7 @@ export function GroupScreen({ groupId }: { groupId: string }) {
     setLoaded({ status: "failed", text: why === "deleted" ? GROUP_DELETED : GROUP_FULL, retry: false });
   };
 
-  // 付け外しで、自分のメンバーが紐づいた・削除されたと分かったとき：覚えを忘れて、参加のシートに文を出す。
+  // 付け外しで、自分のメンバーが削除されたと分かったとき：覚えを忘れて、参加のシートに文を出す。
   // 参加のシートの「参加中」に消された人が残らないように、グループを読み直して入れ替える（読めなければ、いまの一覧のまま）
   const onRejoin = (text: string) => {
     void forgetMember(groupId);
@@ -178,7 +177,7 @@ export function GroupScreen({ groupId }: { groupId: string }) {
     setLoaded((d) => (d.status === "ready" ? { ...d, meId: null, notice: null, toast: null, invite: false } : d));
   };
 
-  // 退出・グループの削除ができたとき（screens の「操作の後に開く画面」）：覚えを忘れて、トップに移る（ログインなしのため）。知らせは出さない。
+  // 退出・グループの削除ができたとき（screens の「操作の後に開く画面」）：覚えを忘れて、トップに移る。知らせは出さない。
   // トップはアプリの外のページなので、ページごと開き直す（ヘッダーの「トップへ」と同じ）
   // 移る途中か。自分で消したグループの「取り直して」が自分にも届くので、移る前に裏の読み直しが 404 で削除の画面を出さないようにする
   const leaving = useRef(false);
@@ -388,7 +387,7 @@ type BodyProps = {
   initialInvite: Invite;
   // 保存できたら、保存できた「行った」に入れる
   onSaved: (memberId: number, pref: number, visited: boolean) => void;
-  // 付け外しが断られたとき：自分のメンバーが紐づいた・削除された（参加のシートに文）、グループが削除された、画面の不具合（読み直す）
+  // 付け外しが断られたとき：自分のメンバーが削除された（参加のシートに文）、グループが削除された、画面の不具合（読み直す）
   onRejoin: (text: string) => void;
   onDeleted: () => void;
   onReload: () => void;
@@ -515,15 +514,6 @@ function GroupBody({
     setPanel(null);
     onSwitchMember();
   }, [onSwitchMember]);
-  // グループ設定の退出で、自分のメンバーが紐づいていたと分かったとき：シートを閉じてから、参加のシートに文を出す
-  const rejoinFromSettings = useCallback(
-    (text: string) => {
-      setPanel(null);
-      onRejoin(text);
-    },
-    [onRejoin],
-  );
-
   const fills =
     tab === "all"
       ? everyoneFills(byMember, showGap)
@@ -706,7 +696,6 @@ function GroupBody({
         <GroupSettingsSheet
           groupId={groupId}
           groupName={view.group.name}
-          ownerOnly={view.group.ownerOnly}
           members={members}
           meId={meId}
           myName={myName}
@@ -718,7 +707,6 @@ function GroupBody({
           onSwitchMember={switchMember}
           onLeftGroup={onLeftGroup}
           onMemberDeleted={onMemberDeleted}
-          onRejoin={rejoinFromSettings}
           onClose={closePanel}
         />
       )}

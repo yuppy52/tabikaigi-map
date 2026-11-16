@@ -73,7 +73,7 @@ const browserFetch: Fetch = (input, init) => fetch(input, init);
 const TIMEOUT_MS = 20_000;
 
 // API を1回呼ぶ。目印のヘッダー X-Tabikaigi: 1 をいつも付け、本文があれば JSON で送る（api の「共通の決まり」）。
-// ログインはまだないので Authorization は付けない。fetch が失敗したとき・本文を読み切れないとき・20秒たっても返ってこないときは通信エラー
+// ログインはないので Authorization は付けない。fetch が失敗したとき・本文を読み切れないとき・20秒たっても返ってこないときは通信エラー
 export async function callApi(method: string, path: string, body?: unknown, fetchFn: Fetch = browserFetch): Promise<ApiResult> {
   const headers: Record<string, string> = { "X-Tabikaigi": "1" };
   const init: RequestInit = { method, headers, signal: AbortSignal.timeout(TIMEOUT_MS) };

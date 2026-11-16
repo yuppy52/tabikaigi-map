@@ -74,26 +74,25 @@ export function applyVisit(visits: readonly Visit[], memberId: number, pref: num
   return visited ? [...rest, { memberId, pref }] : rest;
 }
 
-// グループを開いたときの応答（api の「グループを開いたときの応答」）を確かめて読む。形が違えば null。
-// API と画面の取り決めが食い違ったときに、画面の途中で止まらないように、使う値の型だけを見る
+// グループを開いたときの応答（api の「グループを開いたときの応答」：{ group: { name }, members: [{ id, name, color }], visits }）を確かめて読む。
+// 形が違えば null。API と画面の取り決めが食い違ったときに、画面の途中で止まらないように、使う値の型だけを見る（余分な値は読まずに捨てる）
 export function parseGroupView(body: unknown): GroupView | null {
   if (!isRecord(body) || !isRecord(body.group) || !Array.isArray(body.members) || !Array.isArray(body.visits)) return null;
-  const { name, manageBy, ownerOnly } = body.group;
-  if (typeof name !== "string" || (manageBy !== "everyone" && manageBy !== "owner") || typeof ownerOnly !== "boolean") return null;
+  const { name } = body.group;
+  if (typeof name !== "string") return null;
   const members: GroupMember[] = [];
   for (const m of body.members as unknown[]) {
     if (!isRecord(m)) return null;
-    const { id, name: mname, color, isOwner, linked, isMe } = m;
+    const { id, name: mname, color } = m;
     if (!isPositiveInt(id) || typeof mname !== "string" || !Number.isInteger(color)) return null;
-    if (typeof isOwner !== "boolean" || typeof linked !== "boolean" || typeof isMe !== "boolean") return null;
-    members.push({ id, name: mname, color: color as number, isOwner, linked, isMe });
+    members.push({ id, name: mname, color: color as number });
   }
   const visits: Visit[] = [];
   for (const v of body.visits as unknown[]) {
     if (!isRecord(v) || !isPositiveInt(v.memberId) || !isPref(v.pref)) return null;
     visits.push({ memberId: v.memberId, pref: v.pref });
   }
-  return { group: { name, manageBy, ownerOnly }, members, visits };
+  return { group: { name }, members, visits };
 }
 
 // グループを作ったときの応答（201 { groupId, memberId }）を読む。形が違えば null
@@ -104,7 +103,8 @@ export function parseCreated(body: unknown): CreatedGroup | null {
   return { groupId: body.groupId, memberId: body.memberId };
 }
 
-// 参加の応答を読む。201 { memberId } は入れた、409 name_taken { memberId, linked } は同じ名前の人がいた（api の「参加で同じ名前がいたとき」）。
+// 参加の応答を読む。201 { memberId } は入れた、409 name_taken { memberId } は同じ名前の人がいた（api の「参加で同じ名前がいたとき」）。
+// 番号がこのグループのメンバーかは、ここでは見ない（入った後の読み直しで、calc の resolveMe がいない番号を「見つからない」にする）。
 // それ以外は失敗の種類のまま返す。成功の形が違えば、表にない値（bad_response）の失敗にする
 export function parseJoined(r: ApiResult): { ok: true; result: JoinResult } | { ok: false; failure: Failure } {
   if (r.ok) {
@@ -113,8 +113,8 @@ export function parseJoined(r: ApiResult): { ok: true; result: JoinResult } | { 
   }
   const f = r.failure;
   if (f.kind === "refused" && f.status === 409 && f.error === "name_taken") {
-    const { memberId, linked } = f.body;
-    if (isPositiveInt(memberId) && typeof linked === "boolean") return { ok: true, result: { status: "name_taken", memberId, linked } };
+    const { memberId } = f.body;
+    if (isPositiveInt(memberId)) return { ok: true, result: { status: "name_taken", memberId } };
   }
   return { ok: false, failure: f };
 }
@@ -152,7 +152,7 @@ export async function createGroup(groupName: string, name: string, turnstileToke
 }
 
 // 新しいメンバーとして参加する（POST /api/groups/{groupId}/members：REQ-004）。入れたら、端末がそのメンバーを覚える。
-// 同じ名前の人がいれば（409 name_taken）、入れずにその人の番号と、紐づいているかを返す（画面が REQ-012・REQ-013 の文を出す）。
+// 同じ名前の人がいれば（409 name_taken）、入れずにその人の番号を返す（画面が REQ-012 の文を出す）。
 // turnstileToken はボット対策のトークン（1回しか使えない）
 export async function joinGroup(groupId: string, name: string, turnstileToken: string): Promise<JoinResult> {
   const mname = checkName(name, MEMBER_NAME_MAX);
@@ -175,7 +175,7 @@ export function forgetMember(groupId: string): Promise<void> {
   return Promise.resolve();
 }
 
-// ログインなしのメンバーの「行った」を付ける・外す（PUT・DELETE /api/groups/{groupId}/members/{memberId}/visits/{pref}：REQ-016・REQ-023）
+// メンバーの「行った」を付ける・外す（PUT・DELETE /api/groups/{groupId}/members/{memberId}/visits/{pref}：REQ-016・REQ-023）
 export async function saveVisit(groupId: string, memberId: number, pref: number, visited: boolean): Promise<void> {
   const r = await callApi(visited ? "PUT" : "DELETE", `${groupPath(groupId)}/members/${memberId}/visits/${pref}`);
   if (!r.ok) throw new ApiError(r.failure);

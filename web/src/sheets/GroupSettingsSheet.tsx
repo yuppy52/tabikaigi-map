@@ -11,7 +11,6 @@ import {
   GROUP_RENAMED,
   leaveErrorOf,
   memberDeletedText,
-  OWNER_ONLY,
   renameErrorOf,
   switchMemberNote,
   type RemoveErrorAction,
@@ -25,8 +24,6 @@ import { Sheet } from "./Sheet";
 type Props = {
   groupId: string;
   groupName: string;
-  // API の ownerOnly（「作成者のみ」が効いているか。manageBy ではなくこれで出し分ける：REQ-051）
-  ownerOnly: boolean;
   members: readonly GroupMember[];
   meId: number;
   myName: string;
@@ -35,7 +32,7 @@ type Props = {
   onToast: (text: string) => void;
   // グループ名を変えられたとき（保存した名前）。画面のグループ名を入れ替える
   onRenamed: (name: string) => void;
-  // 断られて、グループを読み直すとき（403 not_allowed、画面の不具合）
+  // 断られて、グループを読み直すとき（画面の不具合）
   onReload: () => void;
   // グループが削除されていたとき（覚えを忘れて、エラーの画面）
   onDeleted: () => void;
@@ -45,20 +42,17 @@ type Props = {
   onLeftGroup: () => void;
   // ほかのメンバーを削除できたとき（画面の一覧から消す。グループ設定のまま）
   onMemberDeleted: (memberId: number) => void;
-  // 退出で、自分のメンバーがほかの端末で紐づいていたとき（覚えを忘れて、参加のシートに text を出す）
-  onRejoin: (text: string) => void;
   onClose: () => void;
 };
 
 // グループ設定のシート（screens の「グループ設定の中身」、ワイヤーフレームの 8）。メニューの「グループ設定」から開く。
-// グループ名（［変更］で、その場で入力欄と［保存］［やめる］に変わる。シートは重ねない）、管理できる人（見せるだけ）、
+// グループ名（［変更］で、その場で入力欄と［保存］［やめる］に変わる。シートは重ねない）、
 // 自分以外のメンバーの一覧（各行に「削除」）、「ほかのメンバーに切り替える」、「退出する」「グループを削除する」（赤）。
-// 「作成者のみ」が効いていれば［変更］・「削除」・「グループを削除する」を出さず「作成者だけが変えられます」。
+// 管理の操作はメンバーなら誰でもできるので、いつも出す（permissions、REQ-046〜REQ-048）。
 // 消す操作は確認ダイアログ（ConfirmDialog）を出してから送る。背景を押すか Esc で閉じる（入れ物は Sheet）
 export function GroupSettingsSheet({
   groupId,
   groupName,
-  ownerOnly,
   members,
   meId,
   myName,
@@ -70,11 +64,10 @@ export function GroupSettingsSheet({
   onSwitchMember,
   onLeftGroup,
   onMemberDeleted,
-  onRejoin,
   onClose,
 }: Props) {
   const titleId = useId();
-  const { canManage, manageByLabel, others } = settingsView(ownerOnly, members, meId);
+  const { others } = settingsView(members, meId);
   // グループ名を入れ直しているか、入力欄の中身、入力欄の下の文、送っている途中か
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState("");
@@ -171,20 +164,18 @@ export function GroupSettingsSheet({
           ? deleteMember(groupId, target.member.id)
           : deleteGroup(groupId);
     request.then(succeeded, (err: unknown) => {
-      const action = removeErrorFor(target, failureOf(err), myName);
+      const action = removeErrorFor(target, failureOf(err));
       if (action.kind !== "done") finish();
       if (action.kind === "done") {
         // 退出・グループの削除で、グループがもうなかった：成功と同じにトップへ（仮の動き 2026-10-28）
         succeeded();
       } else if (action.kind === "toast") {
         onToast(action.text);
-        // 読み直すときは閉じる（設定が途中で変わっていて、ボタンが消えることがあるため）。やり直せる失敗は開いたまま
+        // 読み直すときは閉じる（画面の不具合で、いまの表示が古いことがあるため）。やり直せる失敗は開いたまま
         if (action.reload) {
           setConfirm(null);
           onReload();
         }
-      } else if (action.kind === "rejoin") {
-        onRejoin(action.text);
       } else {
         onDeleted();
       }
@@ -195,7 +186,7 @@ export function GroupSettingsSheet({
     confirm === null
       ? null
       : confirm.kind === "leave"
-        ? leaveConfirm(ownerOnly, members, meId)
+        ? leaveConfirm(members, meId)
         : confirm.kind === "member"
           ? deleteMemberConfirm(confirm.member)
           : deleteGroupConfirm(groupName, members.length);
@@ -206,7 +197,7 @@ export function GroupSettingsSheet({
         グループ設定
       </h2>
 
-      {editing && canManage ? (
+      {editing ? (
         <div ref={editRef}>
           <form onSubmit={onSubmit} noValidate>
             <NameField label="グループ名" value={draft} onChange={setDraft} placeholder="例：卒業旅行" error={nameError} />
@@ -223,17 +214,11 @@ export function GroupSettingsSheet({
       ) : (
         <div className="setrow">
           <span className="setval">グループ名：{groupName}</span>
-          {canManage && (
-            <button type="button" className="iconbtn" ref={changeRef} onClick={startEdit}>
-              変更
-            </button>
-          )}
+          <button type="button" className="iconbtn" ref={changeRef} onClick={startEdit}>
+            変更
+          </button>
         </div>
       )}
-      <div className="setrow">
-        <span className="setval">管理できる人：{manageByLabel}</span>
-      </div>
-      {!canManage && <p className="note">{OWNER_ONLY}</p>}
 
       {others.length > 0 && (
         <section className="setmembers" aria-labelledby={`${titleId}-members`}>
@@ -244,16 +229,14 @@ export function GroupSettingsSheet({
                 <span className="setval" id={`${titleId}-m${m.id}`}>
                   {m.name}
                 </span>
-                {canManage && (
-                  <button
-                    type="button"
-                    className="iconbtn danger-line"
-                    aria-describedby={`${titleId}-m${m.id}`}
-                    onClick={() => setConfirm({ kind: "member", member: m })}
-                  >
-                    削除
-                  </button>
-                )}
+                <button
+                  type="button"
+                  className="iconbtn danger-line"
+                  aria-describedby={`${titleId}-m${m.id}`}
+                  onClick={() => setConfirm({ kind: "member", member: m })}
+                >
+                  削除
+                </button>
               </li>
             ))}
           </ul>
@@ -265,16 +248,14 @@ export function GroupSettingsSheet({
       </button>
       <p className="note setnote">{switchMemberNote(myName)}</p>
 
-      {/* 消す操作（赤：NFR-017）。退出はいつも、グループの削除は管理できるときだけ */}
+      {/* 消す操作（赤：NFR-017） */}
       <div className="setdanger">
         <button type="button" className="primary danger-line" onClick={() => setConfirm({ kind: "leave" })}>
           退出する
         </button>
-        {canManage && (
-          <button type="button" className="primary danger-line" onClick={() => setConfirm({ kind: "group" })}>
-            グループを削除する
-          </button>
-        )}
+        <button type="button" className="primary danger-line" onClick={() => setConfirm({ kind: "group" })}>
+          グループを削除する
+        </button>
       </div>
 
       {confirm && confirmText && (
@@ -314,8 +295,8 @@ export function GroupSettingsSheet({
 type Removal = { kind: "leave" } | { kind: "member"; member: GroupMember } | { kind: "group" };
 
 // 操作ごとに、失敗の種類から動きを選ぶ（messages の leaveErrorOf・deleteMemberErrorOf・deleteGroupErrorOf）
-function removeErrorFor(target: Removal, f: Failure, myName: string): RemoveErrorAction {
-  if (target.kind === "leave") return leaveErrorOf(f, myName);
+function removeErrorFor(target: Removal, f: Failure): RemoveErrorAction {
+  if (target.kind === "leave") return leaveErrorOf(f);
   if (target.kind === "member") return deleteMemberErrorOf(f);
   return deleteGroupErrorOf(f);
 }
