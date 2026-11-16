@@ -9,9 +9,9 @@ describe("interpretResponse：応答を成功か失敗の種類にする", () =>
   });
 
   it("断った応答は、状態コードと error の値と、本文の残り（name_taken の memberId など）", () => {
-    expect(interpretResponse(409, '{"error":"name_taken","memberId":2,"linked":false}')).toEqual({
+    expect(interpretResponse(409, '{"error":"name_taken","memberId":2}')).toEqual({
       ok: false,
-      failure: { kind: "refused", status: 409, error: "name_taken", body: { error: "name_taken", memberId: 2, linked: false } },
+      failure: { kind: "refused", status: 409, error: "name_taken", body: { error: "name_taken", memberId: 2 } },
     });
     expect(interpretResponse(404, '{"error":"group_not_found"}')).toMatchObject({
       failure: { kind: "refused", status: 404, error: "group_not_found" },

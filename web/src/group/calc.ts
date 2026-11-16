@@ -24,11 +24,8 @@ export const REGIONS: readonly { name: string; prefs: readonly number[] }[] = [
   { name: "九州・沖縄", prefs: [40, 41, 42, 43, 44, 45, 46, 47] },
 ];
 
-// 自分のメンバーの番号。ログイン済みで紐づいたメンバー（isMe）を先に見て、なければ端末が覚えている番号。
-// 覚えている番号がグループにいなければ「自分はいない」（null）
+// 自分のメンバーの番号。端末が覚えている番号で決める。覚えている番号がグループにいなければ「自分はいない」（null）
 export function findMeId(members: readonly GroupMember[], rememberedId: number | null): number | null {
-  const linked = members.find((m) => m.isMe);
-  if (linked) return linked.id;
   return rememberedId !== null && members.some((m) => m.id === rememberedId) ? rememberedId : null;
 }
 
@@ -38,25 +35,19 @@ export function rememberedIsMissing(members: readonly GroupMember[], rememberedI
 }
 
 // グループを開いたときの自分のメンバー。meId：自分の番号（いなければ null で参加のシート）、lostMember：覚えを忘れて REQ-025 の文を出すか。
-// 1. ログイン済みで紐づいたメンバー（isMe）がいれば、その人
-// 2. 端末が覚えている番号がいなければ、忘れて「前回の名前が見つかりませんでした」（REQ-025）
-// 3. 覚えている番号のメンバーが紐づいていれば、覚えを消さずに参加のシート（2026-10-23 にメインが決めた仮の動き。
-//    ログインがない Phase 2 では起きない。REQ-025・REQ-035 の文は Phase 3 で作る）
-// 4. 覚えていなければ、グループ作成から渡された番号（端末に書けなかったときの代わり）。グループにいて紐づいていないときだけ使う
+// 1. 端末が覚えている番号がいれば、その人。いなければ、忘れて「前回の名前が見つかりませんでした」（REQ-025）
+// 2. 覚えていなければ、グループ作成から渡された番号（端末に書けなかったときの代わり）。グループにいるときだけ使う
 export function resolveMe(
   members: readonly GroupMember[],
   rememberedId: number | null,
   createdId: number | null,
 ): { meId: number | null; lostMember: boolean } {
-  const linked = members.find((m) => m.isMe);
-  if (linked) return { meId: linked.id, lostMember: false };
   if (rememberedId !== null) {
     const m = members.find((x) => x.id === rememberedId);
-    if (!m) return { meId: null, lostMember: true };
-    return { meId: m.linked ? null : m.id, lostMember: false };
+    return m ? { meId: m.id, lostMember: false } : { meId: null, lostMember: true };
   }
   const created = members.find((x) => x.id === createdId);
-  return { meId: created && !created.linked ? created.id : null, lostMember: false };
+  return { meId: created ? created.id : null, lostMember: false };
 }
 
 // 招待URL（REQ-002）。LINE のアプリ内ブラウザで開いても外部ブラウザに移るように ?openExternalBrowser=1 を付ける（auth-flow の「LINE のアプリ内ブラウザ」）

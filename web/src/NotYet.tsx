@@ -1,6 +1,6 @@
 import { FooterLinks } from "./Footer";
 
-// まだ作っていない画面の仮の画面（/account など。それぞれの項目で画面に置き換える）
+// まだ作っていない画面の仮の画面（/contact など。それぞれの項目で画面に置き換える）
 export function NotYet() {
   return (
     <main className="wrap">

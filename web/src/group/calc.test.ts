@@ -26,15 +26,7 @@ import {
 } from "./calc";
 import { PREF_IDS } from "../map/colors";
 
-const member = (id: number, name: string, extra: Partial<GroupMember> = {}): GroupMember => ({
-  id,
-  name,
-  color: id % 10,
-  isOwner: false,
-  linked: false,
-  isMe: false,
-  ...extra,
-});
+const member = (id: number, name: string): GroupMember => ({ id, name, color: id % 10 });
 
 const A = member(1, "あ");
 const B = member(2, "い");
@@ -99,8 +91,8 @@ describe("findMeId：自分のメンバー", () => {
     expect(findMeId(members, 99)).toBeNull();
   });
 
-  it("ログイン済みで紐づいたメンバー（isMe）がいれば、覚えている番号より先", () => {
-    expect(findMeId([A, member(2, "い", { isMe: true }), C], 1)).toBe(2);
+  it("API が古い形の値（isMe）を付けて返しても、端末が覚えている番号だけで決める", () => {
+    expect(findMeId([A, { ...B, isMe: true } as GroupMember, C], 1)).toBe(1);
   });
 });
 
@@ -236,7 +228,7 @@ describe("rememberedIsMissing：覚えていたメンバーがグループにい
 });
 
 describe("resolveMe：グループを開いたときの自分のメンバー", () => {
-  it("覚えている番号が紐づいていないメンバーなら、その人", () => {
+  it("覚えている番号のメンバーがいれば、その人", () => {
     expect(resolveMe(members, 2, null)).toEqual({ meId: 2, lostMember: false });
   });
 
@@ -244,18 +236,16 @@ describe("resolveMe：グループを開いたときの自分のメンバー", (
     expect(resolveMe(members, 9, null)).toEqual({ meId: null, lostMember: true });
   });
 
-  it("覚えている番号のメンバーが紐づいていれば、覚えを消さずに参加のシート（2026-10-23 の仮の動き）", () => {
-    expect(resolveMe([A, member(2, "い", { linked: true }), C], 2, null)).toEqual({ meId: null, lostMember: false });
+  it("API が古い形の値（linked・isMe）を付けて返しても、端末が覚えている番号だけで決める", () => {
+    const old = [A, { ...B, linked: true } as GroupMember, { ...C, linked: true, isMe: true } as GroupMember];
+    expect(resolveMe(old, 2, null)).toEqual({ meId: 2, lostMember: false });
+    expect(resolveMe(old, 9, null)).toEqual({ meId: null, lostMember: true });
+    expect(resolveMe(old, null, 2)).toEqual({ meId: 2, lostMember: false });
   });
 
-  it("ログイン済みで紐づいたメンバー（isMe）がいれば、覚えている番号より先", () => {
-    expect(resolveMe([A, member(2, "い", { linked: true, isMe: true }), C], 9, null)).toEqual({ meId: 2, lostMember: false });
-  });
-
-  it("覚えていなければ、作ったメンバーの番号を使う。グループにいない・紐づいているときは使わない", () => {
+  it("覚えていなければ、作ったメンバーの番号を使う。グループにいないときは使わない", () => {
     expect(resolveMe(members, null, 1)).toEqual({ meId: 1, lostMember: false });
     expect(resolveMe(members, null, 9)).toEqual({ meId: null, lostMember: false });
-    expect(resolveMe([member(1, "あ", { linked: true })], null, 1)).toEqual({ meId: null, lostMember: false });
   });
 
   it("覚えていなくて、作ったメンバーの番号もなければ、自分はいない（初めて開いたのと同じ）", () => {
@@ -292,7 +282,7 @@ describe("roomVisitAction・meRemoved：部屋から届いたとき（architectu
 
 describe("withRoomVisits：読み直しの結果に、その間に届いた付け外しを入れ直す", () => {
   const view = (visits: Visit[]): GroupView => ({
-    group: { name: "旅", manageBy: "everyone", ownerOnly: false },
+    group: { name: "旅" },
     members: [member(1, "ゆう"), member(2, "あき")],
     visits,
   });

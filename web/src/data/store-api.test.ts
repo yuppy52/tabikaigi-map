@@ -21,10 +21,10 @@ import {
 const G = "abcdefghijABCDEFGHIJ01";
 
 const VIEW = {
-  group: { name: "旅行部", manageBy: "owner", ownerOnly: true },
+  group: { name: "旅行部" },
   members: [
-    { id: 12, name: "ゆう", color: 0, isOwner: true, linked: true, isMe: false },
-    { id: 13, name: "たろう", color: 1, isOwner: false, linked: false, isMe: false },
+    { id: 12, name: "ゆう", color: 0 },
+    { id: 13, name: "たろう", color: 1 },
   ],
   visits: [
     { memberId: 12, pref: 13 },
@@ -79,12 +79,22 @@ describe("parseGroupView：グループを開いたときの応答を読む", ()
     expect(parseGroupView(VIEW)).toEqual(VIEW);
   });
 
-  it("形が違えば null（グループがない、メンバーの番号が整数でない、県が範囲の外、真偽値が数）", () => {
+  it("余分な値（ログインをやめる前の manageBy・ownerOnly・isOwner・linked・isMe など）が付いていても読み、使う値だけを返す", () => {
+    const withExtra = {
+      ...VIEW,
+      group: { ...VIEW.group, manageBy: "owner", ownerOnly: true },
+      members: VIEW.members.map((m) => ({ ...m, isOwner: true, linked: 1, isMe: "x" })),
+      extra: 1,
+    };
+    expect(parseGroupView(withExtra)).toEqual(VIEW);
+  });
+
+  it("形が違えば null（グループがない、グループ名が文字でない、メンバーの番号が整数でない、色がない、県が範囲の外）", () => {
     expect(parseGroupView(null)).toBeNull();
     expect(parseGroupView({ ...VIEW, group: null })).toBeNull();
-    expect(parseGroupView({ ...VIEW, group: { ...VIEW.group, manageBy: "x" } })).toBeNull();
+    expect(parseGroupView({ ...VIEW, group: { name: 1 } })).toBeNull();
     expect(parseGroupView({ ...VIEW, members: [{ ...VIEW.members[0], id: "12" }] })).toBeNull();
-    expect(parseGroupView({ ...VIEW, members: [{ ...VIEW.members[0], linked: 1 }] })).toBeNull();
+    expect(parseGroupView({ ...VIEW, members: [{ id: 12, name: "ゆう" }] })).toBeNull();
     expect(parseGroupView({ ...VIEW, visits: [{ memberId: 12, pref: 48 }] })).toBeNull();
     expect(parseGroupView({ ...VIEW, visits: undefined })).toBeNull();
   });
@@ -97,10 +107,15 @@ describe("parseCreated・parseJoined：作成・参加の応答を読む", () =>
     expect(parseCreated({ groupId: G })).toBeNull();
   });
 
-  it("参加：201 は入れた。409 name_taken は同じ名前の人（番号と紐づいているか）", () => {
+  it("参加：201 は入れた。409 name_taken は同じ名前の人（番号）", () => {
     expect(parseJoined({ ok: true, status: 201, body: { memberId: 5 } })).toEqual({ ok: true, result: { status: "joined", memberId: 5 } });
+    const taken = { kind: "refused" as const, status: 409, error: "name_taken", body: { error: "name_taken", memberId: 2 } };
+    expect(parseJoined({ ok: false, failure: taken })).toEqual({ ok: true, result: { status: "name_taken", memberId: 2 } });
+  });
+
+  it("参加：409 name_taken に、ログインをやめる前の linked が付いていても、番号だけを返す", () => {
     const taken = { kind: "refused" as const, status: 409, error: "name_taken", body: { error: "name_taken", memberId: 2, linked: true } };
-    expect(parseJoined({ ok: false, failure: taken })).toEqual({ ok: true, result: { status: "name_taken", memberId: 2, linked: true } });
+    expect(parseJoined({ ok: false, failure: taken })).toEqual({ ok: true, result: { status: "name_taken", memberId: 2 } });
   });
 
   it("参加：name_taken の本文の形が違えば失敗のまま。ほかの失敗もそのまま。201 の形が違えば bad_response", () => {
@@ -145,9 +160,9 @@ describe("saveVisit：自分の「行った」を付ける・外す", () => {
     expect(calls[0].init.body).toBeUndefined();
   });
 
-  it("403 member_linked は、その理由の失敗", async () => {
-    respond(403, { error: "member_linked" });
-    expect(await failureFrom(saveVisit(G, 13, 47, true))).toMatchObject({ kind: "refused", status: 403, error: "member_linked" });
+  it("404 member_not_found は、その理由の失敗", async () => {
+    respond(404, { error: "member_not_found" });
+    expect(await failureFrom(saveVisit(G, 13, 47, true))).toMatchObject({ kind: "refused", status: 404, error: "member_not_found" });
   });
 });
 
@@ -195,8 +210,8 @@ describe("joinGroup：参加する", () => {
   });
 
   it("409 name_taken は、同じ名前の人を結果として返し、覚えない（「続ける」を押したときに覚える：REQ-012）", async () => {
-    respond(409, { error: "name_taken", memberId: 13, linked: false });
-    expect(await joinGroup(G, "たろう", "tok")).toEqual({ status: "name_taken", memberId: 13, linked: false });
+    respond(409, { error: "name_taken", memberId: 13 });
+    expect(await joinGroup(G, "たろう", "tok")).toEqual({ status: "name_taken", memberId: 13 });
     expect(await readRememberedMember(G)).toBeNull();
   });
 
@@ -261,10 +276,10 @@ describe("renameGroup：グループ名を変える（REQ-046）", () => {
     expect(calls).toHaveLength(1);
   });
 
-  it("断られたら、その理由の失敗（400 bad_name・403 not_allowed・404 group_not_found）", async () => {
+  it("断られたら、その理由の失敗（400 bad_name・400 bad_request・404 group_not_found）", async () => {
     for (const [status, error] of [
       [400, "bad_name"],
-      [403, "not_allowed"],
+      [400, "bad_request"],
       [404, "group_not_found"],
     ] as const) {
       respond(status, { error });
@@ -319,9 +334,9 @@ describe("leaveGroup：退出する（REQ-049・REQ-050）", () => {
     expect(await readRememberedMember(G)).toEqual({ memberId: 12, name: "ゆう" });
   });
 
-  it("断られたら、その理由の失敗（403 member_linked・404 group_not_found）", async () => {
+  it("断られたら、その理由の失敗（400 bad_request・404 group_not_found）", async () => {
     for (const [status, error] of [
-      [403, "member_linked"],
+      [400, "bad_request"],
       [404, "group_not_found"],
     ] as const) {
       respond(status, { error });
@@ -344,9 +359,9 @@ describe("deleteMember：メンバーを削除する（REQ-048）", () => {
     expect(calls[0].init.body).toBeUndefined();
   });
 
-  it("断られたら、その理由の失敗（403 not_allowed・404 group_not_found）。429・通信エラーはその種類", async () => {
+  it("断られたら、その理由の失敗（400 bad_request・404 group_not_found）。429・通信エラーはその種類", async () => {
     for (const [status, error] of [
-      [403, "not_allowed"],
+      [400, "bad_request"],
       [404, "group_not_found"],
     ] as const) {
       respond(status, { error });
@@ -373,9 +388,9 @@ describe("deleteGroup：グループを削除する（REQ-047）", () => {
     expect(calls[0].init.body).toBeUndefined();
   });
 
-  it("断られたら、その理由の失敗（403 not_allowed・404 group_not_found）。503 はその種類", async () => {
+  it("断られたら、その理由の失敗（400 bad_request・404 group_not_found）。503 はその種類", async () => {
     for (const [status, error] of [
-      [403, "not_allowed"],
+      [400, "bad_request"],
       [404, "group_not_found"],
     ] as const) {
       respond(status, { error });

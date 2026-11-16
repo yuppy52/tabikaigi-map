@@ -7,16 +7,12 @@ export type GroupMember = {
   name: string;
   // 10色の番号（0〜9）。色の文字列は memberColor で引く
   color: number;
-  isOwner: boolean;
-  linked: boolean;
-  // ログイン済みの人に紐づいたメンバーか（ログインなしの人では、いつも false）
-  isMe: boolean;
 };
 
 export type Visit = { memberId: number; pref: number };
 
 export type GroupView = {
-  group: { name: string; manageBy: "everyone" | "owner"; ownerOnly: boolean };
+  group: { name: string };
   members: GroupMember[];
   visits: Visit[];
 };
@@ -27,5 +23,5 @@ export type RememberedMember = { memberId: number; name: string };
 // グループを作ったときの応答（API の POST /api/groups の 201 と同じ）
 export type CreatedGroup = { groupId: string; memberId: number };
 
-// 参加したときの結果。入れた（API の 201）か、同じ名前の人がいた（API の 409 name_taken。その人の番号と、紐づいているか）
-export type JoinResult = { status: "joined"; memberId: number } | { status: "name_taken"; memberId: number; linked: boolean };
+// 参加したときの結果。入れた（API の 201）か、同じ名前の人がいた（API の 409 name_taken。その人の番号）
+export type JoinResult = { status: "joined"; memberId: number } | { status: "name_taken"; memberId: number };

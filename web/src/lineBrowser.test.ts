@@ -44,9 +44,11 @@ describe("externalBrowserUrl：開き直す先の URL", () => {
     expect(externalBrowserUrl(G, LINE_ANDROID)).toBe(`${G}?openExternalBrowser=1`);
   });
 
-  it("グループの画面のほか、アプリの画面すべて（/new・/login など）で足す", () => {
+  it("グループの画面のほか、アプリの画面すべて（/new・/contact など）で足す", () => {
     expect(externalBrowserUrl("https://tabikaigi-map.com/new", LINE_IOS)).toBe("https://tabikaigi-map.com/new?openExternalBrowser=1");
-    expect(externalBrowserUrl("https://tabikaigi-map.com/login", LINE_IOS)).toBe("https://tabikaigi-map.com/login?openExternalBrowser=1");
+    expect(externalBrowserUrl("https://tabikaigi-map.com/contact", LINE_IOS)).toBe(
+      "https://tabikaigi-map.com/contact?openExternalBrowser=1",
+    );
   });
 
   it("もう付いていれば何もしない（外に出られなかった LINE なので、くり返さない）", () => {

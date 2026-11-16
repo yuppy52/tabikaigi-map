@@ -4,7 +4,7 @@
 
 画面（React）が呼ぶ API（Hono）の URL と応答の一覧。SQL の形は [data-model](data-model.md)、誰が何をできるかは [権限マトリクス](permissions.md) が正本で、ここは画面と API の取り決め。コードは `api/src/app.ts`（SQL は `groups.ts`・`manage.ts`）、テストは `api/test/groups-api.test.ts`・`api/test/manage-api.test.ts`。
 
-コードとテストは、ロードマップの L-2（2026-11-10）でこの一覧に合わせた（ログインの入口と `Authorization` の扱いを消した）。画面（`web/`）は L-3 で合わせる。
+コードとテストは、ロードマップの L-2（2026-11-10）でこの一覧に合わせた（ログインの入口と `Authorization` の扱いを消した）。画面（`web/`）は L-3（2026-11-17）で合わせた。
 
 ## 共通の決まり
 

@@ -7,7 +7,7 @@ import { joinGroup, rememberMember } from "../data/store";
 import type { GroupMember } from "../data/types";
 import { FooterLinks } from "../Footer";
 import { Avatar } from "../group/Avatar";
-import { BAD_NAME, joinErrorOf, NAME_NEEDS_LOGIN, SAVE_FAILED } from "../messages";
+import { BAD_NAME, joinErrorOf, SAVE_FAILED } from "../messages";
 import { TurnstileWidget, type TurnstileHandle } from "../turnstile/TurnstileWidget";
 import { NameField } from "./NameField";
 import { Sheet } from "./Sheet";
@@ -17,7 +17,7 @@ type Props = {
   groupName: string;
   members: readonly GroupMember[];
   // シートの一番上に出す文。覚えていたメンバーがいなかった（REQ-025「前回の名前が見つかりませんでした」）、
-  // 自分のメンバーが紐づいた・削除された（「行った」の付け外しで分かったとき）。なければ出さない
+  // 自分のメンバーが削除された（「行った」の付け外しで分かったとき）。なければ出さない
   notice: string | null;
   // 入れたとき（新しいメンバー、または同じ名前の確認で「続ける」）。番号と、出す知らせの文
   onJoined: (memberId: number, toast: string) => void;
@@ -29,9 +29,8 @@ type Props = {
 type Confirm = { memberId: number; name: string } | null;
 
 // 参加のシート（REQ-002・REQ-004・REQ-012、モックの openJoin('join')）。グループ名と参加中のメンバーの名前を見せて、名前を入れてもらう。
-// 名前を入れるまで閉じられない。同じ名前の紐づいていないメンバーがいたら「この人として続けますか？」と聞き、
+// 名前を入れるまで閉じられない。同じ名前のメンバーがいたら「この人として続けますか？」と聞き、
 // 続けるならそのメンバーとして覚え（新しく作らない）、続けないなら名前の入力に戻る。
-// 紐づいたメンバーと同じ名前なら「この名前で入るにはログインが必要です」（ログインへの入口は Phase 3 で置く）。
 // 失敗の文と行き先は messages の joinErrorOf（screens の「API の応答と画面の動き」）
 export function JoinSheet({ groupId, groupName, members, notice, onJoined, onGone }: Props) {
   const titleId = useId();
@@ -62,11 +61,6 @@ export function JoinSheet({ groupId, groupName, members, notice, onJoined, onGon
         setBusy(false);
         if (result.status === "joined") {
           onJoined(result.memberId, `${groupName} に参加しました`);
-          return;
-        }
-        // 紐づいたメンバーと同じ名前（REQ-013）。別の名前を入れてもらう（ログインへの入口は Phase 3）
-        if (result.linked) {
-          setFormError(NAME_NEEDS_LOGIN);
           return;
         }
         // 表示する名前は、すでにいるメンバーの名前（入れた名前と、全角・半角や大文字・小文字が違うことがある）
