@@ -2,6 +2,9 @@
 // 文を自分で考えない：.claude/rules/web.md）。表にない値は「保存できませんでした。もう一度お試しください」にする
 import { BAD_RESPONSE, type Failure } from "./data/api";
 
+// 知らせ（モックの toast）を出しておく時間（グループの画面と参加のシートで同じにする）
+export const TOAST_MS = 1800;
+
 // 表にない失敗、やり直せる失敗（書き込みの通信エラー、一時的な 503）
 export const SAVE_FAILED = "保存できませんでした。もう一度お試しください";
 // 400 bad_name（画面の側で長さが外れたときも、同じ文を入力欄の下に出す）
@@ -17,8 +20,8 @@ export const UNAVAILABLE = "いまは混み合っていて使えません。遅�
 export const RATE_LIMITED = "少し待ってから、もう一度お試しください";
 // 404 group_not_found（REQ-006）
 export const GROUP_DELETED = "このグループは削除されました";
-// 409 group_full（REQ-005）
-export const GROUP_FULL = "このグループは満員（20人）です";
+// 満員のときに「＋ 新しく参加する」の代わりに出す一言（REQ-005。409 group_full で読み直したときも同じ：screens の「参加の画面」）
+export const GROUP_FULL = "20人いるので、新しくは参加できません";
 // 覚えていたメンバーがグループにいなかった（REQ-025）
 export const LOST_MEMBER = "前回の名前が見つかりませんでした";
 // 404 member_not_found（自分のメンバーが削除されていた：REQ-048）
@@ -72,7 +75,8 @@ export function createErrorText(f: Failure): string {
   return writeFailureText(f);
 }
 
-// 参加の失敗のときの動き。field：入力欄の下に文、form：ボタンの上に文、deleted：忘れてエラーの画面（削除された）、full：エラーの画面（満員）
+// 参加の失敗のときの動き。field：入力欄の下に文、form：ボタンの上に文、deleted：忘れてエラーの画面（削除された）、
+// full：グループを読み直して参加の画面（一覧と満員の一言）に戻す。何も覚えない（2026-11-10）
 export type JoinErrorAction = { kind: "field"; text: string } | { kind: "form"; text: string } | { kind: "deleted" } | { kind: "full" };
 
 // 参加の失敗 → 動き（同じ名前の 409 name_taken は失敗ではなく、store の joinGroup が結果として返す）
@@ -84,11 +88,21 @@ export function joinErrorOf(f: Failure): JoinErrorAction {
   return { kind: "form", text: writeFailureText(f) };
 }
 
+// 参加の画面（screens の「参加の画面」：2026-11-09 にモックを見てユーザーと決めた文）
+// 新しい名前で参加できたときの知らせ
+export const joinedText = (groupName: string) => `${groupName} に参加しました`;
+// 一覧の名前を押して入ったとき（「（名前）さんとして入る」で入ったときも同じ：2026-11 にメインが決めた仮の値）の知らせ
+export const pickedText = (name: string) => `${name}さんとして開きました。違うときはメニューの『メンバーを変更する』から選び直せます`;
+// 409 name_taken：名前の入力の下に出す文とボタン、その下の一言
+export const takenText = (name: string) => `${name}さんはもういます。あなたなら、そのまま入れます`;
+export const takenButton = (name: string) => `${name}さんとして入る`;
+export const TAKEN_OTHER = "別の人なら、名前を変えてください";
+
 // グループ設定（screens の「グループ設定の中身」の「形と文」：2026-10-28 にユーザーと決めた）
 // グループ名の変更が成功したときの知らせ
 export const GROUP_RENAMED = "グループ名を変更しました";
 // 「ほかのメンバーに切り替える」に添える一言（REQ-056）
-export const switchMemberNote = (name: string) => `${name}さんのデータは消えません。名前の入力に戻ります`;
+export const switchMemberNote = (name: string) => `${name}さんのデータは消えません。名前を選ぶ画面に戻ります`;
 
 // グループ名の変更が失敗したときの動き。
 // - field：入力欄の下に text（400 bad_name。その場で入れ直す）

@@ -1,14 +1,15 @@
-import { useId, useRef, useState, type FormEvent } from "react";
+import { useEffect, useId, useRef, useState, type FormEvent } from "react";
 import { Link } from "react-router";
 import { memberColor } from "../data/memberColors";
 import { checkName, MEMBER_NAME_MAX } from "../data/names";
 import { failureOf } from "../data/api";
-import { joinGroup, rememberMember } from "../data/store";
-import type { GroupMember } from "../data/types";
+import { joinGroup } from "../data/store";
+import type { GroupMember, GroupView } from "../data/types";
 import { FooterLinks } from "../Footer";
 import { Avatar } from "../group/Avatar";
-import { BAD_NAME, joinErrorOf, SAVE_FAILED } from "../messages";
+import { BAD_NAME, GROUP_FULL, joinedText, joinErrorOf, LOAD_FAILED, TAKEN_OTHER, takenButton, takenText, TOAST_MS } from "../messages";
 import { TurnstileWidget, type TurnstileHandle } from "../turnstile/TurnstileWidget";
+import { isGroupFull, takenMemberOf } from "./join";
 import { NameField } from "./NameField";
 import { Sheet } from "./Sheet";
 
@@ -19,30 +20,116 @@ type Props = {
   // シートの一番上に出す文。覚えていたメンバーがいなかった（REQ-025「前回の名前が見つかりませんでした」）、
   // 自分のメンバーが削除された（「行った」の付け外しで分かったとき）。なければ出さない
   notice: string | null;
-  // 入れたとき（新しいメンバー、または同じ名前の確認で「続ける」）。番号と、出す知らせの文
+  // 新しい名前で参加できたとき。番号と、出す知らせの文（グループの画面が読み直してから入る）
   onJoined: (memberId: number, toast: string) => void;
-  // 参加できないと分かったとき（グループが削除された、満員）。グループの画面がエラーの画面に替える
-  onGone: (why: "deleted" | "full") => void;
+  // 一覧の名前を押した、または「（名前）さんとして入る」を押したとき。そのメンバーとして入る（API は呼ばない。読み直さない）
+  onPicked: (member: GroupMember) => void;
+  // 参加しようとしたらグループが削除されていたとき。グループの画面がエラーの画面に替える
+  onGone: () => void;
+  // グループを読み直す（グループの画面の一覧も入れ替わる）。409 name_taken で一覧にいない人が返ったとき、409 group_full のときに使う
+  onReload: () => Promise<GroupView>;
+  // 読み直しが失敗したとき（満員の後）の、グループの画面の読み込み失敗の扱い
+  onLoadError: (e: unknown) => void;
 };
 
-// 同じ名前の確認の途中なら、その人（番号と名前）
-type Confirm = { memberId: number; name: string } | null;
+// 一覧の表示か、名前の入力か（名前の入力は同じシートの中で開く。シートを重ねない：screens の「画面遷移図」の下）
+type Mode = "list" | "name";
 
-// 参加のシート（REQ-002・REQ-004・REQ-012、モックの openJoin('join')）。グループ名と参加中のメンバーの名前を見せて、名前を入れてもらう。
-// 名前を入れるまで閉じられない。同じ名前のメンバーがいたら「この人として続けますか？」と聞き、
-// 続けるならそのメンバーとして覚え（新しく作らない）、続けないなら名前の入力に戻る。
+// 参加のシート（REQ-002・REQ-005・REQ-012・REQ-024、screens の「参加の画面」）。グループ名と参加中のメンバーの名前の一覧を見せる。
+// 自分の名前を押せば、確かめずにそのメンバーとして入る。いなければ「＋ 新しく参加する」から名前を入れて参加する。
+// 入れた名前がもういれば（409 name_taken）、その人として入るボタンを出す。名前を入れるか選ぶまで閉じられない。
 // 失敗の文と行き先は messages の joinErrorOf（screens の「API の応答と画面の動き」）
-export function JoinSheet({ groupId, groupName, members, notice, onJoined, onGone }: Props) {
+export function JoinSheet({ groupId, groupName, members, notice, onJoined, onPicked, onGone, onReload, onLoadError }: Props) {
   const titleId = useId();
+  const [mode, setMode] = useState<Mode>("list");
   const [name, setName] = useState("");
   const [nameError, setNameError] = useState<string | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  const [confirm, setConfirm] = useState<Confirm>(null);
+  // 409 name_taken で返った人（一覧の表示名を使う）。出ている間は、一覧のその人にも色を付ける
+  const [taken, setTaken] = useState<GroupMember | null>(null);
   // ボット対策のトークン（取れるまで「参加する」は押せない）と、送った後に取り直すためのウィジェット。
-  // 同じ名前の確認の間はウィジェットが消え、「別の名前にする」で戻ると出し直されて、新しいトークンを取る
+  // 一覧に戻るとウィジェットが消え、名前の入力を開き直すと出し直されて、新しいトークンを取る
   const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
   const turnstileRef = useRef<TurnstileHandle>(null);
+  // 知らせ（name_taken の人が読み直してもいなかったとき）。後ろの画面は押せない（読み上げも届かない）ので、シートの中に出す
+  const [toast, setToast] = useState<{ text: string; key: number } | null>(null);
+  // 「一覧に戻る」の後に、キーボードの位置を「＋ 新しく参加する」に戻すための印とボタン
+  const newJoinRef = useRef<HTMLButtonElement>(null);
+  const focusNewJoin = useRef(false);
+
+  const full = isGroupFull(members);
+
+  // 知らせは少したったら消す。新しい知らせが出たら、そこから数え直す（グループの画面と同じ）
+  useEffect(() => {
+    if (!toast) return;
+    const timer = setTimeout(() => setToast(null), TOAST_MS);
+    return () => clearTimeout(timer);
+  }, [toast]);
+
+  // 一覧に戻ったら、「＋ 新しく参加する」にキーボードの位置を戻す（描き直した後でないとボタンがないので、描いた後に移す）
+  useEffect(() => {
+    if (mode !== "list" || !focusNewJoin.current) return;
+    focusNewJoin.current = false;
+    newJoinRef.current?.focus();
+  }, [mode]);
+
+  const showToast = (text: string) => setToast((t) => ({ text, key: (t?.key ?? 0) + 1 }));
+
+  // 一覧の表示に戻す：入れた名前・失敗の文・「もういます」を消す
+  const backToList = () => {
+    setMode("list");
+    setName("");
+    setNameError(null);
+    setFormError(null);
+    setTaken(null);
+    setTurnstileToken(null);
+  };
+
+  // 「＋ 新しく参加する」：同じシートの中で名前の入力を開く（入力欄にキーボードの位置を移す：NameField の autoFocus）
+  const openName = () => {
+    setMode("name");
+    setTaken(null);
+  };
+
+  // 「一覧に戻る」
+  const onBack = () => {
+    focusNewJoin.current = true;
+    backToList();
+  };
+
+  // 409 name_taken：一覧にその人がいれば、その人の表示名で「もういます」を出す。
+  // いなければ（ほぼ同時に入った）読み直し、読み直した一覧にいれば出す。いない・読み直せないときは知らせを出して一覧に戻る
+  const showTaken = (memberId: number) => {
+    const found = takenMemberOf(members, memberId);
+    if (found) {
+      setTaken(found);
+      setBusy(false);
+      return;
+    }
+    const giveUp = () => {
+      setBusy(false);
+      backToList();
+      showToast(LOAD_FAILED);
+    };
+    onReload().then((view) => {
+      const again = takenMemberOf(view.members, memberId);
+      if (!again) {
+        giveUp();
+        return;
+      }
+      setTaken(again);
+      setBusy(false);
+    }, giveUp);
+  };
+
+  // 409 group_full：読み直して、一覧（満員の一言つき）に戻す。何も覚えない。読み直せなければグループの画面の読み込み失敗の扱い
+  const showFull = () => {
+    onReload().then(() => {
+      setBusy(false);
+      backToList();
+    }, onLoadError);
+  };
 
   // 「参加する」：画面の側で長さを確かめてから送る（入力の手助け。正本は API）
   const onSubmit = (e: FormEvent) => {
@@ -51,6 +138,7 @@ export function JoinSheet({ groupId, groupName, members, notice, onJoined, onGon
     const mname = checkName(name, MEMBER_NAME_MAX);
     setNameError(mname === null ? BAD_NAME : null);
     setFormError(null);
+    setTaken(null);
     if (mname === null) return;
     setBusy(true);
     // トークンは1回しか使えないので、送ったら（成功でも失敗でも）取り直す
@@ -58,36 +146,24 @@ export function JoinSheet({ groupId, groupName, members, notice, onJoined, onGon
     joinGroup(groupId, mname, turnstileToken).then(
       (result) => {
         resetTurnstile();
-        setBusy(false);
         if (result.status === "joined") {
-          onJoined(result.memberId, `${groupName} に参加しました`);
+          setBusy(false);
+          onJoined(result.memberId, joinedText(groupName));
           return;
         }
-        // 表示する名前は、すでにいるメンバーの名前（入れた名前と、全角・半角や大文字・小文字が違うことがある）
-        const same = members.find((m) => m.id === result.memberId);
-        setConfirm({ memberId: result.memberId, name: same?.name ?? mname });
+        showTaken(result.memberId);
       },
       (err: unknown) => {
         resetTurnstile();
-        setBusy(false);
         const action = joinErrorOf(failureOf(err));
+        if (action.kind === "full") {
+          showFull();
+          return;
+        }
+        setBusy(false);
         if (action.kind === "field") setNameError(action.text);
         else if (action.kind === "form") setFormError(action.text);
-        else onGone(action.kind);
-      },
-    );
-  };
-
-  // 同じ名前の確認で「続ける」：そのメンバーとして端末に覚えて入る（API は呼ばない。信頼ベース：REQ-012）
-  const onContinue = () => {
-    if (!confirm) return;
-    const { memberId, name: sameName } = confirm;
-    rememberMember(groupId, { memberId, name: sameName }).then(
-      () => onJoined(memberId, `${sameName} さんとして続きから`),
-      // いまの rememberMember は書けなくても成功で返す（覚えられないだけで、この間は入れる）。中身を替えて失敗が返るようになっても、黙らずに文を出す
-      () => {
-        setConfirm(null);
-        setFormError(SAVE_FAILED);
+        else onGone();
       },
     );
   };
@@ -109,20 +185,36 @@ export function JoinSheet({ groupId, groupName, members, notice, onJoined, onGon
             {groupName}
           </b>
           <br />
-          <small className="muted">{members.map((m) => m.name).join("・")} が参加中</small>
+          <small className="muted">{members.length}人が参加中</small>
         </div>
       </div>
-      {confirm ? (
-        <div>
-          <p role="alert">{confirm.name}さんはすでに参加しています。この人として続けますか？</p>
-          {/* 入力欄が消えるので、キーボードの位置を「続ける」に移す */}
-          <button className="primary" type="button" onClick={onContinue} autoFocus>
-            続ける
-          </button>
-          <button className="linkbtn" type="button" onClick={() => setConfirm(null)}>
-            別の名前にする
-          </button>
-        </div>
+
+      {/* メンバーの名前の一覧（参加した順に2列）。押すと、確かめずにそのメンバーとして入る（REQ-012・REQ-024） */}
+      <h3 className="pick-title">あなたはどれ？</h3>
+      <ul className="pick">
+        {members.map((m) => (
+          <li key={m.id}>
+            <button className={taken?.id === m.id ? "taken" : undefined} type="button" disabled={busy} onClick={() => onPicked(m)}>
+              <span className="swatch" style={{ background: memberColor(m.color) }} aria-hidden="true" />
+              <span className="pick-name">{m.name}</span>
+            </button>
+          </li>
+        ))}
+      </ul>
+
+      {mode === "list" ? (
+        <>
+          {full ? (
+            <p className="fullnote">{GROUP_FULL}</p>
+          ) : (
+            <button className="newjoin" type="button" ref={newJoinRef} onClick={openName}>
+              ＋ 新しく参加する
+            </button>
+          )}
+          <Link className="linkbtn" to="/new">
+            新しいグループを作る
+          </Link>
+        </>
       ) : (
         <>
           <form onSubmit={onSubmit} noValidate>
@@ -133,7 +225,17 @@ export function JoinSheet({ groupId, groupName, members, notice, onJoined, onGon
               placeholder="例：さくら"
               error={nameError}
               autoComplete="nickname"
+              autoFocus
             />
+            {taken !== null && (
+              <div className="takenbox" role="alert">
+                <p>{takenText(taken.name)}</p>
+                <button className="primary" type="button" onClick={() => onPicked(taken)}>
+                  {takenButton(taken.name)}
+                </button>
+                <p className="muted">{TAKEN_OTHER}</p>
+              </div>
+            )}
             <p className="note">あなたの名前は、招待URLを知っている人に表示されます。本名でなくてもかまいません</p>
             <TurnstileWidget ref={turnstileRef} onToken={setTurnstileToken} />
             {formError !== null && (
@@ -145,9 +247,9 @@ export function JoinSheet({ groupId, groupName, members, notice, onJoined, onGon
               参加する
             </button>
           </form>
-          <Link className="linkbtn" to="/new">
-            新しいグループを作る
-          </Link>
+          <button className="linkbtn" type="button" disabled={busy} onClick={onBack}>
+            一覧に戻る
+          </button>
         </>
       )}
       {/* 閉じられないシートで後ろの画面が押せないので、トップへの出口と一番下のリンク（NFR-008）をシートの中にも置く */}
@@ -155,6 +257,14 @@ export function JoinSheet({ groupId, groupName, members, notice, onJoined, onGon
         トップへ
       </a>
       <FooterLinks />
+
+      {/* 知らせ（グループの画面と同じ形。読み上げ用の入れ物はいつも置いておき、中身だけを変える） */}
+      <div className="toast" aria-hidden="true" hidden={!toast}>
+        {toast?.text}
+      </div>
+      <div className="sr-only" role="status">
+        {toast?.text}
+      </div>
     </Sheet>
   );
 }

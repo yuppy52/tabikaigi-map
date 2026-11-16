@@ -163,7 +163,7 @@ export async function joinGroup(groupId: string, name: string, turnstileToken: s
   return r.result;
 }
 
-// 同じ名前の確認で「続ける」を選んだとき、そのメンバーとして端末に覚える（API は呼ばない：REQ-012、api の「参加で同じ名前がいたとき」）
+// 参加の画面で名前を選んだとき・「（名前）さんとして入る」を押したとき、そのメンバーとして端末に覚える（API は呼ばない：REQ-012、api の「参加で同じ名前がいたとき」）
 export function rememberMember(groupId: string, member: RememberedMember): Promise<void> {
   remember(groupId, member);
   return Promise.resolve();

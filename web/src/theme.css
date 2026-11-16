@@ -1,5 +1,6 @@
 /* 色の変数（ライト・ダーク）。アプリの画面（styles.css）と検索に出すページ（pages/page.css）で同じものを使う。
-   値はモック（tools/template.html）をそのまま写した（見た目は Phase 3 で整える） */
+   値はモック（tools/template.html）をそのまま写した（見た目は Phase 3 で整える）。
+   --hint-fill・--hint-line は、参加の画面の「（名前）さんはもういます」の薄い黄色（2026-11-09 のモック。全員まだの県の --gap-* とは別に持つ） */
 
 /* ライト（ふだん） */
 :root {
@@ -21,6 +22,8 @@
   --danger-ink: #ffffff;
   --gap-fill: #fde9bd;
   --gap-line: #e39a12;
+  --hint-fill: #fff6d6;
+  --hint-line: #e3b341;
   --shadow: 0 8px 28px rgba(20, 40, 60, 0.14);
   color-scheme: light;
 }
@@ -46,6 +49,8 @@
     --danger-ink: #0e151b;
     --gap-fill: #4a3a12;
     --gap-line: #f0b94a;
+    --hint-fill: #3a3116;
+    --hint-line: #c9a13a;
     --shadow: 0 8px 28px rgba(0, 0, 0, 0.45);
     color-scheme: dark;
   }
@@ -71,6 +76,8 @@
   --danger-ink: #0e151b;
   --gap-fill: #4a3a12;
   --gap-line: #f0b94a;
+  --hint-fill: #3a3116;
+  --hint-line: #c9a13a;
   --shadow: 0 8px 28px rgba(0, 0, 0, 0.45);
   color-scheme: dark;
 }
