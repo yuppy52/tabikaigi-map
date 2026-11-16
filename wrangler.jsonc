@@ -17,10 +17,6 @@
     // Q-031：ファイルがない URL は Worker を通さず、静的な 404.html を返す
     "not_found_handling": "404-page"
   },
-  "vars": {
-    // Firebase のプロジェクトID（秘密の値ではない）
-    "FIREBASE_PROJECT_ID": "tabikaigi-map"
-  },
   // Q-027：自分で書いたログだけ残す。アクセスごとの記録（IP・場所・URL）は切る
   "observability": {
     "enabled": true,

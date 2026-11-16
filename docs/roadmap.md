@@ -16,7 +16,7 @@
 
 公開までの順番（項目の中身は下の Phase 2）：
 
-1. **いまここ**：ログインをやめる。L-1 ドキュメント → L-2 API と表 → L-3 画面 → L-3b 参加の画面で名前を選ぶ → L-4 図 → L-5 Firebase のプロジェクトを消す（ユーザー）
+1. **いまここ**：ログインをやめる。L-1 ドキュメント（済）→ L-2 API と表 → L-3 画面 → L-3b 参加の画面で名前を選ぶ → L-4 図 → L-5 Firebase のプロジェクトを消す（ユーザー）
 2. 検索に出すページ。7-1 トップは済み。次は 7-2 使い方、7-3 プライバシーポリシー、7-4 確かめとモックの削除
 3. 問い合わせのフォーム
 4. 公開の前の安全の確かめ（CodeQL、Strix）を調べて、入れるかを決める
@@ -137,7 +137,7 @@
   - [x] 6-3 確かめ（2026-10-28〔済：ローカル〕：Vite を通した2つのタブで、片方がメンバーを削除・ほかの所（API）から自分のメンバーを削除したら、両方のタブに「（名前）さんはグループから削除されました」と名前の入力が出て、端末の覚えが消えた。最後の1人を削除するとグループも消え、両方のタブが削除の画面に移った。作成者がいないグループ（ログインなしで作ったもの）は「誰でも」で、変更・削除が出る（6-1・6-2 の確かめで見た））：手元の2つのタブで、片方で消したらもう片方が気づく（削除の画面、名前の入力）、最後の1人の退出でグループも消える、作成者がいないグループの「誰でも」
 - [ ] ログインをやめる（2026-11-06 にユーザーが推奨どおりに決めた：[ADR 0013](adr/0013-drop-login.md)、Q-034。書いてあるログインのコードと表は、使わない入口を本番に出さないため、最初のデプロイの前に消す。作成者と「管理できる人」も一緒になくす。使い方とプライバシーポリシーの文がこの決定で変わるので、7-2 の前に入れた）
   - 小分け（上から順に、1つずつプルリクエストにする）：
-  - [ ] L-1 `docs/drop-login`：ADR 0013、requirements（なくした要件を欠番に）、use-cases、glossary、design 一式（permissions・data-model・api・auth-flow・screens・privacy・architecture・traceability）、open-questions、roadmap、CLAUDE.md、`.claude/` のルールとエージェント
+  - [x] L-1 `docs/drop-login`（2026-11-10。PR #87。`/review-docs` を2回反映し、参加の画面を名前を選ぶ形にした：Q-035）：ADR 0013、requirements（なくした要件を欠番に）、use-cases、glossary、design 一式（permissions・data-model・api・auth-flow・screens・privacy・architecture・traceability）、open-questions、roadmap、CLAUDE.md、`.claude/` のルールとエージェント
   - [ ] L-2 `feat/drop-login-api`：API から ID トークンの確かめ（`firebase-auth.ts`）、アカウント（`account.ts`）、ログインの入口8つ、作成者・管理できる人・紐づいたメンバーの確かめを消す。`0001_init.sql` から `accounts`・`account_visits`・`members.uid`・`is_owner`・`groups.manage_by` と、それに関わるトリガー・索引を消す（まだ本番で流していないので書き換えてよい）。`jose` と `wrangler.jsonc` の `FIREBASE_PROJECT_ID` を消す。消す・変えるテストは先にユーザーに見せる。手元の D1 を作り直す。API と D1 の制約なので `access-reviewer` に頼む
   - [ ] L-3 `feat/drop-login-web`：画面の型・API の呼び出し・文言から、ログイン・作成者・管理できる人（`manageBy`・`ownerOnly`・`isOwner`・`linked`・`isMe`、`403 member_linked`・`not_allowed`）を消す。グループ設定の「管理できる人」の文をなくす。`_headers`・`_redirects` から `/account`・`/login`・`/groups`・`/me` を消す（配信の設定なので `access-reviewer` に頼む）
   - [ ] L-3b `feat/join-pick-member`：参加のシートを、参加中のメンバーの名前を選ぶか「新しく参加する」で名前を入れる形にする（REQ-012・Q-035。2026-11-09 にモックを見てユーザーと決めた）。中身と文は [screens](design/screens.md) の「参加の画面」と「API の応答と画面の動き」の `409 name_taken`。「メンバーを変更する」の一言も直す。アプリ内のブラウザで、ふつう・前回の名前がない・新しく参加・もういる名前（全角・半角が違う名前も）・20人・入った後の6つと、名前を入れている間に満員になる・ほぼ同時に同じ名前で入る（一覧にいない `name_taken`）・通信エラー・送る間にグループが消える・Safari で覚えが消えた後（「前回の名前が〜」を出さない）の5つを確かめる（2026-11-10：L-1 の2回目の `/review-docs` #16）
@@ -163,7 +163,7 @@
   - 〔未〕Turnstile のウィジェットのドメインの制限と、応答の `hostname` を確かめるか（[api](design/api.md)）
   - 〔未〕Durable Objects の動いている時間（GB 秒）と眠れる書き方の効き方。あわせて本番で：スマホで画面を消して戻ったときにつなぎ直して読み直すか、付け外しのたびに部屋を呼ぶ回数とつなぐたびのアラームの書き込み（Durable Objects の回数と保存の枠）、相手が閉じたときに部屋が自動で閉じ返すか（手元では効かないので手で閉じ返している：api/src/room.ts）、部屋の入口の Origin の確かめが独自ドメインで通るか（2026-10-26：5-1・5-3）
   - 〔未〕無料枠を超えたときに API が実際に返すエラー（D1・Workers・Durable Objects）。D1 の枠切れのエラーの文が分かったら、API の 503 に `reason: "quota"` を付けて「一時的な失敗」と分ける（いまは全部 `temporary`：[api](design/api.md)）
-- [ ] 最初の本番のデプロイ（[deploy](design/deploy.md) の「最初のデプロイ」）と、そこにある〔未〕の確かめ（配信の設定：GET 以外・大文字・`%61pi`・`//api/…`・`/api` で Worker が動かないか、動くなら WAF の式を `lower(…)` で広げる、独自ドメインを `wrangler.jsonc` の `routes` に書くか、管理画面のセキュリティのイベントに残るパス（architecture の「ログに残るもの」に足す）。2026-10-21 の `access-reviewer` #1・#5・#9・#10。Turnstile の確認の通信にグループIDを含む URL が入るか（2026-10-23 の `access-reviewer` #1：architecture の「ログに残るもの」）。トークンの権限、本物の D1 の書き出し、わざと失敗するマイグレーション、Time Travel の巻き戻しと取り消し、バックアップからの作り直し、`rollback` で静的アセットが戻るか、デプロイで部屋の接続が切れるか）。どれも公開の前に必須
+- [ ] 最初の本番のデプロイ（[deploy](design/deploy.md) の「最初のデプロイ」）と、そこにある〔未〕の確かめ（配信の設定：GET 以外・大文字・`%61pi`・`//api/…`・`/api` で Worker が動かないか、動くなら WAF の式を `lower(…)` で広げる、独自ドメインを `wrangler.jsonc` の `routes` に書くか、管理画面のセキュリティのイベントに残るパス（architecture の「ログに残るもの」に足す）。2026-10-21 の `access-reviewer` #1・#5・#9・#10。Turnstile の確認の通信にグループIDを含む URL が入るか（2026-10-23 の `access-reviewer` #1：architecture の「ログに残るもの」）。トークンの権限、型の自動生成（`npm run types`）が `.dev.vars` から `TURNSTILE_SECRET` を「必ずある」と書いてしまうので、作り直す手順を決めて deploy に書く（2026-11-10：L-2 では手で2行消した）、本物の D1 の書き出し、わざと失敗するマイグレーション、Time Travel の巻き戻しと取り消し、バックアップからの作り直し、`rollback` で静的アセットが戻るか、デプロイで部屋の接続が切れるか）。どれも公開の前に必須
 - [ ] 公開の前に、相談・確かめ（Phase 1 で決めたことの確かめ）：
   - 〔未〕個人情報保護法相談ダイヤルに、運営者の氏名・住所を「請求があれば遅滞なく回答する」と書く形でよいかを電話で聞く（ユーザーが行う。[privacy](design/privacy.md)）
   - 〔未〕招待URLを LINE と X で実際に送り、OGP のカードの表示を確かめる。変えたら LINE の Page Poker で覚えたものを消す（[architecture](design/architecture.md) の「招待URLのプレビュー（OGP）」）。あわせて、`?openExternalBrowser=1` の付かない URL（アドレス欄からコピーしたもの、`/new`）を LINE で開いたときに、画面が足して開き直した後で外部ブラウザに移るか（LINE が押したリンクにだけ効かせるなら、LINE の中でそのまま使うことになる：2026-10-28 の `/code-review`）、外に出た後に LINE に戻ると何が見えるか（白い画面のまま）。`/g/*` には `X-Robots-Tag: noindex` が付いた状態で、カードが出るか（LINE がこのヘッダーを見るかは公開の情報がない：2026-10-28 の `access-reviewer` #3）
