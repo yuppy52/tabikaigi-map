@@ -35,4 +35,4 @@
 - **レビュー待ち**：一通り書けたので読んでほしい
 - **確定**：レビュー済み。変えるときは理由を残す
 
-図は [Mermaid](https://mermaid.js.org/) で書いている（正本）。システム構成図とワイヤーフレームだけは draw.io の `*.drawio.svg`（画像として見られ、draw.io でそのまま開いて直せる）。GitHub や VS Code（拡張機能）でそのまま図として表示される。
+図は [Mermaid](https://mermaid.js.org/) で書いている（正本）。システム構成図とワイヤーフレームだけは draw.io の `*.drawio.svg`（画像として見られ、draw.io でそのまま開いて直せる）。draw.io のアプリを使わずに中のデータ（`content` 属性）を直したときは、`node tools/drawio-svg.mjs <ファイル>` で絵を描き直す（2026-11-17）。GitHub や VS Code（拡張機能）でそのまま図として表示される。
