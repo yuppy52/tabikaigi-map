@@ -16,9 +16,9 @@ describe("parseRedirects：_redirects の行を読む", () => {
   });
 
   it("Windows の改行（\\r\\n）でも読める", () => {
-    expect(parseRedirects("/new /app 200\r\n/contact /app 200\r\n")).toEqual([
+    expect(parseRedirects("/new /app 200\r\n/x /app 200\r\n")).toEqual([
       { from: "/new", prefix: false, to: "/app" },
-      { from: "/contact", prefix: false, to: "/app" },
+      { from: "/x", prefix: false, to: "/app" },
     ]);
   });
 });
@@ -55,7 +55,7 @@ describe("本物の web/public/_redirects", () => {
   const rules = parseRedirects(redirectsText);
 
   it("screens の「トップと URL」のアプリの URL が、どれも app.html になる", () => {
-    for (const url of ["/g/abcdefghijABCDEFGHIJ01", "/new", "/contact"]) {
+    for (const url of ["/g/abcdefghijABCDEFGHIJ01", "/new"]) {
       expect(rewriteToApp(url, rules)).toBe("/app.html");
     }
   });
@@ -66,6 +66,10 @@ describe("本物の web/public/_redirects", () => {
 
   it("ログインをやめて消した URL（/account・/login・/groups・/me）は書き換えない（404.html になる：ADR 0013）", () => {
     for (const url of ["/account", "/login", "/groups", "/me"]) expect(rewriteToApp(url, rules)).toBeNull();
+  });
+
+  it("問い合わせのフォームをやめて消した /contact は書き換えない（404.html になる：ADR 0014）", () => {
+    expect(rewriteToApp("/contact", rules)).toBeNull();
   });
 });
 

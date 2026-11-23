@@ -18,7 +18,7 @@
 
 1. ログインをやめる（済：2026-11-18）
 2. **いまここ**：検索に出すページ。7-1 トップ・7-2 使い方・7-3 プライバシーポリシーは済み。次は 7-4 確かめとモックの削除
-3. 問い合わせ（フォームは作らず、メールアドレスにする：ADR 0014）
+3. 問い合わせ（済：フォームは作らず、メールアドレスにした：ADR 0014）
 4. 公開の前の安全の確かめ（CodeQL、Strix）を調べて、入れるかを決める
 5. 最初の本番のデプロイ
 6. 本番でしか分からない確かめ（12件）
@@ -151,8 +151,8 @@
   - [ ] 7-4 確かめ：ビルドして `wrangler dev` で、3つのページに `noindex` が付かず、アプリの画面には付くこと、375px の見た目。終わったらモック（`index.html`、`tools/template.html`）を消す
 - [ ] 問い合わせ（NFR-018）：フォームは作らず、連絡先はこのアプリ用のメールアドレス `tabikaigimap.contact@gmail.com` にする（2026-11-23 にユーザーと決めた：[ADR 0014](adr/0014-contact-by-email.md)。それまでは 2026-10-04 に決めた、アプリの中のフォーム（API＋D1＋Turnstile）の予定だった）
   - [x] C-1 `docs/drop-contact-form`（2026-11-23）：ADR 0014、requirements（NFR-007・NFR-008・NFR-018）、design（privacy・screens・data-model・api・architecture・traceability）、glossary
-  - [ ] C-2 運営者が Google アカウント（`tabikaigimap.contact@gmail.com`、名前は「旅会議マップ」、写真なし）を作り、他の人に見える情報とプロフィールの検出を確かめる（ユーザー）
-  - [ ] C-3 `feat/contact-by-email`：プライバシーポリシーの 1.（連絡先、`id="contact"`）・7.・10. をメールアドレスにし、5.・9. に Google（Gmail）を足して、改定の日を付ける。「お問い合わせ」のリンク（トップ、使い方、ポリシー、アプリの一番下とメニュー）を `/privacy#contact` にし、使い方のよくある質問の最後の答えを直す。`/contact` の仮の画面と、`_redirects`・`_headers` の `/contact` を消す（配信の設定なので `access-reviewer` に頼む）
+  - [x] C-2（2026-11-23）運営者が Google アカウント（`tabikaigimap.contact@gmail.com`、名前は「旅会議マップ」、写真なし）を作り、他の人に見える情報とプロフィールの検出を確かめる（ユーザー）
+  - [x] C-3 `feat/contact-by-email`（2026-11-23。改定の日は付けず、制定日のまま（まだ公開していないため：privacy の「ページにしたときに決めたこと」））：プライバシーポリシーの 1.（連絡先、`id="contact"`）・7.・10. をメールアドレスにし、5.・9. に Google（Gmail）を足す。「お問い合わせ」のリンク（トップ、使い方、ポリシー、アプリの一番下とメニュー）を `/privacy#contact` にし、使い方のよくある質問の最後の答えを直す。`/contact` の仮の画面と、`_redirects`・`_headers` の `/contact` を消す（配信の設定なので `access-reviewer` に頼む）
   - [x] 名前を入れる所の一言を強めるか：強めない。いまの「本名でなくてもかまいません」のまま（2026-11-23 にユーザーが決めた）
 - [ ] 基本設計で Phase 2 に回した確かめ（〔未〕。どれも公開の前に必須）：
   - 〔未〕Cloudflare Web Analytics が切れているか（Q-025。Firebase の Google アナリティクスの連携は、プロジェクトを消す（L-5）ので確かめない）

@@ -6,9 +6,6 @@
 /new
   X-Robots-Tag: noindex
   Referrer-Policy: no-referrer
-/contact
-  X-Robots-Tag: noindex
-  Referrer-Policy: no-referrer
 /app
   X-Robots-Tag: noindex
   Referrer-Policy: no-referrer

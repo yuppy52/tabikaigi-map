@@ -3,4 +3,3 @@
 # 行き先を /app.html にしないのは、Cloudflare が /app.html を /app に移す（307）ため
 /g/* /app 200
 /new /app 200
-/contact /app 200

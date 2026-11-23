@@ -1,10 +1,11 @@
 // どの画面にも一番下に置く、小さなリンク（NFR-008：screens の「画面のルール」）。
-// /privacy は素の HTML のページなので、アプリの中の移動ではなく、ふつうのリンクで開く
+// /privacy は素の HTML のページなので、アプリの中の移動ではなく、ふつうのリンクで開く。
+// 「お問い合わせ」はフォームを作らず、プライバシーポリシーの連絡先（メールアドレス）を開く（ADR 0014）
 export function FooterLinks() {
   return (
     <nav className="footlinks" aria-label="このサイトについて">
       <a href="/privacy">プライバシーポリシー</a>
-      <a href="/contact">お問い合わせ</a>
+      <a href="/privacy#contact">お問い合わせ</a>
     </nav>
   );
 }
