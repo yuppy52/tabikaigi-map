@@ -1,6 +1,6 @@
 import { FooterLinks } from "./Footer";
 
-// まだ作っていない画面の仮の画面（/contact など。それぞれの項目で画面に置き換える）
+// app.html を直接開いたとき（/app など）に出す仮の画面。アプリの画面は /g/… と /new だけ
 export function NotYet() {
   return (
     <main className="wrap">

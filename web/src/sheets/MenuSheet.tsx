@@ -26,7 +26,7 @@ export function MenuSheet({ groupName, myName, onSettings, onClose }: Props) {
         </button>
         <a href="/">トップ</a>
         <a href="/privacy">プライバシーポリシー</a>
-        <a href="/contact">お問い合わせ</a>
+        <a href="/privacy#contact">お問い合わせ</a>
       </nav>
     </Sheet>
   );

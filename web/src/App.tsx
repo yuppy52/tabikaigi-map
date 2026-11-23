@@ -7,8 +7,7 @@ import { CreateGroupScreen } from "./sheets/CreateGroupScreen";
 
 // URL ごとに出す画面の一覧（ADR 0011。URL の正本は screens の「トップと URL」）。
 // /g/ の後ろは「/g/*」で受け、グループIDの形かどうかは画面の側で確かめる（/g/ だけや、形の違う ID でも app.html が返るため）。
-// /new はグループ作成の画面。ほかのアプリの URL（/contact）と、
-// それ以外（/app、開発中の /app.html など）は、まだ仮の画面
+// /new はグループ作成の画面。それ以外（/app、開発中の /app.html など）は仮の画面
 export const router = createBrowserRouter([
   { path: "/g/*", element: <GroupRoute /> },
   { path: "/new", element: <CreateGroupScreen /> },
