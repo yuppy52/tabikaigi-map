@@ -1,0 +1,152 @@
+<!doctype html>
+<!-- プライバシーポリシー（/privacy）。検索に出す素の HTML（ADR 0004、architecture の「検索に出すページと出さないページ」）。
+     noindex と no-referrer の meta は付けない（検索に出すため）。スクリプトは読み込まない（見た目の page.css だけ）。
+     書く項目は docs/design/privacy.md の「書く項目」、文は 2026-11-23 にユーザーと決めた。
+     外部のサービスを足す・変えるとき（Sentry、問い合わせの返事のメール）は、5. と 9. を直し、11. の日付を改定にする -->
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>プライバシーポリシー｜旅会議マップ</title>
+    <link rel="canonical" href="https://tabikaigi-map.com/privacy" />
+    <meta name="description" content="旅会議マップが預かる情報、使い道、保存する期間、消してほしいときの頼み方。" />
+    <meta property="og:title" content="プライバシーポリシー｜旅会議マップ" />
+    <meta property="og:description" content="旅会議マップが預かる情報、使い道、保存する期間、消してほしいときの頼み方。" />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://tabikaigi-map.com/privacy" />
+    <meta property="og:image" content="https://tabikaigi-map.com/ogp.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <link rel="stylesheet" href="/src/pages/page.css" />
+  </head>
+  <body>
+    <main class="page policy">
+      <header class="hero">
+        <p class="lead crumb"><a href="/">旅会議マップ</a></p>
+        <h1>プライバシーポリシー</h1>
+      </header>
+
+      <p>旅会議マップ（以下「このアプリ」）の運営者は、このアプリを使う人の情報を、次のとおり扱います。</p>
+
+      <section>
+        <h2 class="section-title">1. 運営者</h2>
+        <p>運営者は YUPPY です。個人で運営しています。連絡は<a href="/contact">お問い合わせのフォーム</a>からお願いします。</p>
+        <p>運営者の氏名と住所は、お問い合わせのフォームから求めていただければ、遅れることなくお答えします。</p>
+      </section>
+
+      <section>
+        <h2 class="section-title">2. 預かる情報</h2>
+        <ul>
+          <li>グループ名、メンバーの名前、行った都道府県</li>
+          <li>グループごとの、最後に開かれた日</li>
+          <li>お問い合わせの本文と、返信先のメールアドレス（返信先は書いた人のものだけ）</li>
+        </ul>
+        <p>アカウントの登録はなく、本名やメールアドレスは求めません。</p>
+        <p>
+          このほか、このアプリを動かしている Cloudflare が、アクセスの記録（IP アドレス、おおよその場所、開いた
+          URL）を自動で受け取ります。このアプリは、この記録を自分の記録（ログ）に残さず、表示や集計にも使いません。
+        </p>
+      </section>
+
+      <section>
+        <h2 class="section-title">3. 使い道</h2>
+        <ul>
+          <li>グループで地図を共有するため</li>
+          <li>不具合を見つけて直すため</li>
+          <li>お問い合わせに返事をするため（このアプリ用のメールアドレスから送ります）</li>
+          <li>使われている量を数えるため（グループやメンバーの数など。一人ひとりの使い方は追いません）</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2 class="section-title">4. ブラウザに覚えるもの</h2>
+        <ul>
+          <li>グループごとに、自分として選んだメンバーの番号と名前。次に開いたときに、名前を選び直さずにすむようにするためです。</li>
+          <li>LINE から外部のブラウザで開き直したかの印。タブを閉じると消えます。</li>
+        </ul>
+        <p>
+          どちらも、このアプリの中だけで使い、ほかには送りません。このアプリ自身はクッキーを使いません。覚えたものは、グループ設定の「ほかのメンバーに切り替える」か「退出する」、またはブラウザのサイトデータを消すことで消せます。
+        </p>
+      </section>
+
+      <section>
+        <h2 class="section-title">5. 使っている外部のサービス</h2>
+        <ul>
+          <li>
+            <b>Cloudflare</b>（Cloudflare,
+            Inc.、米国）：画面の配信、データの保存、ボット対策（Turnstile）。ボット対策では、グループを作るときや新しく参加するときに、ブラウザの情報が
+            Cloudflare に送られます。
+          </li>
+        </ul>
+      </section>
+
+      <section>
+        <h2 class="section-title">6. 保存する期間</h2>
+        <p>
+          預かった情報は、自動では消しません。退出、メンバーの削除、グループの削除で消えます。ただし、消した後も、次の所にしばらく残ります。
+        </p>
+        <ul>
+          <li>データベースを元に戻すための記録：7日</li>
+          <li>運営者の手元のバックアップ：次の版を出して、新しいバックアップを取るまで</li>
+          <li>このアプリの動作の記録（ログ）：最大7日</li>
+        </ul>
+        <p>お問い合わせの本文と返信先は、対応が済んでから3か月で消します。</p>
+      </section>
+
+      <section>
+        <h2 class="section-title">7. 消してほしいとき、見せてほしいとき</h2>
+        <p>自分の情報は、グループ設定の「退出する」で消せます。グループごと消すときは「グループを削除する」を使ってください。</p>
+        <p>
+          自分で消せないときや、預かっている情報を見せてほしい、直してほしい、使うのをやめてほしいときは、<a href="/contact"
+            >お問い合わせのフォーム</a
+          >から、招待URLとメンバーの名前を書いて送ってください。1か月以内に応じます。
+        </p>
+      </section>
+
+      <section>
+        <h2 class="section-title">8. 安全のための取り組み</h2>
+        <ul>
+          <li>グループの URL は、推測できない文字の並びにしています。</li>
+          <li>グループのデータは、そのグループの招待URLを知っている人だけが読み書きできるよう、サーバーの側で守っています。</li>
+          <li>通信は暗号化しています。</li>
+          <li>データの集計とバックアップは、運営者のパソコンからだけ行い、バックアップは1つだけ残します。</li>
+        </ul>
+        <p>詳しいことは、お問い合わせいただければお答えします。</p>
+      </section>
+
+      <section>
+        <h2 class="section-title">9. 外国にあるサービスの利用</h2>
+        <p>Cloudflare は米国の会社です。</p>
+        <p>
+          データベースの置き場所は、アジア太平洋を希望として指定しています。ただし、これは希望で、置き場所の保証ではありません。日本を含め、国を指定する仕組みもないため、実際にどの国に置かれるかは特定できません。
+        </p>
+        <!-- 出典：https://developers.cloudflare.com/d1/configuration/data-location/ （場所のヒントは保証しない。国を固定する jurisdiction は eu・fedramp・us だけ。2026-11-23 に確かめた） -->
+        <p>
+          米国の個人情報を守る制度は、個人情報保護委員会の「<a href="https://www.ppc.go.jp/enforcement/infoprovision/laws/"
+            >諸外国・地域の法制度</a
+          >」のページで確かめられます。
+        </p>
+      </section>
+
+      <section>
+        <h2 class="section-title">10. 苦情・相談の窓口</h2>
+        <p>このアプリでの情報の扱いについての苦情や相談は、<a href="/contact">お問い合わせのフォーム</a>で受け付けます。</p>
+      </section>
+
+      <section>
+        <h2 class="section-title">11. このポリシーを変えるとき</h2>
+        <p>このポリシーを変えるときは、このページでお知らせし、下の日付を書き換えます。</p>
+        <p class="dated">2026年11月23日 制定</p>
+      </section>
+
+      <footer>
+        <nav class="footlinks" aria-label="このサイトについて">
+          <a href="/">トップ</a>
+          <a href="/guide">使い方</a>
+          <a href="/contact">お問い合わせ</a>
+        </nav>
+      </footer>
+    </main>
+  </body>
+</html>

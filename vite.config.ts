@@ -38,8 +38,13 @@ export default defineConfig({
       // 入口の HTML。web/ の直下に置くと、同じ名前で dist/ の直下に出る（Cloudflare は /index.html を /、guide.html を /guide で配る）。
       // - app：アプリの画面（React。/g/… などは _redirects で app.html を返す）
       // - top：トップ（/）。検索に出す素の HTML（ADR 0004）
-      // - guide：使い方（/guide）。トップと同じ素の HTML。プライバシーポリシー（privacy.html）も同じ形で足す
-      input: { app: fromHere("./web/app.html"), top: fromHere("./web/index.html"), guide: fromHere("./web/guide.html") },
+      // - guide：使い方（/guide）、privacy：プライバシーポリシー（/privacy）。トップと同じ素の HTML
+      input: {
+        app: fromHere("./web/app.html"),
+        top: fromHere("./web/index.html"),
+        guide: fromHere("./web/guide.html"),
+        privacy: fromHere("./web/privacy.html"),
+      },
     },
   },
   server: {
