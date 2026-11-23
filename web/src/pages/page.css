@@ -1,4 +1,4 @@
-/* 検索に出すページ（トップ、後で使い方・プライバシーポリシー）の見た目。
+/* 検索に出すページ（トップ、使い方、後でプライバシーポリシー）の見た目。
    アプリの画面の styles.css はアプリ用の規則まで入るので読み込まず、色の変数（theme.css）と字だけを同じにする（見た目は Phase 3 で整える） */
 @import "../theme.css";
 
@@ -59,6 +59,20 @@ h2 {
   font-size: 16px;
   margin: 0 0 2px;
 }
+/* 使い方のページ：節の見出し（はじめ方、よくある質問）と、その中の見出し（手順の名前、質問） */
+.section-title {
+  font-size: 18px;
+  margin-bottom: 10px;
+}
+.steps h3,
+.faq h3 {
+  font-size: 16px;
+  margin: 0 0 2px;
+}
+.crumb {
+  margin: 0;
+  font-size: 13px;
+}
 
 /* 特徴と使い方：カードを縦に並べる */
 .cards,
@@ -96,6 +110,23 @@ h2 {
   display: grid;
   place-items: center;
   font-weight: 700;
+}
+
+/* 使い方のページ：よくある質問。質問ごとに区切り線で分ける */
+.faq article {
+  padding: 12px 0;
+  border-bottom: 1px solid var(--line);
+}
+.faq article:first-child {
+  padding-top: 0;
+}
+/* 最後の質問の下の線は、すぐ下の footer の線と重なるので引かない */
+.faq article:last-child {
+  border-bottom: none;
+}
+.faq p {
+  margin: 0;
+  color: var(--ink2);
 }
 
 /* 大きなボタン（リンク）「グループを作る」 */
