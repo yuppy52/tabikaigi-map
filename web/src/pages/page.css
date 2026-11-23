@@ -1,4 +1,4 @@
-/* 検索に出すページ（トップ、使い方、後でプライバシーポリシー）の見た目。
+/* 検索に出すページ（トップ、使い方、プライバシーポリシー）の見た目。
    アプリの画面の styles.css はアプリ用の規則まで入るので読み込まず、色の変数（theme.css）と字だけを同じにする（見た目は Phase 3 で整える） */
 @import "../theme.css";
 
@@ -127,6 +127,22 @@ h2 {
 .faq p {
   margin: 0;
   color: var(--ink2);
+}
+
+/* プライバシーポリシー：本文の段落と箇条書きの間を詰め、読む幅のまま並べる */
+.policy p,
+.policy ul {
+  margin: 0 0 8px;
+}
+.policy ul {
+  padding-left: 1.3em;
+}
+.policy li + li {
+  margin-top: 4px;
+}
+.dated {
+  color: var(--ink2);
+  font-size: 13px;
 }
 
 /* 大きなボタン（リンク）「グループを作る」 */
