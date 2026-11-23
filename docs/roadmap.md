@@ -153,7 +153,7 @@
   - [x] C-1 `docs/drop-contact-form`（2026-11-23）：ADR 0014、requirements（NFR-007・NFR-008・NFR-018）、design（privacy・screens・data-model・api・architecture・traceability）、glossary
   - [ ] C-2 運営者が Google アカウント（`tabikaigimap.contact@gmail.com`、名前は「旅会議マップ」、写真なし）を作り、他の人に見える情報とプロフィールの検出を確かめる（ユーザー）
   - [ ] C-3 `feat/contact-by-email`：プライバシーポリシーの 1.（連絡先、`id="contact"`）・7.・10. をメールアドレスにし、5.・9. に Google（Gmail）を足して、改定の日を付ける。「お問い合わせ」のリンク（トップ、使い方、ポリシー、アプリの一番下とメニュー）を `/privacy#contact` にし、使い方のよくある質問の最後の答えを直す。`/contact` の仮の画面と、`_redirects`・`_headers` の `/contact` を消す（配信の設定なので `access-reviewer` に頼む）
-  - [ ] 名前を入れる所の一言を「本名ではなく、ニックネームを入れてください」に強めるかを決める（2026-11-23 にメインが勧めた。未定）
+  - [x] 名前を入れる所の一言を強めるか：強めない。いまの「本名でなくてもかまいません」のまま（2026-11-23 にユーザーが決めた）
 - [ ] 基本設計で Phase 2 に回した確かめ（〔未〕。どれも公開の前に必須）：
   - 〔未〕Cloudflare Web Analytics が切れているか（Q-025。Firebase の Google アナリティクスの連携は、プロジェクトを消す（L-5）ので確かめない）
   - 〔未〕グループを開くときの `last_opened_on` の0行の更新が書き込みに数えられないか（`meta.rows_written`。Q-025）
