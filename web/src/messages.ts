@@ -92,7 +92,8 @@ export function joinErrorOf(f: Failure): JoinErrorAction {
 // 新しい名前で参加できたときの知らせ
 export const joinedText = (groupName: string) => `${groupName} に参加しました`;
 // 一覧の名前を押して入ったとき（「（名前）さんとして入る」で入ったときも同じ：2026-11 にメインが決めた仮の値）の知らせ
-export const pickedText = (name: string) => `${name}さんとして開きました。違うときはメニューの『メンバーを変更する』から選び直せます`;
+export const pickedText = (name: string) =>
+  `${name}さんとして開きました。違うときは、右上の自分の名前から『グループ設定』の『ほかのメンバーに切り替える』で選び直せます`;
 // 409 name_taken：名前の入力の下に出す文とボタン、その下の一言
 export const takenText = (name: string) => `${name}さんはもういます。あなたなら、そのまま入れます`;
 export const takenButton = (name: string) => `${name}さんとして入る`;

@@ -1,0 +1,135 @@
+<!doctype html>
+<!-- 使い方（/guide）。検索に出す素の HTML（ADR 0004、architecture の「検索に出すページと出さないページ」）。
+     noindex と no-referrer の meta は付けない（検索に出すため）。スクリプトは読み込まない（見た目の page.css だけ）。
+     文は screens の「使い方の中身」（2026-11-23 にユーザーと決めた）。見た目と文言は βテスト（Phase 4）で整える -->
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>使い方｜旅会議マップ</title>
+    <!-- 検索エンジンに、正の URL はここだと伝える（/guide.html なども同じ中身を返すため。NFR-019） -->
+    <link rel="canonical" href="https://tabikaigi-map.com/guide" />
+    <meta
+      name="description"
+      content="旅会議マップの使い方。グループを作って招待URLを送り、行った都道府県をみんなで塗るまでの手順と、よくある質問。"
+    />
+    <!-- 共有したときのカード。トップと同じ画像に、このページの題と URL（仮の値） -->
+    <meta property="og:title" content="使い方｜旅会議マップ" />
+    <meta property="og:description" content="グループを作って招待URLを送り、行った都道府県をみんなで塗るまでの手順と、よくある質問。" />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://tabikaigi-map.com/guide" />
+    <meta property="og:image" content="https://tabikaigi-map.com/ogp.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <link rel="stylesheet" href="/src/pages/page.css" />
+  </head>
+  <body>
+    <main class="page">
+      <header class="hero">
+        <p class="lead crumb"><a href="/">旅会議マップ</a></p>
+        <h1>使い方</h1>
+      </header>
+
+      <!-- 手順（トップの3ステップと同じ見出しで、中身を少し詳しく） -->
+      <section aria-labelledby="steps-title">
+        <h2 id="steps-title" class="section-title">はじめ方</h2>
+        <ol class="steps">
+          <li>
+            <span class="num" aria-hidden="true">1</span>
+            <div>
+              <h3>作る</h3>
+              <p>
+                「グループを作る」から、グループ名と自分の名前を入れます。名前はニックネームでかまいません。アカウントの登録は要りません。
+              </p>
+            </div>
+          </li>
+          <li>
+            <span class="num" aria-hidden="true">2</span>
+            <div>
+              <h3>招待する</h3>
+              <p>
+                グループの画面の「招待」から招待URLをコピーして、LINE
+                などで友達に送ります。招待URLを知っている人は誰でも参加できるので、グループの友達にだけ送ってください。
+              </p>
+            </div>
+          </li>
+          <li>
+            <span class="num" aria-hidden="true">3</span>
+            <div>
+              <h3>塗る</h3>
+              <p>
+                招待URLを開いたら、一覧から自分の名前を選ぶか、「新しく参加する」で名前を入れます。行ったことのある県を押すと、みんなの地図にすぐ出ます。全員がまだ行っていない県が、次の旅行先の候補です。
+              </p>
+            </div>
+          </li>
+        </ol>
+      </section>
+
+      <a class="cta" href="/new">グループを作る</a>
+
+      <!-- よくある質問（screens の「使い方の中身」） -->
+      <section aria-labelledby="faq-title">
+        <h2 id="faq-title" class="section-title">よくある質問</h2>
+        <div class="faq">
+          <article>
+            <h3>名前を打ち間違えました</h3>
+            <p>
+              名前は、あとから変えられません。右上の自分の名前を押して、「グループ設定」から「退出する」で一度抜けて、招待URLから正しい名前で入り直してください。退出すると、その名前で付けた「行った」は消えるので、もう一度押してください。
+            </p>
+          </article>
+          <article>
+            <h3>間違えて、ほかの人の名前を押してしまいました</h3>
+            <p>
+              右上の自分の名前を押して、「グループ設定」から「ほかのメンバーに切り替える」を押すと、名前を選ぶ画面に戻ります。押してしまった人のデータは消えません。
+            </p>
+          </article>
+          <article>
+            <h3>スマホを替えたら、また名前を選ぶ画面が出ました</h3>
+            <p>
+              このアプリは、選んだ名前をブラウザに覚えておくだけです。スマホやブラウザを替えたときや、しばらく開かなかったとき（iPhone の
+              Safari
+              は、使わない日が続くと覚えたものを消すことがあります）は、名前を選ぶ画面になります。一覧から自分の名前を選べば、前の「行った」のまま続けられます。
+            </p>
+          </article>
+          <article>
+            <h3>本名を入れないといけませんか</h3>
+            <p>いいえ。グループの友達に誰だか分かれば、ニックネームでかまいません。名前は、招待URLを知っている人に見えます。</p>
+          </article>
+          <article>
+            <h3>グループを消したいです</h3>
+            <p>
+              メンバーなら誰でも、右上の自分の名前を押して、「グループ設定」の「グループを削除する」で消せます。全員の「行った」が消え、戻せません。自分だけ抜けたいときは「退出する」を使ってください。
+            </p>
+          </article>
+          <article>
+            <h3>自分のデータを消してほしいです</h3>
+            <p>
+              自分の分は「退出する」で、グループごとなら「グループを削除する」で、その場で消せます。招待URLがもう分からないなど、自分で消せないときは、<a
+                href="/contact"
+                >お問い合わせ</a
+              >のフォームから、招待URLとメンバーの名前を書いて送ってください。1か月以内に消します。詳しくは<a href="/privacy"
+                >プライバシーポリシー</a
+              >に書いています。
+            </p>
+          </article>
+        </div>
+      </section>
+
+      <footer>
+        <nav class="footlinks" aria-label="このサイトについて">
+          <a href="/">トップ</a>
+          <a href="/privacy">プライバシーポリシー</a>
+          <a href="/contact">お問い合わせ</a>
+        </nav>
+        <!-- 地図データの出典（screens の「画面のルール」：トップ・使い方の一番下。web/src/Footer.tsx の MapCredit と同じ文とリンク） -->
+        <p class="credit">
+          地図：「国土数値情報（行政区域データ）」（国土交通省）を加工して作成（<a
+            href="https://nlftp.mlit.go.jp/ksj/gml/datalist/KsjTmplt-N03-2025.html"
+            >国土交通省国土数値情報ダウンロードサイト</a
+          >）
+        </p>
+      </footer>
+    </main>
+  </body>
+</html>
