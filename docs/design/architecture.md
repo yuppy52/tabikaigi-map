@@ -1,6 +1,6 @@
 # システム構成
 
-状態：下書き（2026-11-10：メンバーの削除で「取り直して」を配るのは、本当に消えたときだけにした。2026-11-09：L-1 の `/review-docs` を受けて、アプリの画面の URL からログインの URL を消し、見た目を整える時期を βテスト（Phase 4）にした。2026-11-06：ログインをやめた（[ADR 0013](../adr/0013-drop-login.md)）ので、Firebase Authentication、ID トークン、アカウントの表、ログインの URL、グループ一覧と名前の変更の見積もりを外した。2026-10-26：部屋が配る順番が入れ替わりうることを「部屋が配るもの」に足した。2026-10-26：5-1 の `access-reviewer` を受けて、部屋への接続の確かめ（Origin、最初のメッセージ、100本まで、アラームのまとめ方）を「無料枠を使い切られないために」に足した。2026-10-26：つなぎ直しの数字と、WebSocket が通らない回線の予備は作らないことを足した（ADR 0012）。2026-10-23：外のスクリプトがグループIDを含む URL を読めることを「ログに残るもの」に足した。2026-10-22：画面の切り替えに React Router を使うことを「開発環境」に足した（ADR 0011）。2026-10-21：配信の設定（`assets`、`_redirects`、`_headers`、`404.html`）を書き、ローカルで確かめた結果を「無料枠を使い切られないために」に足した。2026-10-19：画面の道具（Vite＋React）を入れ、開発の動かし方（[ADR 0010](../adr/0010-plain-vite-with-wrangler-dev.md)）とリポジトリの構成を実際に合わせた。2026-10-19：画面のテストは計算だけにすると決めた。2026-10-19：lint・Dependabot を入れ、GitHub の設定（ルールセット）を書き、「開発環境」を実際の設定に合わせた。2026-10-16：開発運用を決め、「環境」と「開発環境」にデプロイ・ステージング・lint・Dependabot を書いた。2026-10-16：OGP の文言と画像を決めた。2026-10-15：`/review-docs` を受けて、「ログに残るもの」のグループIDの扱いを実際の API（URL のパスに入れる）に合わせ、部屋が配らないものに管理できる人の変更と退会を足した。2026-10-13：管理の操作の API を作った `access-reviewer` の指摘で、名前の変更を「使い切られうる API」に足した。2026-10-13：API を作った `access-reviewer` の指摘で、目印のヘッダー（よそのサイトから読ませない）を「無料枠を使い切られないために」に足し、Sentry で消す URL に `/api/groups/` を足した。2026-10-12：開発環境を用意して、Node.js の版とリポジトリの構成（1つの `package.json`）を決め、テストの道具の名前を `@cloudflare/vitest-plugin` に直した。2026-10-12：`/review-docs`（24件）を受けて、Mermaid の構成図を清書にそろえ（WAF、Turnstile、運営者の PC、部屋への接続）、部屋の URL を `/api/rooms/{room_key}` にし、429 の扱い、Sentry に送る前に消すもの・作る前に確かめること・DSN と CPU の注意、集計の鍵、問い合わせの確かめ方と保存期間、Durable Objects の枠を直した。2026-10-12：Q-025・Q-026・Q-027・Q-031 を推奨案で決めて、「運用」、「無料枠を使い切られないために」、「エラーの送り方」、ログに残るもの、使うサービス（WAF のレート制限、Sentry）を書いた。構成図の清書（draw.io）を足した。2026-10-12：Q-016・Q-017 の `/review-docs`（18件）を受けて、`noindex` と `Referrer-Policy: no-referrer` を付けるパスを並べた。2026-10-12：Q-016 を決めて、アプリの画面の URL を `app.html` へのリライトに足した。2026-10-11：Q-020 の `/review-docs`（21件）を受けて、メンバーとグループの削除も部屋から「取り直して」を配ることにし、503 の理由の分け方を足した。2026-10-10：[ADR 0003](../adr/0003-backend-selection.md) が案 C に決まったので、Firebase 一式の版から書き直した。元の版は git の履歴にある。画面の作り方は [ADR 0004](../adr/0004-frontend-react-typescript.md)。システム構成図の清書（draw.io）は roadmap の Phase 1 で作る）
+状態：下書き（2026-11-23：問い合わせのフォームをやめた（[ADR 0014](../adr/0014-contact-by-email.md)）ので、Turnstile の使い道、運用の問い合わせ、`noindex` の対象から外した。2026-11-10：メンバーの削除で「取り直して」を配るのは、本当に消えたときだけにした。2026-11-09：L-1 の `/review-docs` を受けて、アプリの画面の URL からログインの URL を消し、見た目を整える時期を βテスト（Phase 4）にした。2026-11-06：ログインをやめた（[ADR 0013](../adr/0013-drop-login.md)）ので、Firebase Authentication、ID トークン、アカウントの表、ログインの URL、グループ一覧と名前の変更の見積もりを外した。2026-10-26：部屋が配る順番が入れ替わりうることを「部屋が配るもの」に足した。2026-10-26：5-1 の `access-reviewer` を受けて、部屋への接続の確かめ（Origin、最初のメッセージ、100本まで、アラームのまとめ方）を「無料枠を使い切られないために」に足した。2026-10-26：つなぎ直しの数字と、WebSocket が通らない回線の予備は作らないことを足した（ADR 0012）。2026-10-23：外のスクリプトがグループIDを含む URL を読めることを「ログに残るもの」に足した。2026-10-22：画面の切り替えに React Router を使うことを「開発環境」に足した（ADR 0011）。2026-10-21：配信の設定（`assets`、`_redirects`、`_headers`、`404.html`）を書き、ローカルで確かめた結果を「無料枠を使い切られないために」に足した。2026-10-19：画面の道具（Vite＋React）を入れ、開発の動かし方（[ADR 0010](../adr/0010-plain-vite-with-wrangler-dev.md)）とリポジトリの構成を実際に合わせた。2026-10-19：画面のテストは計算だけにすると決めた。2026-10-19：lint・Dependabot を入れ、GitHub の設定（ルールセット）を書き、「開発環境」を実際の設定に合わせた。2026-10-16：開発運用を決め、「環境」と「開発環境」にデプロイ・ステージング・lint・Dependabot を書いた。2026-10-16：OGP の文言と画像を決めた。2026-10-15：`/review-docs` を受けて、「ログに残るもの」のグループIDの扱いを実際の API（URL のパスに入れる）に合わせ、部屋が配らないものに管理できる人の変更と退会を足した。2026-10-13：管理の操作の API を作った `access-reviewer` の指摘で、名前の変更を「使い切られうる API」に足した。2026-10-13：API を作った `access-reviewer` の指摘で、目印のヘッダー（よそのサイトから読ませない）を「無料枠を使い切られないために」に足し、Sentry で消す URL に `/api/groups/` を足した。2026-10-12：開発環境を用意して、Node.js の版とリポジトリの構成（1つの `package.json`）を決め、テストの道具の名前を `@cloudflare/vitest-plugin` に直した。2026-10-12：`/review-docs`（24件）を受けて、Mermaid の構成図を清書にそろえ（WAF、Turnstile、運営者の PC、部屋への接続）、部屋の URL を `/api/rooms/{room_key}` にし、429 の扱い、Sentry に送る前に消すもの・作る前に確かめること・DSN と CPU の注意、集計の鍵、問い合わせの確かめ方と保存期間、Durable Objects の枠を直した。2026-10-12：Q-025・Q-026・Q-027・Q-031 を推奨案で決めて、「運用」、「無料枠を使い切られないために」、「エラーの送り方」、ログに残るもの、使うサービス（WAF のレート制限、Sentry）を書いた。構成図の清書（draw.io）を足した。2026-10-12：Q-016・Q-017 の `/review-docs`（18件）を受けて、`noindex` と `Referrer-Policy: no-referrer` を付けるパスを並べた。2026-10-12：Q-016 を決めて、アプリの画面の URL を `app.html` へのリライトに足した。2026-10-11：Q-020 の `/review-docs`（21件）を受けて、メンバーとグループの削除も部屋から「取り直して」を配ることにし、503 の理由の分け方を足した。2026-10-10：[ADR 0003](../adr/0003-backend-selection.md) が案 C に決まったので、Firebase 一式の版から書き直した。元の版は git の履歴にある。画面の作り方は [ADR 0004](../adr/0004-frontend-react-typescript.md)。システム構成図の清書（draw.io）は roadmap の Phase 1 で作る）
 
 ## 構成図
 
@@ -19,7 +19,7 @@ flowchart LR
     Worker["Worker（Hono）<br/>/api/*"]
     D1[("D1<br/>groups / members / member_visits")]
     Room["Durable Objects<br/>グループごとの部屋（WebSocket）"]
-    Turnstile["Turnstile<br/>作成・参加・問い合わせ"]
+    Turnstile["Turnstile<br/>作成・参加"]
   end
 
   Sentry["Sentry（Developer・無料）<br/>エラーの把握"]
@@ -39,7 +39,7 @@ flowchart LR
 
 清書（draw.io）：[architecture.drawio.svg](architecture.drawio.svg)（正本はこの Mermaid）
 
-- 画面は静的なファイルとして Cloudflare から配る。**`/api/*` だけを Worker が受ける**（`run_worker_first`。部屋への接続も `/api/rooms/{room_key}` で、`/api/*` の中に置く：Q-031）。招待URL `/g/*` とアプリの画面の URL（`/new`、`/contact`。[screens.md](screens.md) の「トップと URL」）は `_redirects` の 200 リライトで `app.html` を返し、Worker を通らない（Worker の枠が尽きても画面は出る。2026-10-05 に本番で確認：[ADR 0003](../adr/0003-backend-selection.md) の決定の基準1）
+- 画面は静的なファイルとして Cloudflare から配る。**`/api/*` だけを Worker が受ける**（`run_worker_first`。部屋への接続も `/api/rooms/{room_key}` で、`/api/*` の中に置く：Q-031）。招待URL `/g/*` とアプリの画面の URL（`/new`。[screens.md](screens.md) の「トップと URL」）は `_redirects` の 200 リライトで `app.html` を返し、Worker を通らない（Worker の枠が尽きても画面は出る。2026-10-05 に本番で確認：[ADR 0003](../adr/0003-backend-selection.md) の決定の基準1）
 - データの正本は D1 の1か所。読み書きはすべて API を通す。画面から D1 に直接は触れない。データの形は [data-model.md](data-model.md)
 - **アクセス制御（NFR-006）は API とデータベースの制約で行う**。どこで何を守るかは [data-model.md](data-model.md) の「保存先で守るもの」
 - リアルタイム（NFR-003）：API が D1 に書けたら、グループの部屋に知らせ、部屋が開いている画面に WebSocket で配る。部屋はデータを持たない（[ADR 0003](../adr/0003-backend-selection.md) の「リアルタイムの共有」）
@@ -53,7 +53,7 @@ flowchart LR
 | Cloudflare Workers | API（Hono） | 1日10万リクエスト、1回の CPU 10ms。超えたらエラーで止まり、日本時間9時に戻る |
 | Cloudflare D1 | データ（SQLite） | 1日に読み取り500万行・書き込み10万行、1データベース500MB、1回の呼び出しで SQL 50本まで。超えたらエラーで止まり、日本時間9時に戻る |
 | Cloudflare Durable Objects | リアルタイムの部屋 | Free は SQLite 版だけ。1日10万リクエスト（接続が1、WebSocket の受信は20通で1、送信は数えない）と、動いている時間 1日13,000 GB 秒。眠れる書き方（WebSocket Hibernation）にして、つながっているだけの間は時間を使わないようにする前提。超えた種類の操作がエラーで止まり、日本時間9時に戻る（要確認：GB 秒の数え方と眠れる書き方の効き方は Phase 2 で測る） |
-| Cloudflare Turnstile | ボット対策（グループの作成、参加、問い合わせ） | 無料・回数無制限。ウィジェットは20個まで。検証（siteverify）は API の中で1回呼ぶだけで、Workers の回数は増えない |
+| Cloudflare Turnstile | ボット対策（グループの作成、参加） | 無料・回数無制限。ウィジェットは20個まで。検証（siteverify）は API の中で1回呼ぶだけで、Workers の回数は増えない |
 | Cloudflare WAF のレート制限 | `/api/*` への連続アクセスを止める（Q-031） | Free で1本（IP ごと、10秒の窓、止めるのも10秒）。止めたアクセスは Worker に届かないので、Workers の回数を使わない |
 | Sentry（Developer） | 画面と API のエラーの把握（NFR-013、Q-027） | 無料、1人、月5,000件。超えたら受け付けなくなる（請求は来ない）。有料プランと従量課金（Pay-as-you-go）は有効にしない |
 | Cloudflare Registrar | ドメイン `tabikaigi-map.com`（最初から使い、変えない：NFR-020） | 年額の固定費（2027-10-04 まで、自動更新） |
@@ -97,7 +97,7 @@ Workers の枠が尽きると、`run_worker_first` に当たる `/api/*` は Clo
 | エラー | 画面と API のエラーは Sentry（Developer・無料）に送り、新しいエラーはメールで知らせてもらう。送る前にグループIDを伏せ、利用者の情報（IP など）を送らない（下の「エラーの送り方」）。Workers Logs は、アクセスごとの自動の記録（`invocation_logs`）を切り、自分で書いたログだけを残す（Q-027） | NFR-013 |
 | 使い切られる対策 | 下の「無料枠を使い切られないために」（Q-031） | NFR-004・NFR-012 |
 | 運営者用の管理画面（MVP の次） | 運営者の PC で動かす画面。D1 の集計と、GraphQL Analytics API の使用量（読み取りだけ・期限付きのトークン）を1画面に出す。インターネットには置かない（Q-030） | NFR-014 |
-| 問い合わせ | アプリの中のフォーム（API＋D1＋Turnstile）。表の形は Phase 2。新しい問い合わせは、週1回の確認で、運営者の PC から集計と一緒に見る（NFR-018 の「1か月以内」に間に合う）。返事は、このアプリ用に作ったメールアドレス（Gmail など）から手で送る。返信先と本文は、対応が済んでから3か月で消す（2026-10-12：`/review-docs` #5） | NFR-018 |
+| 問い合わせ | フォームは作らない。プライバシーポリシーに書いた、このアプリ用のメールアドレス（Gmail）で受ける。届いたメールは週1回の確認で見る（NFR-018 の「1か月以内」に間に合う）。返事はこのアドレスから手で送る。対応が済んでから3か月で手で消す（2026-11-23：[ADR 0014](../adr/0014-contact-by-email.md)） | NFR-018 |
 | D1 の置き場所 | 作るときにアジアを指定する（後から変えられない：要確認） | NFR-016 |
 
 出典：https://developers.cloudflare.com/d1/reference/time-travel/ 、https://developers.cloudflare.com/d1/platform/limits/ 、[ADR 0003](../adr/0003-backend-selection.md) の「運用」
@@ -110,7 +110,7 @@ Workers の枠が尽きると、`run_worker_first` に当たる `/api/*` は Clo
 |---|---|---|
 | 画面は Worker を通さない | `run_worker_first` は `/api/*` だけ（部屋への接続も `/api/rooms/{room_key}`）。互換日付（`compatibility_date`）を 2025-04-01 以降にし、ページの移動はアセットの側で返す。ファイルがない URL は `not_found_handling = "404-page"` で静的な `404.html` を返す（`_redirects` の 200 リライトと合わせた動きは、〔済：ローカル、2026-10-21〕`wrangler dev` で両方が効いた：アプリの URL は 200 で `app.html`、ない URL は 404 で `404.html`。ほかに、GET 以外（POST・PUT・OPTIONS）はアセットの側が 405 を返して Worker に回らない、`/G/…`・`/NEW`・`/API/…`・`/api` は 404、`/_headers`・`/_redirects` は配られない、クエリ（`?openExternalBrowser=1`）が付いてもヘッダーは付く。〔未〕本番で同じかは最初のデプロイで確かめる：roadmap の「最初の本番のデプロイ」） | Workers の回数 |
 | `/api/*` のレート制限 | Cloudflare WAF のレート制限のルール1本（Free）。IP ごとに10秒で一定の回数を超えたら10秒止める。回数は、会議で1人が続けて「行った」を押す速さより十分多くし、Phase 2 で決める（仮に10秒で50回） | Workers・D1・Durable Objects の回数 |
-| Turnstile | グループの作成、参加、問い合わせの API で確かめる（いまのまま）。地図を開くたびには付けない | D1 の書き込み |
+| Turnstile | グループの作成、参加の API で確かめる（いまのまま）。地図を開くたびには付けない | D1 の書き込み |
 | 部屋への接続の確かめ | 部屋の URL は `/api/rooms/{room_key}`（グループIDの SHA-256。WAF のレート制限も効く）。Worker が D1 の `groups.room_key`（`UNIQUE`）で引いてグループがあることを確かめてから Durable Objects に回す（読み取り1行程度。[data-model](data-model.md)）。その前に、URL の形・WebSocket か・`Origin` を、D1 を読まずに確かめる。部屋につなげるのは100本まで（仮の値 2026-10-26）。つないだ後は、最初のメッセージのグループIDで部屋が自分のグループかを確かめ、済むまで何も配らない。確かめが済んだ接続から `ping` 以外の文が届いたら切る（届くたびに部屋が起きて動いている時間を使うため）。最初のメッセージを待つアラームは、1部屋で10秒に1回まで（2026-10-26：5-1 の `access-reviewer`）。細かい順番と断り方は [api](api.md) の「部屋への接続」 | Durable Objects の回数と動いている時間 |
 | つなぎ直しの間隔 | だんだん長くする（1・2・4・8・16・32秒、その後60秒ごと。続けて10回失敗したらやめる。最初のメッセージを送らない接続は10〜20秒で切る、生きているかの確認は30秒ごと：[ADR 0012](../adr/0012-realtime-reconnect-and-no-polling-fallback.md)） | Durable Objects の回数 |
 | 目印のヘッダー | 画面は API に `X-Tabikaigi: 1` を必ず付け、付いていなければ D1 を読まずに 400 にする（2026-10-13）。よそのサイトに `<img src="…/api/groups/…">` を置かれると、訪れた人のブラウザから IP を散らしてグループを開かせられ、IP ごとのレート制限が効かない。独自のヘッダーはブラウザが勝手に付けず、付けるには事前の確認（preflight）が要るが、その応答も D1 を読まない。部屋への WebSocket はヘッダーを付けられないので、代わりに `Origin` が同じサイトかを見る（よそのサイトの `new WebSocket` はブラウザが `Origin` を付けるので断れる。ブラウザ以外からは偽れるので、認証ではない。仮の値 2026-10-26） | D1 の読み取り |
@@ -166,7 +166,7 @@ Workers Logs の設定（`wrangler.jsonc` の `observability`）：`"enabled": t
 | | 検索に出すページ（トップ、使い方、プライバシーポリシー） | アプリの画面（`/g/*` など） |
 |---|---|---|
 | 作り方 | 中身を書いた素の HTML（[ADR 0004](../adr/0004-frontend-react-typescript.md)） | React の画面（`app.html` から動く） |
-| `noindex` | 付けない | **付ける**。`_headers` でレスポンスのヘッダー（`X-Robots-Tag`）に最初から書く。対象のパスを並べる：`/g/*`、`/new`、`/contact`、`/app`・`/app.html`（`app.html` を直接開いたとき。`/app.html` は `/app` に 307 で移る）（検索エンジンが JavaScript を動かす前に読めるように。2026-10-04 にローカルで確認）。二重の守りとして `app.html` と `404.html` にも `<meta name="robots" content="noindex">` を書く（`_headers` に書き忘れた URL でも効く。2026-10-21） |
+| `noindex` | 付けない | **付ける**。`_headers` でレスポンスのヘッダー（`X-Robots-Tag`）に最初から書く。対象のパスを並べる：`/g/*`、`/new`、`/app`・`/app.html`（`app.html` を直接開いたとき。`/app.html` は `/app` に 307 で移る）（検索エンジンが JavaScript を動かす前に読めるように。2026-10-04 にローカルで確認）。二重の守りとして `app.html` と `404.html` にも `<meta name="robots" content="noindex">` を書く（`_headers` に書き忘れた URL でも効く。2026-10-21） |
 | `Referrer-Policy` | 既定のまま | **`no-referrer`**。`_headers` で上と同じパスに付け、`app.html`・`404.html` にも `<meta name="referrer">` で書く。アプリの画面から外のサイトやトップへ移ったときに、参照元の URL（`/g/{groupId}`）を渡さないため（NFR-005・NFR-010。2026-10-12。アクセス解析は使わないことにした：Q-025） |
 | `robots.txt` | 許可 | **禁止しない**。`robots.txt` で読むのを禁止すると、検索エンジンが `noindex` を読めず、URL だけが検索結果に載ることがある（要確認） |
 | sitemap | 載せる | 載せない |
