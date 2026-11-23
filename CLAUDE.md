@@ -11,9 +11,7 @@
 
 ## 構成
 
-- `index.html`：ビルド結果。直接編集しない
-- `tools/template.html`：モックの画面のソース
-- `tools/`：地図データの生成とビルド（`npm run build` で `index.html` を作り直す）
+- `tools/`：地図データ（`paths.json`）と OGP の画像の生成、draw.io の図の描き直し（`drawio-svg.mjs`）
 - `web/`：画面（Vite＋React。`npm run dev` で画面と API を一緒に起こし、`http://localhost:5173/app.html` を開く。`npm run build` で `dist/` にビルド：[ADR 0010](docs/adr/0010-plain-vite-with-wrangler-dev.md)）
 - `api/`：API（Hono）とそのテスト。`migrations/`：D1 のテーブル定義。リポジトリの直下で `npm test`（API と D1 の制約、画面の計算のテスト）、`npm run typecheck`、`npm run lint`（ESLint）、`npm run format:check`（Prettier）。プルリクエストごとに GitHub Actions でも動く（`test` が通らないとマージできない）
 - `docs/`：要件、設計、ADR、ロードマップ

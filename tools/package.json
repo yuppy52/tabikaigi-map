@@ -5,7 +5,6 @@
     "fetch-n03": "mkdir -p n03 && curl -sSL -o n03/N03-20250101_GML.zip https://nlftp.mlit.go.jp/ksj/gml/data/N03/N03-2025/N03-20250101_GML.zip && unzip -o -q -d n03 n03/N03-20250101_GML.zip N03-20250101_prefecture.geojson",
     "gen-n03": "node --max-old-space-size=8192 gen-n03.mjs",
     "gen-map": "node gen-map.mjs",
-    "build": "node build.mjs",
     "ogp": "node gen-ogp.mjs"
   },
   "dependencies": {
