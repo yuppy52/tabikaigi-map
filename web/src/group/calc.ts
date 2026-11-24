@@ -1,5 +1,5 @@
 // グループの画面の計算（部品の外に切り出してテストする：.claude/rules/web.md）。
-// 数え方はモック（tools/template.html）の renderSummary・renderList・openPrefSheet と同じ
+// 数え方はモック（2026-11-23 に消した。git の履歴の tools/template.html）の renderSummary・renderList・openPrefSheet と同じ
 import { PREF_IDS } from "../map/colors";
 import { applyVisit } from "../data/store";
 import type { GroupMember, GroupView, Visit } from "../data/types";

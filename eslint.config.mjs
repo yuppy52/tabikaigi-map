@@ -9,7 +9,7 @@ import tseslint from "typescript-eslint";
 export default defineConfig(
   // 見ないもの：ビルド結果、モックの道具、試作、部品
   {
-    ignores: ["index.html", "dist/", "tools/", "spike/", "node_modules/", ".wrangler/", "api/src/worker-configuration.d.ts"],
+    ignores: ["dist/", "tools/", "spike/", "node_modules/", ".wrangler/", "api/src/worker-configuration.d.ts"],
   },
   js.configs.recommended,
   // 型を使うチェック。tsconfig の範囲（api/ は直下の tsconfig.json、web/src/ は web/tsconfig.json）にだけ効く
