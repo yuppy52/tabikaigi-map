@@ -26,3 +26,6 @@ dist/
 
 # 国土数値情報 N03 の元データ（約600MB。npm run fetch-n03 で取る）
 tools/n03/
+
+# Strix（公開の前の安全の確かめ）の結果。攻撃の記録が入るので入れない（ADR 0015）
+strix_runs/
