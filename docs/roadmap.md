@@ -184,6 +184,10 @@
   - [x] S-2 CodeQL は入れない（2026-11-24 にユーザーが決めた。推奨は入れるだった：[ADR 0016](adr/0016-no-codeql.md)）
   - [x] S-3〜S-5 Strix は使わない（2026-11-24 にユーザーが決めた。推奨は使うだった：[ADR 0017](adr/0017-no-strix.md)）
   - [ ] S-6 `access-reviewer` に、API・D1 の制約・部屋（WebSocket）・配信の設定の全体を通しで1回見てもらい、指摘を直す（ADR 0017）
+    - 結果（2026-11-24）：他人のグループを読み書きする道はなかった。中5件・低10件。直し方は 2026-11-24 にユーザーと決めた（全部いま直す。6-C は「本当に書いたときだけ配る」）。上から順に、1つずつプルリクエストにする
+    - [ ] S-6a `fix/turnstile-hostname`：siteverify の応答の `hostname` を `TURNSTILE_HOSTNAME`（`wrangler.jsonc` の `vars`、本番は `tabikaigi-map.com`。手元は `.dev.vars` で `example.com`：試験用の鍵はいつもこの名前を返す）と突き合わせ、違えば `403 turnstile_failed`、値がなければ `503`（6-B）。`action` は試験用の鍵が返さないので見ない。siteverify は5秒で切って `503`（4-A）。`cloudflareTurnstile` のテスト（8-A）。deploy の「最初のデプロイ」に、本番のウィジェットを作る（ドメインの制限）→ サイトキーを差し替えてマージ → `wrangler secret put TURNSTILE_SECRET` を足す。`access-reviewer` に頼む
+    - [ ] S-6b `fix/api-hardening`：付いていた・外れていたときは部屋に配らない（6-C）、`/api/*` の応答に `Cache-Control: no-store`（5-A）、`member_visits` の `UPDATE` を断るトリガー（`0002`、1-A）、守りのテスト（8-B〜8-E）
+    - [ ] S-6c `fix/delivery-headers`：アプリの画面に `frame-ancestors 'none'` と `nosniff`（5-B）、deploy の「トリガーは3つ」と古い名前を消す（9-A）、WAF のカスタムルール（目印のない `/api/*`、Origin の違う `/api/rooms/*`）を deploy の手順 5 と architecture に書き、`/api/health` の目印の免除をやめる（6-A）、「分かっている限界」に 1-B・2-A・6-D
 - [ ] 画面の E2E テスト（Playwright Test）を入れるかを決める（道具の表の「画面ができたら」。2026-11-02 に項目にした）
 - [ ] 要件定義（requirements・use-cases・用語集）を見直して「確定」にする（確定の後に足したものがあり、「レビュー待ち」のまま。2026-11-02 に項目にした）
 - [ ] 公開の前に、試作の Worker（`tabikaigi-spike.tabikaigi.workers.dev`）と試作の D1 を消す（本番と同じアカウントの無料枠を使い、公開されたままのため）。試作の部品を上げる Dependabot の PR #62 も閉じる
