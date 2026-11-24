@@ -19,7 +19,7 @@
 1. ログインをやめる（済：2026-11-18）
 2. 検索に出すページ（済：2026-11-23）
 3. 問い合わせ（済：フォームは作らず、メールアドレスにした：ADR 0014）
-4. **いまここ**：公開の前の安全の確かめ（Strix。2026-11-24 に入れると決めた：ADR 0015。CodeQL は入れない：ADR 0016）
+4. **いまここ**：公開の前の安全の確かめ（`access-reviewer` で全体を1回見直す。CodeQL と Strix は使わない：ADR 0016・0017）
 5. 最初の本番のデプロイ
 6. 本番でしか分からない確かめ（12件）
 7. iPhone の実機の確かめ（ユーザー）
@@ -86,7 +86,7 @@
 | 基本設計 | 画面設計のレビューは既存の `design:design-critique` を使う（2026-10-04 に決定。新しい `ui-reviewer` は作らない）。構成図とワイヤーフレームは接続済みの draw.io のツールを試す（`.drawio.svg` で保存できるかは要確認）。技術の比較と ADR（既存の `researcher` と、Skill の `engineering:architecture` を試す）。権限マトリクスは NFR-006 の (1)〜(13) を出発点にする |
 | 保存先で守るものの実装の前 | 2026-10-12 に見直した。**足した**：`access-reviewer`（API と D1 の制約を、攻撃する側の目で見る。Firestore をやめたので `rules-reviewer` から名前を変えた）、`.claude/rules/api.md`（下の行から前倒し）、GitHub Actions でプルリクエストごとに型の確かめとテストを動かす（公開リポジトリは無料。外の部品はコミットの番号で固定）。**足さない**：サンドボックス（`/sandbox`）は、いまの deny／ask と作業ログで足りており、ローカルのテストしか動かさないため。困ったら見直す |
 | 実装（Phase 2）の前 | 2026-10-16 に `researcher` で1人＋AI の開発の道具を調べて決めた。**足す**：`/code-review` を push の前に毎回、ESLint＋Prettier（[ADR 0009](adr/0009-lint-eslint-prettier.md)。推奨は Biome だったがユーザーが ESLint を選んだ）と Claude Code の hooks、Dependabot（脆弱性の修正 PR と、npm は週1回・Actions は月1回の版上げ、出てから7日待つ）、`test` を必須のチェックに、`.dev.vars*` を `.gitignore` に、CLAUDE.md に「新しい部品は `npm view` で実在を確かめる」「テストを変えたら差分を先に見せる」。**公開の前**：CodeQL（2026-11-24 に入れないと決めた：[ADR 0016](adr/0016-no-codeql.md)）。**画面ができたら**：Playwright Test の E2E を入れるかを決める（それまではアプリ内のブラウザで確かめる）。**足さない**：`test-writer`（ルールで足りる）、husky などのコミット前の確かめ（CI の必須のチェックで足りる）、Renovate（外のアプリに権限を渡す）、Playwright CLI（MCP で足りなくなったら）。secret scanning と push protection はもう有効だった。**いまある道具の見直し**（2026-10-17）：`access-reviewer` の範囲に部屋（WebSocket）・問い合わせ（Turnstile）・配信の設定を足した。`.claude/rules/sql.md` にマイグレーションの決まりを足した。`doc-reviewer`・`researcher`・`/review-docs`・`/compound` はそのまま。**2026-10-19 に足した**：`coder`（決まった設計に沿ってコードとテストを書く。設計にないことは止まって報告し、テストの期待する値と docs は変えない）。チケットは使わず、項目を小分けにしてロードマップに書く。**2026-10-19 に足した（3-1）**：画面のルール `.claude/rules/web.md`（Q-017 の覚える内容、エラーの理由と知らせ、出典、スマホ幅、計算だけのテスト）。**後で**：テストのルール `.claude/rules/test.md`（画面のテストか E2E を足すとき）、`/deploy` の Skill（最初の本番のデプロイで手順を飛ばしそうなら）。画面のレビューは `design:design-critique` と `design:accessibility-review` |
-| 公開（Phase 2 の終わり）の前 | **Strix**（下のメモ）。**公開から**：GitHub Issues（友達からの報告とバグの受け口。直す PR に `Closes #番号` を書く。2026-10-19 に、βテストの前から公開の時に早めた） |
+| 公開（Phase 2 の終わり）の前 | **Strix**（下のメモ。2026-11-24 に使わないと決めた：[ADR 0017](adr/0017-no-strix.md)）。**公開から**：GitHub Issues（友達からの報告とバグの受け口。直す PR に `Closes #番号` を書く。2026-10-19 に、βテストの前から公開の時に早めた） |
 | 要件定義の後 | docs の自動チェック（Markdown の書式、Mermaid の構文、リンク切れ） |
 
 ### 導入を検討している道具（メモ）
@@ -96,7 +96,7 @@
 - **Playwright CLI**：Claude が実際にブラウザを動かして、画面の操作や表示を確かめる（E2E テスト、スクリーンショット）。
   - 目的：スマホ幅での表示、参加 → 塗る → 別の人の画面に反映、の流れを自動で確かめる
   - 要調査：CLI と MCP（Playwright MCP はすでに接続済み）、アプリ内蔵のブラウザとの使い分け、CI で動かす方法
-- **Strix**：AI エージェントがアプリを攻撃する側の目で調べ、セキュリティの弱点を見つける。2026-11-24 に入れると決めた（[ADR 0015](adr/0015-pre-launch-security-tools.md)。CodeQL は入れない：[ADR 0016](adr/0016-no-codeql.md)）
+- **Strix**：AI エージェントがアプリを攻撃する側の目で調べ、セキュリティの弱点を見つける。2026-11-24 に入れると決めたが、同じ日に使わないことにした（[ADR 0017](adr/0017-no-strix.md)。CodeQL も入れない：[ADR 0016](adr/0016-no-codeql.md)）
   - 目的：API やルールの抜け道、他人のグループを読み書きできないか、などを公開前に確かめる
   - 注意：**調べてよいのは自分のアプリだけ**。本番ではなく、エミュレータかテスト用のプロジェクトに対して実行する
   - 要調査：導入方法、必要な環境（Docker、LLM の API キーなど）と費用、選んだ構成で使えるか
@@ -182,9 +182,8 @@
   - 小分け（2026-11-24 にユーザーと決めた：[ADR 0015](adr/0015-pre-launch-security-tools.md)。上から順に）
   - [x] S-1 調べて決める（2026-11-24：`researcher`。CodeQL は default setup・Extended・止めない（S-2 で入れないことにした）。Strix は Muse Spark 1.3 を OpenRouter の前払い $10 で、まず1回（認可））
   - [x] S-2 CodeQL は入れない（2026-11-24 にユーザーが決めた。推奨は入れるだった：[ADR 0016](adr/0016-no-codeql.md)）
-  - [ ] S-3 Strix の用意（ユーザー：OpenRouter のアカウント、$10 の前払い、上限と期限付きの鍵。Docker と `pipx`。Claude：入れる版と公開者の確かめ、動かす手順を書く）
-  - [ ] S-4 Strix の短い実行（quick）で、Mac で動くか・手元の `wrangler dev` に届くか・実際の金額を確かめる
-  - [ ] S-5 Strix の1回目（認可を重点、standard）。指摘を見て直し、2回目（入力と部屋）が要るかを決める
+  - [x] S-3〜S-5 Strix は使わない（2026-11-24 にユーザーが決めた。推奨は使うだった：[ADR 0017](adr/0017-no-strix.md)）
+  - [ ] S-6 `access-reviewer` に、API・D1 の制約・部屋（WebSocket）・配信の設定の全体を通しで1回見てもらい、指摘を直す（ADR 0017）
 - [ ] 画面の E2E テスト（Playwright Test）を入れるかを決める（道具の表の「画面ができたら」。2026-11-02 に項目にした）
 - [ ] 要件定義（requirements・use-cases・用語集）を見直して「確定」にする（確定の後に足したものがあり、「レビュー待ち」のまま。2026-11-02 に項目にした）
 - [ ] 公開の前に、試作の Worker（`tabikaigi-spike.tabikaigi.workers.dev`）と試作の D1 を消す（本番と同じアカウントの無料枠を使い、公開されたままのため）。試作の部品を上げる Dependabot の PR #62 も閉じる
