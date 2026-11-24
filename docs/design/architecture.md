@@ -205,7 +205,7 @@ Workers Logs の設定（`wrangler.jsonc` の `observability`）：`"enabled": t
   - ブランチ保護（Settings → Branches）：main に直接 push できない、管理者も対象。2026-10-19 の前から
   - ルールセット（Settings → Rules）「main：test が通らないとマージできない」：CI の `test`（GitHub Actions が出したものだけ）が通らないとマージできない。例外の人はなし、main の最新への取り込み直し（strict）は求めない。ブランチ保護に必須のチェックがまだないと、その部分だけを足せない（全体の上書きになる）ため、別のルールセットにした
   - Dependabot の脆弱性の知らせ（alerts）と修正 PR（security updates）は有効。secret scanning と push protection も有効（2026-10-16 に確かめた）
-  - CodeQL は default setup で有効にし、検査の項目は Extended、最初はプルリクエストを止めない（[ADR 0015](../adr/0015-pre-launch-security-tools.md)、2026-11-24。認可の抜けは拾えないので、`access-reviewer` と API のテストで守る）
+  - CodeQL は入れない（[ADR 0016](../adr/0016-no-codeql.md)、2026-11-24。ADR 0015 の決定を覆した。書き方で分かる欠陥は `/code-review` と `access-reviewer` で見る）
 - E2E（Playwright Test）は、画面の流れ（作成 → 参加 → 塗る → 別の人の画面に出る）ができたら入れるかを決める。それまでは Claude がアプリ内のブラウザでスマホ幅も含めて確かめる（2026-10-16）
 - 画面のテスト（2026-10-19 にユーザーと決めた）：画面から切り出した計算（色の濃さ、「行った」の数え方、まだ誰も行っていない県）だけを、いまの Vitest で確かめる。画面の部品の動き（押すとシートが開く、など）の自動のテスト（Testing Library）は入れない。見た目と文言を βテスト（Phase 4）で整える前提で、作り直すたびにテストも直すことになるため。画面の動きは上の E2E で通しで確かめる
 
