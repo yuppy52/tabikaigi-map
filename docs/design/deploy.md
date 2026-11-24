@@ -75,11 +75,15 @@ SQLite は列の型や制約をあとから変えられないので、「新し�
 
 1. 本番の D1 を作る：`npx wrangler d1 create tabikaigi-map --location apac`（場所は後から変えられない：architecture の「運用」。指定の名前と値は〔未〕作るときに公式で確かめる）。出てきた `database_id` で `wrangler.jsonc` を差し替え、プルリクエストでマージする
 2. `npx wrangler d1 migrations apply DB --remote` で、テーブル定義を当てる。`sqlite_master` でトリガーが6つあるかを数える
-3. 独自ドメインを `wrangler.jsonc` の `routes`（`custom_domain: true`）に足してマージし、`npm run deploy`
-4. 確かめる：独自ドメインで開ける、`*.workers.dev` とプレビューの URL で開けない（Q-031）、アプリの画面と API に `noindex` と `Referrer-Policy: no-referrer` が付いている
-5. WAF のレート制限のルールを作る（architecture の「無料枠を使い切られないために」）
-6. 下の「確かめたこと」の〔未〕と、roadmap の Phase 2 の〔未〕を済ませる。わざと失敗するマイグレーション、Time Travel の巻き戻しと取り消し、バックアップからの作り直しは、利用者のいないこの時期に試す
-7. 試作の Worker（`tabikaigi-spike.tabikaigi.workers.dev`）と試作の D1 を消す（roadmap の Phase 2。消すのは `ask` で止まる）
+3. 本番の Turnstile を用意する（試験用の鍵のまま公開すると、ボット対策が黙って外れる：2026-11-24 の S-6 の `access-reviewer` 6-B）
+   1. ダッシュボードの Turnstile でウィジェットを作る。使えるサイト（Hostname）は `tabikaigi-map.com` だけにする（`wrangler.jsonc` の `vars` の `TURNSTILE_HOSTNAME` と同じ値）
+   2. 公開してよい鍵（サイトキー）で `web/src/config.ts` の本番の鍵（`npm run build` のときだけ使う）を差し替え、プルリクエストでマージする。手元の `npm run dev` はいつも試験用の鍵を使うので、本番のウィジェットに `localhost` は足さない
+4. 独自ドメインを `wrangler.jsonc` の `routes`（`custom_domain: true`）に足してマージし、`npm run deploy`。出力の vars に `TURNSTILE_HOSTNAME: tabikaigi-map.com` が出ていることを見る（手元の `.dev.vars` の値は本番に送られない）
+5. 秘密の鍵を `npx wrangler secret put TURNSTILE_SECRET` で入れる（リポジトリと画面に出さない）。Worker ができた後に入れる（先に入れると、wrangler が空の Worker を作るか聞いてくる見込み。要確認）。入れるまで、作成と参加は `503`
+6. 確かめる：独自ドメインで開ける、`*.workers.dev` とプレビューの URL で開けない（Q-031）、アプリの画面と API に `noindex` と `Referrer-Policy: no-referrer` が付いている、本番でグループを作れて、試験用の券（手元の画面で取ったもの）では作れない（`403`）。作れずに `503` になるときは、秘密の鍵の打ち間違い（Cloudflare の `invalid-input-secret`）を疑い、`wrangler tail` で理由の短い文を見る。`www.tabikaigi-map.com` では画面を配らない（www は付けない：architecture の OGP。Turnstile の `hostname` も合わない）
+7. WAF のレート制限のルールを作る（architecture の「無料枠を使い切られないために」）
+8. 下の「確かめたこと」の〔未〕と、roadmap の Phase 2 の〔未〕を済ませる。わざと失敗するマイグレーション、Time Travel の巻き戻しと取り消し、バックアップからの作り直しは、利用者のいないこの時期に試す
+9. 試作の Worker（`tabikaigi-spike.tabikaigi.workers.dev`）と試作の D1 を消す（roadmap の Phase 2。消すのは `ask` で止まる）
 
 ## ふだんのデプロイ（表を変えないとき）
 

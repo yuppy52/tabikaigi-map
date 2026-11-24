@@ -179,6 +179,7 @@ Workers Logs の設定（`wrangler.jsonc` の `observability`）：`"enabled": t
 - グループIDは API の URL のパスに入れる（`/api/groups/{groupId}`：[api](api.md)。試作のときは「パスに入れず、中身かヘッダーで送る」としていたが、API の設計で変えた。2026-10-15：`/review-docs` #6）。その代わり、URL が残る場所を減らす：アクセスごとの自動の記録（`invocation_logs`）を切り、Sentry に送る前に伏せ、自分で書くログにも書かない（下の項目と「エラーの送り方」）
 - アプリの画面で動く外のスクリプト（いまは Turnstile。後で Sentry）は、同じページで動くので、グループIDを含む URL（`location.href`）を読める。`Referrer-Policy: no-referrer` は Referer ヘッダーを止めるだけで、スクリプトが自分で読む分は止めない。Turnstile が確認の通信に URL を入れて送るかは〔未〕（最初のデプロイで、本番の鍵で通信を見る。入るなら「分かっている限界」に書く。2026-10-23：`access-reviewer` #1）
 - 部屋への WebSocket の URL（`/api/rooms/{room_key}`）には、グループIDの代わりにその SHA-256 を入れる
+- Turnstile の確かめで、使えない（`503`）ときと、`hostname` が違うときは、理由の短い決まった文（`turnstile: unavailable (no secret)`、`turnstile: hostname mismatch` など）だけを残す。券・`hostname` の値・グループIDは入れない（2026-11-24：S-6a。秘密の鍵の打ち間違いや、試験用の鍵の入れ間違いに気づくため）
 - Workers Logs は有効にするが、アクセスごとの自動の記録（URL、IP アドレス、おおよその場所）は切る（上の「エラーの送り方」。Q-027）。自分で書くログにも、グループID、名前、メールアドレスを書かない
 - Cloudflare Web Analytics は使わない。Free ではアプリの画面（`/g/*`）だけを外す設定がなく、自動で有効になることがあるので、Phase 2 で管理画面を見て切れていることを確かめる（要確認。Q-025）
 
