@@ -1,6 +1,6 @@
 # ADR 0015：公開の前の安全の確かめに、CodeQL（default setup）と Strix（Muse Spark を OpenRouter の前払いで）を使う
 
-状態：決定（2026-11-24）。決定 1（CodeQL）は同じ日に [ADR 0016](0016-no-codeql.md) で覆した（入れない）。Strix の部分はそのまま
+状態：決定（2026-11-24）。決定 1（CodeQL）は同じ日に [ADR 0016](0016-no-codeql.md) で覆した（入れない）。決定 2〜5（Strix）も同じ日に [ADR 0017](0017-no-strix.md) で覆した（使わない）
 
 - 関係する要件：NFR-006（アクセス制御は保存先の側で守る）、NFR-009（費用に上限がある構成）
 - roadmap の「公開の前の安全の確かめ：CodeQL と Strix を調べて、入れるかを決める」の決定
