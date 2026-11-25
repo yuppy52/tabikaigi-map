@@ -17,17 +17,21 @@ export const testTurnstile: Deps["verifyTurnstile"] = async (token) => token ===
 
 export type CallOptions = {
   body?: unknown;
-  rawBody?: string;
+  /** そのまま送る本文。ReadableStream なら Content-Length の付かない、少しずつ届く本文になる */
+  rawBody?: string | ReadableStream<Uint8Array>;
   deps?: Partial<Deps>;
   headers?: Record<string, string>;
   env?: Partial<Env>;
 };
 
-/** API を呼ぶ。応答の後に流す処理（waitUntil）も終わるまで待つ */
-export async function call(method: string, path: string, opts: CallOptions = {}) {
+/**
+ * API を呼び、応答をそのまま返す（ヘッダーを見たいとき用）。応答の後に流す処理（waitUntil）も終わるまで待つ。
+ * omitMark：目印のヘッダー（X-Tabikaigi）を付けない（よそのサイトからの書き込みをまねる）
+ */
+export async function callRaw(method: string, path: string, opts: CallOptions & { omitMark?: boolean } = {}) {
   const app = createApp({ verifyTurnstile: testTurnstile, ...opts.deps });
-  const headers: Record<string, string> = { "X-Tabikaigi": "1", ...opts.headers };
-  let body: string | undefined = opts.rawBody;
+  const headers: Record<string, string> = { ...(opts.omitMark ? {} : { "X-Tabikaigi": "1" }), ...opts.headers };
+  let body: string | ReadableStream<Uint8Array> | undefined = opts.rawBody;
   if (opts.body !== undefined) {
     headers["Content-Type"] = "application/json";
     body = JSON.stringify(opts.body);
@@ -35,6 +39,12 @@ export async function call(method: string, path: string, opts: CallOptions = {})
   const ctx = createExecutionContext();
   const res = await app.fetch(new Request(`https://example.com${path}`, { method, headers, body }), { ...env, ...opts.env }, ctx);
   await waitOnExecutionContext(ctx);
+  return res;
+}
+
+/** API を呼ぶ。状態コードと JSON だけを返す */
+export async function call(method: string, path: string, opts: CallOptions & { omitMark?: boolean } = {}) {
+  const res = await callRaw(method, path, opts);
   const json = (await res.json().catch(() => null)) as any;
   return { status: res.status, json };
 }

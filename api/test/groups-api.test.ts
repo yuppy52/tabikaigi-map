@@ -3,15 +3,103 @@
 // 通るべき人が通ること（断りすぎていないこと）を確かめる
 import { beforeAll, describe, expect, it } from "vitest";
 import { TurnstileUnavailableError } from "../src/turnstile";
-import { call, create, env, join, setup } from "./helpers";
+import { call, callRaw, create, env, join, setup } from "./helpers";
 
 beforeAll(setup);
+
+/** 表ごとの行の数（断ったときに何も書いていないことの確かめ） */
+async function rowCounts() {
+  const n = async (table: string) => (await env.DB.prepare(`SELECT count(*) AS n FROM ${table}`).first<{ n: number }>())!.n;
+  return { groups: await n("groups"), members: await n("members"), member_visits: await n("member_visits") };
+}
+
+/** prepare と batch が必ず失敗する D1（D1 が落ちた日をまねる。表の名前を替えて戻す形にしない：ほかのテストに漏らさない） */
+const brokenDb = {
+  prepare() {
+    throw new Error("D1 が使えない");
+  },
+  batch() {
+    throw new Error("D1 が使えない");
+  },
+} as unknown as D1Database;
+
+/** 少しずつ届く本文（Content-Length が付かない）。size バイトの JSON を、1KB ずつ流す */
+function streamBody(body: unknown, size: number) {
+  const json = JSON.stringify(body);
+  // 日本語は1文字3バイトなので、バイトで数えて埋める（`,"pad":"` と `"` の9バイトを足し、元の `}` は使い回す）
+  const head = new TextEncoder().encode(json).length;
+  const text = json.slice(0, -1) + `,"pad":"${"x".repeat(Math.max(0, size - head - 9))}"}`;
+  const bytes = new TextEncoder().encode(text);
+  if (bytes.length !== size) throw new Error(`本文の大きさが ${bytes.length} バイトになった`);
+  let offset = 0;
+  return new ReadableStream<Uint8Array>({
+    pull(controller) {
+      if (offset >= bytes.length) return controller.close();
+      controller.enqueue(bytes.slice(offset, offset + 1024));
+      offset += 1024;
+    },
+  });
+}
+
+/** D1 を包み、何回使われたかを数える（「D1 を使わずに断る」の確かめ。room.test の countingEnv と同じ考え方） */
+function countingDb() {
+  const used = { db: 0 };
+  const db = new Proxy(env.DB, {
+    get(t, p) {
+      used.db++;
+      const v: unknown = Reflect.get(t, p);
+      return typeof v === "function" ? (v as (...a: unknown[]) => unknown).bind(t) : v;
+    },
+  });
+  return { used, env: { DB: db } as Partial<Env> };
+}
 
 describe("目印のヘッダー（よそのサイトから読ませない）", () => {
   it("X-Tabikaigi がなければ、D1 を読まずに 400", async () => {
     const { groupId } = await create();
-    const r = await call("GET", `/api/groups/${groupId}`, { headers: { "X-Tabikaigi": "" } });
+    const c = countingDb();
+    const r = await call("GET", `/api/groups/${groupId}`, { headers: { "X-Tabikaigi": "" }, env: c.env });
     expect(r).toEqual({ status: 400, json: { error: "bad_request" } });
+    expect(c.used.db).toBe(0);
+  });
+
+  it("目印のない書き込み（POST・PUT・DELETE の全部）は 400 で、D1 を使わず、行も変わらない（8-B）", async () => {
+    const { groupId, memberId } = await create("ゆう", { groupName: "目印部" });
+    const taro = (await join(groupId, "たろう")).json.memberId as number;
+    expect((await call("PUT", `/api/groups/${groupId}/members/${memberId}/visits/13`)).status).toBe(200);
+    const writes: [string, string, unknown][] = [
+      ["POST", "/api/groups", { groupName: "旅行部", name: "じろう", turnstileToken: "ok" }],
+      ["POST", `/api/groups/${groupId}/members`, { name: "はなこ", turnstileToken: "ok" }],
+      ["PUT", `/api/groups/${groupId}/members/${memberId}/visits/14`, undefined],
+      ["DELETE", `/api/groups/${groupId}/members/${memberId}/visits/13`, undefined],
+      ["POST", `/api/groups/${groupId}/members/${taro}/leave`, undefined],
+      ["DELETE", `/api/groups/${groupId}/members/${taro}`, undefined],
+      ["PUT", `/api/groups/${groupId}/name`, { name: "旅の会" }],
+      ["DELETE", `/api/groups/${groupId}`, undefined],
+    ];
+    const before = await rowCounts();
+    // ヘッダーがない・値が違う（"1" の一歩手前の "0"、空）
+    for (const mark of [undefined, "0", ""]) {
+      for (const [method, path, body] of writes) {
+        const c = countingDb();
+        const r = await call(method, path, {
+          body,
+          env: c.env,
+          omitMark: mark === undefined,
+          headers: mark === undefined ? {} : { "X-Tabikaigi": mark },
+        });
+        const label = `${method} ${path} ${String(mark)}`;
+        expect(r, label).toEqual({ status: 400, json: { error: "bad_request" } });
+        expect(c.used.db, label).toBe(0);
+      }
+    }
+    expect(await rowCounts()).toEqual(before);
+    const view = await call("GET", `/api/groups/${groupId}`);
+    expect(view.json.group).toEqual({ name: "目印部" });
+    expect(view.json.members.map((m: { id: number }) => m.id)).toEqual([memberId, taro]);
+    expect(view.json.visits).toEqual([{ memberId, pref: 13 }]);
+    // 断りすぎの確認：目印があれば同じ書き込みが通る
+    expect((await call("PUT", `/api/groups/${groupId}/name`, { body: { name: "旅の会" } })).status).toBe(200);
   });
 
   it("/api/health は目印なしでも通る", async () => {
@@ -26,6 +114,20 @@ describe("Turnstile（Q-031）", () => {
     const { groupId } = await create();
     const bad = await call("POST", `/api/groups/${groupId}/members`, { body: { name: "たろう", turnstileToken: "ng" } });
     expect(bad).toEqual({ status: 403, json: { error: "turnstile_failed" } });
+  });
+
+  it("Turnstile で断ったときは、グループもメンバーも増えない（作成と参加：8-C）", async () => {
+    const { groupId } = await create();
+    const before = await rowCounts();
+    for (const token of [undefined, "ng", ""]) {
+      const c = await call("POST", "/api/groups", { body: { groupName: "旅行部", name: "ゆう", turnstileToken: token } });
+      expect(c, String(token)).toEqual({ status: 403, json: { error: "turnstile_failed" } });
+      const j = await call("POST", `/api/groups/${groupId}/members`, { body: { name: "たろう", turnstileToken: token } });
+      expect(j, String(token)).toEqual({ status: 403, json: { error: "turnstile_failed" } });
+    }
+    expect(await rowCounts()).toEqual(before);
+    // 断りすぎの確認：合言葉が合えば参加できる
+    expect((await join(groupId, "たろう")).status).toBe(201);
   });
 
   it("Cloudflare に聞けないときは、通さずに 503", async () => {
@@ -67,12 +169,73 @@ describe("グループを作る（REQ-001）", () => {
     expect(r.json.members[0].name).toBe("ゆう");
   });
 
+  it("メンバーを入れる文が失敗したら、グループも残らない（同じ batch で取り消される：8-D）", async () => {
+    const before = await rowCounts();
+    // メンバーの INSERT を必ず失敗させるトリガーを、このテストの間だけ置く（最後に外す）
+    await env.DB.prepare(
+      "CREATE TRIGGER test_block_member_insert BEFORE INSERT ON members BEGIN SELECT RAISE(ABORT, 'blocked'); END",
+    ).run();
+    try {
+      const r = await call("POST", "/api/groups", { body: { groupName: "残らない部", name: "ゆう", turnstileToken: "ok" } });
+      expect(r).toEqual({ status: 503, json: { error: "unavailable", reason: "temporary" } });
+    } finally {
+      await env.DB.prepare("DROP TRIGGER test_block_member_insert").run();
+    }
+    expect(await rowCounts()).toEqual(before);
+    expect(await env.DB.prepare("SELECT 1 FROM groups WHERE name = '残らない部'").first()).toBeNull();
+    // トリガーを外せば作れる（ほかのテストに漏れていない）
+    expect((await call("POST", "/api/groups", { body: { groupName: "残らない部", name: "ゆう", turnstileToken: "ok" } })).status).toBe(201);
+  });
+
   it("大きな本文は読まずに断る", async () => {
     const r = await call("POST", "/api/groups", {
       rawBody: JSON.stringify({ groupName: "旅行部", name: "ゆう", turnstileToken: "ok", pad: "x".repeat(10_000) }),
       headers: { "Content-Type": "application/json" },
     });
     expect(r).toEqual({ status: 413, json: { error: "bad_request" } });
+  });
+});
+
+describe("本文の上限（4KB：8-E）", () => {
+  const pad = "x".repeat(10_000);
+  const raw = (body: unknown) => ({ rawBody: JSON.stringify(body), headers: { "Content-Type": "application/json" } });
+
+  it("参加でも、大きな本文は読まずに 413 で、メンバーは増えない", async () => {
+    const { groupId } = await create();
+    const before = await rowCounts();
+    const r = await call("POST", `/api/groups/${groupId}/members`, raw({ name: "たろう", turnstileToken: "ok", pad }));
+    expect(r).toEqual({ status: 413, json: { error: "bad_request" } });
+    expect(await rowCounts()).toEqual(before);
+  });
+
+  it("Content-Length のない少しずつの本文でも、4KB を超えたら 413 で、行も名前も変わらない", async () => {
+    const { groupId } = await create("ゆう", { groupName: "流す部" });
+    // 本当に Content-Length が付かない形で送っていることの確かめ
+    const probe = new Request("https://example.com/", { method: "PUT", body: streamBody({ name: "x" }, 100) });
+    expect(probe.headers.get("content-length")).toBeNull();
+    const before = await rowCounts();
+    const headers = { "Content-Type": "application/json" };
+    const join413 = await call("POST", `/api/groups/${groupId}/members`, {
+      rawBody: streamBody({ name: "たろう", turnstileToken: "ok" }, 4 * 1024 + 1),
+      headers,
+    });
+    expect(join413).toEqual({ status: 413, json: { error: "bad_request" } });
+    const rename413 = await call("PUT", `/api/groups/${groupId}/name`, { rawBody: streamBody({ name: "旅の会" }, 4 * 1024 + 1), headers });
+    expect(rename413).toEqual({ status: 413, json: { error: "bad_request" } });
+    expect(await rowCounts()).toEqual(before);
+    expect((await call("GET", `/api/groups/${groupId}`)).json.group).toEqual({ name: "流す部" });
+    // 断りすぎの確認：少しずつでも 4KB ちょうどなら通る
+    const ok = await call("PUT", `/api/groups/${groupId}/name`, { rawBody: streamBody({ name: "旅の会" }, 4 * 1024), headers });
+    expect(ok).toEqual({ status: 200, json: { ok: true } });
+  });
+
+  it("グループ名の変更でも、大きな本文は読まずに 413 で、名前は変わらない", async () => {
+    const { groupId } = await create("ゆう", { groupName: "上限部" });
+    const r = await call("PUT", `/api/groups/${groupId}/name`, raw({ name: "旅の会", pad }));
+    expect(r).toEqual({ status: 413, json: { error: "bad_request" } });
+    expect((await call("GET", `/api/groups/${groupId}`)).json.group).toEqual({ name: "上限部" });
+    // 断りすぎの確認：小さな本文なら通る
+    expect((await call("PUT", `/api/groups/${groupId}/name`, raw({ name: "旅の会" }))).status).toBe(200);
   });
 });
 
@@ -335,6 +498,47 @@ describe("メンバーの「行った」（REQ-016・REQ-023）", () => {
     }
     expect(await call("PUT", `/api/groups/${groupId}/members/1.5/visits/13`)).toEqual({ status: 400, json: { error: "bad_request" } });
     expect(await call("PUT", `/api/groups/${groupId}/members/-1/visits/13`)).toEqual({ status: 400, json: { error: "bad_request" } });
+  });
+});
+
+describe("API の応答は残させない（Cache-Control: no-store、X-Robots-Tag: noindex、Referrer-Policy: no-referrer：5-A）", () => {
+  const expected = { cache: "no-store", robots: "noindex", referrer: "no-referrer" };
+  const headersOf = (method: string, path: string, res: Response) => ({
+    method,
+    path,
+    status: res.status,
+    cache: res.headers.get("cache-control"),
+    robots: res.headers.get("x-robots-tag"),
+    referrer: res.headers.get("referrer-policy"),
+  });
+
+  it("成功・失敗・知らない API・落ちたとき、どの応答にも no-store・noindex・no-referrer が付く", async () => {
+    const { groupId, memberId } = await create();
+    const cases: [string, string, Parameters<typeof callRaw>[2], number][] = [
+      ["GET", `/api/groups/${groupId}`, {}, 200],
+      ["POST", "/api/groups", { body: { groupName: "旅行部", name: "ゆう", turnstileToken: "ok" } }, 201],
+      ["PUT", `/api/groups/${groupId}/members/${memberId}/visits/13`, {}, 200],
+      ["GET", "/api/health", {}, 200],
+      ["POST", "/api/groups", { body: { groupName: "旅行部", name: "", turnstileToken: "ok" } }, 400],
+      ["GET", `/api/groups/${groupId}`, { omitMark: true }, 400],
+      ["POST", "/api/groups", { body: { groupName: "旅行部", name: "ゆう", turnstileToken: "ng" } }, 403],
+      ["GET", `/api/groups/${"D".repeat(22)}`, {}, 404],
+      ["GET", "/api/groups/short", {}, 404],
+      ["GET", "/api/nothing", {}, 404],
+      [
+        "POST",
+        "/api/groups",
+        { rawBody: JSON.stringify({ pad: "x".repeat(10_000) }), headers: { "Content-Type": "application/json" } },
+        413,
+      ],
+    ];
+    for (const [method, path, opts, status] of cases) {
+      const res = await callRaw(method, path, opts);
+      expect(headersOf(method, path, res)).toEqual({ method, path, status, ...expected });
+    }
+    // D1 が落ちたときの 503 にも付く
+    const res = await callRaw("GET", `/api/groups/${groupId}`, { env: { DB: brokenDb } });
+    expect(headersOf("GET", groupId, res)).toEqual({ method: "GET", path: groupId, status: 503, ...expected });
   });
 });
 

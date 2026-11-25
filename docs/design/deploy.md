@@ -30,11 +30,11 @@
 SQLite は列の型や制約をあとから変えられないので、「新しい表を作ってデータを写し、古い表を消して名前を替える」で作り直す。**2026-10-17 に手元の D1 で試したところ、親の表（`groups`）を消すと、`PRAGMA defer_foreign_keys = true` を付けても `PRAGMA foreign_keys = OFF` にしても、`ON DELETE CASCADE` で子の表（`members`・`member_visits`）の行が全部消えた**（下の「確かめたこと」）。そのため次を守る。
 
 1. 先頭に `PRAGMA defer_foreign_keys = true;` を書く
-2. **親の表を作り直すときは、その子・孫の表（`groups` なら `members` と `member_visits`、`accounts` なら `members` と `account_visits`、`members` なら `member_visits`）も同じファイルで作り直す**
+2. **親の表を作り直すときは、その子・孫の表（`groups` なら `members` と `member_visits`、`members` なら `member_visits`）も同じファイルで作り直す**
 3. 新しい表は、元の定義と同じ `CREATE TABLE`（`CHECK`、`UNIQUE`、`AUTOINCREMENT`、外部キー）で作る。`CREATE TABLE … AS SELECT` は使わない（制約も `AUTOINCREMENT` も写らない）
 4. データを写す（`INSERT INTO 新しい表 SELECT … FROM 古い表`）
 5. 古い表を**子から先に**消す（孫 → 子 → 親）。名前を替える
-6. **データを写した後で**、インデックス（部分 `UNIQUE` を含む）とトリガーを作る（先に作ると、`members_owner_first_only` などが写すときの `INSERT` を断ることがある）
+6. **データを写した後で**、インデックス（部分 `UNIQUE` を含む）とトリガーを作る（先に作ると、`members_group_full` などが写すときの `INSERT` を断ることがある。`member_visits` を作り直したら、`0002` の `member_visits_fixed` も作り直す）
 7. **番号の続きを元に戻す**：`UPDATE sqlite_sequence SET seq = <作り直す前の値> WHERE name = 'members';`（行がなければ `INSERT`）。戻さないと、消したメンバーの番号を後から入った人がもらい、その番号を覚えている古い端末が、後から入った人として操作できてしまう（[learnings](../learnings/2026-10-13-guard-every-path-to-protected-value.md)）
 8. 手元の練習で、当てる前と後に、表ごとの行数、トリガーの数（`SELECT count(*) FROM sqlite_master WHERE type = 'trigger'`）、`sqlite_sequence` の値を比べる
 
@@ -74,7 +74,7 @@ SQLite は列の型や制約をあとから変えられないので、「新し�
 公開の前に行う。roadmap の Phase 2 の〔未〕の確かめも、ここで済ませる。
 
 1. 本番の D1 を作る：`npx wrangler d1 create tabikaigi-map --location apac`（場所は後から変えられない：architecture の「運用」。指定の名前と値は〔未〕作るときに公式で確かめる）。出てきた `database_id` で `wrangler.jsonc` を差し替え、プルリクエストでマージする
-2. `npx wrangler d1 migrations apply DB --remote` で、テーブル定義を当てる。`sqlite_master` でトリガーが6つあるかを数える
+2. `npx wrangler d1 migrations apply DB --remote` で、テーブル定義を当てる。`sqlite_master` でトリガーが4つ（`0001` の `groups_fixed`・`members_fixed`・`members_group_full` と、`0002` の `member_visits_fixed`）あるかを数える
 3. 本番の Turnstile を用意する（試験用の鍵のまま公開すると、ボット対策が黙って外れる：2026-11-24 の S-6 の `access-reviewer` 6-B）
    1. ダッシュボードの Turnstile でウィジェットを作る。使えるサイト（Hostname）は `tabikaigi-map.com` だけにする（`wrangler.jsonc` の `vars` の `TURNSTILE_HOSTNAME` と同じ値）
    2. 公開してよい鍵（サイトキー）で `web/src/config.ts` の本番の鍵（`npm run build` のときだけ使う）を差し替え、プルリクエストでマージする。手元の `npm run dev` はいつも試験用の鍵を使うので、本番のウィジェットに `localhost` は足さない
@@ -148,7 +148,7 @@ SQLite は列の型や制約をあとから変えられないので、「新し�
 
 ## 確かめたこと
 
-- 〔済：ローカル、2026-10-16〕まっさらな手元の D1 に `0001_init.sql` を当てて `wrangler d1 export --local` で書き出すと、トリガー6つ、部分インデックス（`members_one_owner`）、`d1_migrations` が入っていた。その書き出しを別の手元の D1 に `execute --local --file` で読み込むと、トリガー6つがそろっていた
+- 〔済：ローカル、2026-10-16〕まっさらな手元の D1 に `0001_init.sql` を当てて（当時の、ログインをやめる前の `0001`）`wrangler d1 export --local` で書き出すと、トリガー6つ、部分インデックス（`members_one_owner`）、`d1_migrations` が入っていた。その書き出しを別の手元の D1 に `execute --local --file` で読み込むと、トリガー6つがそろっていた
 - 〔済：ローカル、2026-10-16〕いつもの `wrangler dev` 用の手元の D1（`.wrangler/`）は、`0001_init.sql` を書き換える前の古い形のままだった（トリガー4つで、名前も違う）。`migrations apply --local` は「当てるものはない」と答えた。当てたファイルを書き換えても二度と当たらない、の実例。テスト（Vitest）は毎回まっさらな D1 で動くので影響はない。`wrangler dev` で画面を試す前に、手元の D1 を作り直す（`.wrangler/state` の D1 を運営者が手で消し、`npm run db:migrate:local`）
 - 〔済：ローカル、2026-10-26〕手元の D1 が、`wrangler dev` からの書き込みで `SQLITE_READONLY`（読み取りだけ）を返した（2026-10-23）。本体のファイルが 4KB のままで、表の中身は書きかけの記録（`-wal`、111KB）に入ったままだった。`sqlite3` でファイルを1回開いて閉じると（`BEGIN IMMEDIATE; ROLLBACK;`）書きかけの記録が本体に移り、`wrangler dev` から書けるようになった。〔推測〕`wrangler dev` を強制終了（`pkill`）したことで書きかけの記録が残り、`wrangler dev` がそれを片付けられなかった。原因は確かめきれていない。同じことが起きたら、まず `sqlite3` で開いて閉じる。直らなければ手元の D1 を作り直す（`.wrangler/state/v3/d1` を運営者が消し、`npm run db:migrate:local`）。開発サーバーは強制終了せずに止める
 - 〔済：ローカル、2026-10-17〕メンバーを3人入れて3人目を消すと、`sqlite_sequence` の `members` は 3 のまま。書き出しに `sqlite_sequence` の行が入り、別の手元の D1 に読み込むと、次のメンバーの番号は 4 だった（使い回されない）

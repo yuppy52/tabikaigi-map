@@ -248,6 +248,69 @@ describe("「行った」", () => {
   });
 });
 
+describe("「行った」の固定（member_visits_fixed：migrations/0002）", () => {
+  it("member_id を書き換えて、ほかのグループの人に付け替えられない", async () => {
+    const a = await createGroup();
+    const b = await createGroup();
+    const ma = await firstMemberId(a);
+    const mb = await firstMemberId(b);
+    await db().prepare("INSERT INTO member_visits (member_id, pref) VALUES (?, 13)").bind(ma).run();
+    await expect(
+      db().prepare("UPDATE member_visits SET member_id = ? WHERE member_id = ? AND pref = 13").bind(mb, ma).run(),
+    ).rejects.toThrow(/visit_fixed/);
+    expect(await count("SELECT count(*) AS n FROM member_visits WHERE member_id = ?", ma)).toBe(1);
+    expect(await count("SELECT count(*) AS n FROM member_visits WHERE member_id = ?", mb)).toBe(0);
+  });
+
+  it("県の番号も書き換えられない（付け外しは INSERT と DELETE だけ）", async () => {
+    const id = await createGroup();
+    const memberId = await firstMemberId(id);
+    await db().prepare("INSERT INTO member_visits (member_id, pref) VALUES (?, 13)").bind(memberId).run();
+    await expect(db().prepare("UPDATE member_visits SET pref = 14 WHERE member_id = ?").bind(memberId).run()).rejects.toThrow(
+      /visit_fixed/,
+    );
+    expect(await db().prepare("SELECT pref FROM member_visits WHERE member_id = ?").bind(memberId).first()).toEqual({ pref: 13 });
+  });
+
+  it("メンバーの削除・グループの削除では、外部キーで「行った」が消える（トリガーで止まらない：REQ-047・REQ-048）", async () => {
+    const id = await createGroup();
+    await addMember(id, "たろう");
+    const yu = await firstMemberId(id);
+    const taro = (await db().prepare("SELECT id FROM members WHERE group_id = ? AND name = 'たろう'").bind(id).first<{ id: number }>())!.id;
+    await db().batch([
+      db().prepare("INSERT INTO member_visits (member_id, pref) VALUES (?, 1)").bind(yu),
+      db().prepare("INSERT INTO member_visits (member_id, pref) VALUES (?, 2)").bind(taro),
+    ]);
+    await db().prepare("DELETE FROM members WHERE id = ?").bind(taro).run();
+    expect(await count("SELECT count(*) AS n FROM member_visits WHERE member_id = ?", taro)).toBe(0);
+    expect(await count("SELECT count(*) AS n FROM member_visits WHERE member_id = ?", yu)).toBe(1);
+    await db().prepare("DELETE FROM groups WHERE id = ?").bind(id).run();
+    expect(await count("SELECT count(*) AS n FROM member_visits WHERE member_id = ?", yu)).toBe(0);
+  });
+
+  it("付けると外すは、いままでどおりできる（断りすぎの確認）", async () => {
+    const id = await createGroup();
+    const memberId = await firstMemberId(id);
+    await db()
+      .prepare("INSERT INTO member_visits (member_id, pref) VALUES (?, 5) ON CONFLICT (member_id, pref) DO NOTHING")
+      .bind(memberId)
+      .run();
+    await db()
+      .prepare("INSERT INTO member_visits (member_id, pref) VALUES (?, 5) ON CONFLICT (member_id, pref) DO NOTHING")
+      .bind(memberId)
+      .run();
+    await db().prepare("DELETE FROM member_visits WHERE member_id = ? AND pref = 5").bind(memberId).run();
+    expect(await count("SELECT count(*) AS n FROM member_visits WHERE member_id = ?", memberId)).toBe(0);
+  });
+});
+
+describe("トリガーの一覧", () => {
+  it("マイグレーションを当てた後のトリガーは4つだけ（足した・消したのに気づく）", async () => {
+    const rows = await db().prepare("SELECT name FROM sqlite_master WHERE type = 'trigger' ORDER BY name").all<{ name: string }>();
+    expect(rows.results.map((r) => r.name)).toEqual(["groups_fixed", "member_visits_fixed", "members_fixed", "members_group_full"]);
+  });
+});
+
 describe("20人まで（NFR-006 (8)、REQ-005）", () => {
   it("21人目は断る（API の確かめが抜けたときの最後の守り）", async () => {
     const id = await createGroup();

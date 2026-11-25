@@ -242,14 +242,22 @@ describe("部屋につなぐ（最初のメッセージで確かめる）", () =
     }
   });
 
-  it("付いていた・外れていたときも成功なので配る", async () => {
+  it("付いていた・外れていたときは、成功でも D1 に書いていないので配らない（6-C）", async () => {
     const { groupId, memberId } = await create();
     const a = await connectReady(groupId);
-    await putVisit(groupId, memberId, 1);
-    await putVisit(groupId, memberId, 1);
-    await deleteVisit(groupId, memberId, 2);
-    await until(() => a.received.length === 4);
-    expect(a.received[3]).toEqual({ type: "visit", memberId, pref: 2, visited: false });
+    expect(await putVisit(groupId, memberId, 1)).toEqual({ status: 200, json: { ok: true } });
+    // 同じものを2回付ける・付いていないものを外す：応答は成功のまま
+    expect(await putVisit(groupId, memberId, 1)).toEqual({ status: 200, json: { ok: true } });
+    expect(await deleteVisit(groupId, memberId, 2)).toEqual({ status: 200, json: { ok: true } });
+    // 最後に本当に変わる操作をして、それが届くまで待つ（途中のものが届いていれば、ここまでに並んでいる）
+    expect(await putVisit(groupId, memberId, 2)).toEqual({ status: 200, json: { ok: true } });
+    await until(() => a.received.length >= 3);
+    await pause();
+    expect(a.received).toEqual([
+      { type: "ready" },
+      { type: "visit", memberId, pref: 1, visited: true },
+      { type: "visit", memberId, pref: 2, visited: true },
+    ]);
   });
 
   it("別のグループの変更は届かない", async () => {

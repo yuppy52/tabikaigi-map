@@ -162,7 +162,7 @@
   - 〔未〕WAF のレート制限の回数と、止めたときの 429 を画面が見分けられるか（Q-031）
   - 〔未〕`not_found_handling` と `_redirects` の 200 リライトを合わせた動き、`workers.dev` を切る（Q-031）
   - 〔未〕集計用の D1 の読み取りだけの API トークンを作れるか（Q-025）
-  - 〔未〕API の応答にも `X-Robots-Tag: noindex` を Hono の最初の処理で付ける（`/api/health` だけが 200 のため急がない）（2026-10-21：`access-reviewer` #8。同じ行にあった Firebase の API キーの絞り方（#4）は、2026-11-06 にログインをやめたので要らない）
+  - 〔済：2026-11-25、S-6b〕API の応答にも `X-Robots-Tag: noindex` を Hono の最初の処理で付ける（`Cache-Control: no-store`・`Referrer-Policy: no-referrer` と一緒に）（2026-10-21：`access-reviewer` #8。同じ行にあった Firebase の API キーの絞り方（#4）は、2026-11-06 にログインをやめたので要らない）
   - 〔未〕グループを開く・「行った」の付け外し・グループ名の変更で、本物の D1 が数える `rows_read`・`rows_written`。使い切られる見積もり（[architecture](design/architecture.md) の「無料枠を使い切られないために」）を測り直し、レート制限の回数と、応答を数秒キャッシュするかを決める
   - 〔未〕Turnstile のウィジェットのドメインの制限と、応答の `hostname` を確かめるか（[api](design/api.md)）
   - 〔未〕Durable Objects の動いている時間（GB 秒）と眠れる書き方の効き方。あわせて本番で：スマホで画面を消して戻ったときにつなぎ直して読み直すか、付け外しのたびに部屋を呼ぶ回数とつなぐたびのアラームの書き込み（Durable Objects の回数と保存の枠）、相手が閉じたときに部屋が自動で閉じ返すか（手元では効かないので手で閉じ返している：api/src/room.ts）、部屋の入口の Origin の確かめが独自ドメインで通るか（2026-10-26：5-1・5-3）
@@ -186,8 +186,8 @@
   - [ ] S-6 `access-reviewer` に、API・D1 の制約・部屋（WebSocket）・配信の設定の全体を通しで1回見てもらい、指摘を直す（ADR 0017）
     - 結果（2026-11-24）：他人のグループを読み書きする道はなかった。中5件・低10件。直し方は 2026-11-24 にユーザーと決めた（全部いま直す。6-C は「本当に書いたときだけ配る」）。上から順に、1つずつプルリクエストにする
     - [x] S-6a `fix/turnstile-hostname`（2026-11-25。`access-reviewer` の指摘で、秘密の鍵の打ち間違い（`invalid-input-secret` など）を `503` にして理由の短い文をログに残す、画面のサイトキーは手元では試験用・ビルドでは本番、を足した）：siteverify の応答の `hostname` を `TURNSTILE_HOSTNAME`（`wrangler.jsonc` の `vars`、本番は `tabikaigi-map.com`。手元は `.dev.vars` で `example.com`：試験用の鍵はいつもこの名前を返す）と突き合わせ、違えば `403 turnstile_failed`、値がなければ `503`（6-B）。`action` は試験用の鍵が返さないので見ない。siteverify は5秒で切って `503`（4-A）。`cloudflareTurnstile` のテスト（8-A）。deploy の「最初のデプロイ」に、本番のウィジェットを作る（ドメインの制限）→ サイトキーを差し替えてマージ → `wrangler secret put TURNSTILE_SECRET` を足す。`access-reviewer` に頼む
-    - [ ] S-6b `fix/api-hardening`：付いていた・外れていたときは部屋に配らない（6-C）、`/api/*` の応答に `Cache-Control: no-store`（5-A）、`member_visits` の `UPDATE` を断るトリガー（`0002`、1-A）、守りのテスト（8-B〜8-E）
-    - [ ] S-6c `fix/delivery-headers`：アプリの画面に `frame-ancestors 'none'` と `nosniff`（5-B）、deploy の「トリガーは3つ」と古い名前を消す（9-A）、WAF のカスタムルール（目印のない `/api/*`、Origin の違う `/api/rooms/*`）を deploy の「最初のデプロイ」の 7 と architecture に書き、`/api/health` の目印の免除をやめる（6-A）、「分かっている限界」に 1-B・2-A・6-D
+    - [x] S-6b `fix/api-hardening`（2026-11-25。`access-reviewer` の指摘で、API の応答に `X-Robots-Tag: noindex`・`Referrer-Policy: no-referrer` も付け、少しずつ送られた本文の 413 とトリガーの名前と数のテストを足した。deploy の「最初のデプロイ」2 のトリガーの数を4つに直した）：付いていた・外れていたときは部屋に配らない（6-C）、`/api/*` の応答に `Cache-Control: no-store`（5-A）、`member_visits` の `UPDATE` を断るトリガー（`0002`、1-A）、守りのテスト（8-B〜8-E）
+    - [ ] S-6c `fix/delivery-headers`：アプリの画面に `frame-ancestors 'none'` と `nosniff`（5-B）、deploy の「確かめたこと」のトリガーの数と古い名前（`members_owner_first_only`・`members_one_owner`）を、いまの形に合わせて注記する（9-A。「最初のデプロイ」の 2 の数は S-6b で4つに直した）、WAF のカスタムルール（目印のない `/api/*`、Origin の違う `/api/rooms/*`）を deploy の「最初のデプロイ」の 7 と architecture に書き、`/api/health` の目印の免除をやめる（6-A）、「分かっている限界」に 1-B・2-A・6-D
 - [ ] 画面の E2E テスト（Playwright Test）を入れるかを決める（道具の表の「画面ができたら」。2026-11-02 に項目にした）
 - [ ] 要件定義（requirements・use-cases・用語集）を見直して「確定」にする（確定の後に足したものがあり、「レビュー待ち」のまま。2026-11-02 に項目にした）
 - [ ] 公開の前に、試作の Worker（`tabikaigi-spike.tabikaigi.workers.dev`）と試作の D1 を消す（本番と同じアカウントの無料枠を使い、公開されたままのため）。試作の部品を上げる Dependabot の PR #62 も閉じる
