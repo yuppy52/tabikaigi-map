@@ -51,6 +51,17 @@ function parseMemberId(s: string): number | null {
 export function createApp(deps: Deps) {
   const app = new Hono<{ Bindings: Env }>().basePath("/api");
 
+  // API の応答は、ブラウザにも途中の配信の仕組みにも残させず、検索にも出さず、よそへ移るときに URL を渡さない
+  // （グループの中身や失敗の応答を、後から別の人に見せない。招待URLのグループIDを漏らさない：deploy.md の「最初のデプロイ」6）。
+  // 一番先に置き、後ろの守り（本文の上限の 413、目印の 400）・知らない API の 404・落ちたときの 503 にも付ける。
+  // 部屋（/api/rooms/*）は index.ts が Hono に回さない（room.test で確かめている）。回っても目印の確かめで先に断られる
+  app.use(async (c, next) => {
+    await next();
+    c.header("Cache-Control", "no-store");
+    c.header("X-Robots-Tag", "noindex");
+    c.header("Referrer-Policy", "no-referrer");
+  });
+
   // 本文は小さいものしか送らない。大きな本文を送りつけられても読まずに断る
   app.use(bodyLimit({ maxSize: 4 * 1024, onError: (c) => c.json({ error: "bad_request" }, 413) }));
 
@@ -75,8 +86,16 @@ export function createApp(deps: Deps) {
     return null;
   }
 
+  /**
+   * 本文の JSON を読む。JSON として読めない（形が崩れている・空）ときだけ、空のものとして扱う（名前の確かめで 400 になる）。
+   * それ以外の失敗（本文を読む途中のエラーなど）は飲み込まずに投げ直し、onError に任せる。
+   * 上限（4KB）は bodyLimit が先に本文を全部読んで確かめ、超えたらここに来る前に 413 を返す（Content-Length がなくても）
+   */
   async function readBody(c: C): Promise<Record<string, unknown>> {
-    const body: unknown = await c.req.json().catch(() => null);
+    const body: unknown = await c.req.json().catch((e: unknown) => {
+      if (e instanceof SyntaxError) return null;
+      throw e;
+    });
     return body !== null && typeof body === "object" && !Array.isArray(body) ? (body as Record<string, unknown>) : {};
   }
 
@@ -134,8 +153,8 @@ export function createApp(deps: Deps) {
     if (memberId === null || pref === null) return fail(c, 400, "bad_request");
     const groupId = c.req.param("groupId")!;
     const r = await setMemberVisit(c.env.DB, groupId, memberId, pref, visited);
-    // 書けたら（付いていた・外れていたときも成功なので）部屋に配る。断ったときは配らない
-    if (r.ok) notifyRoom(c.executionCtx, c.env, groupId, { type: "visit", memberId, pref, visited });
+    // 本当に D1 の行が変わったときだけ部屋に配る。付いていた・外れていたとき（成功でも書いていない）と、断ったときは配らない
+    if (r.ok && r.changed) notifyRoom(c.executionCtx, c.env, groupId, { type: "visit", memberId, pref, visited });
     return writeResponse(c, r);
   };
   app.put("/groups/:groupId/members/:memberId/visits/:pref", memberVisit(true));

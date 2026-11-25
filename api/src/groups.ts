@@ -130,7 +130,8 @@ export async function touchGroup(db: D1Database, groupId: string): Promise<void>
   await db.prepare("UPDATE groups SET last_opened_on = ?1 WHERE id = ?2 AND last_opened_on < ?1").bind(today, groupId).run();
 }
 
-export type WriteResult = { ok: true } | { ok: false; reason: "group_not_found" | "member_not_found" };
+/** changed：本当に D1 の行が変わったか（付いていた・外れていたときは成功でも false。部屋に配るかをこれで決める） */
+export type VisitResult = { ok: true; changed: boolean } | { ok: false; reason: "group_not_found" | "member_not_found" };
 
 /**
  * メンバーの「行った」を付ける・外す（REQ-016・REQ-023）。
@@ -142,13 +143,13 @@ export async function setMemberVisit(
   memberId: number,
   pref: number,
   visited: boolean,
-): Promise<WriteResult> {
+): Promise<VisitResult> {
   const inGroup = "EXISTS (SELECT 1 FROM members WHERE id = ?1 AND group_id = ?3)";
   const sql = visited
     ? `INSERT INTO member_visits (member_id, pref) SELECT ?1, ?2 WHERE ${inGroup} ON CONFLICT (member_id, pref) DO NOTHING`
     : `DELETE FROM member_visits WHERE member_id = ?1 AND pref = ?2 AND ${inGroup}`;
   const res = await db.prepare(sql).bind(memberId, pref, groupId).run();
-  if (res.meta.changes > 0) return { ok: true };
+  if (res.meta.changes > 0) return { ok: true, changed: true };
   // 0行：もともと付いていた（外していた）のか、書けなかったのかを読み直して分ける
   const [g, m] = await db.batch([
     db.prepare("SELECT 1 FROM groups WHERE id = ?").bind(groupId),
@@ -156,5 +157,5 @@ export async function setMemberVisit(
   ]);
   if (g.results.length === 0) return { ok: false, reason: "group_not_found" };
   if (m.results.length === 0) return { ok: false, reason: "member_not_found" };
-  return { ok: true };
+  return { ok: true, changed: false };
 }
