@@ -99,7 +99,7 @@ SQLite は列の型や制約をあとから変えられないので、「新し�
    4. 確かめる：
       - `curl -i https://tabikaigi-map.com/api/health` が Cloudflare の `403`（Worker の `400` ではない）。`-H 'X-Tabikaigi: 1'` を付けると `200`
       - `curl -i -H 'Origin: https://example.com' https://tabikaigi-map.com/api/rooms/<64文字>` と、Origin を付けない同じ URL が、どちらも Cloudflare の `403`
-      - `/API/health`・`/%61pi/health`・`/api/rooms/../health` が、Cloudflare の `403` かアセットの `404` になり、どれも Workers のリクエスト数が増えない
+      - `/API/health`・`/%61pi/health`・`/api/rooms/../health` が（`..` は curl が送る前に縮めるので `--path-as-is` を付ける）、Cloudflare の `403` かアセットの `404` になり、どれも Workers のリクエスト数が増えない
       - URL の正規化（ゾーンの「ルール」→「設定」）が、Cloudflare の方式で「入ってくる URL」を正規化する設定のまま
       - 本番の画面で、グループを作る・開く・「行った」を付ける・リアルタイムで届く、が今までどおりできる
       - 止めた要求が、管理画面の「セキュリティ」の「イベント」に出て、Workers の「リクエスト数」には増えない
