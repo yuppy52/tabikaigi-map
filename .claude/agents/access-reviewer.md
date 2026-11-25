@@ -37,4 +37,5 @@ model: opus
 - 重さは **重大**（他人のデータを読み書き・消せる、無料枠を使い切らせる）／**中**（直した方がよい）／**軽**（書き方など）
 - 場所は `ファイル:行` で書く
 - 確かめていない推測には「（要確認）」を付ける
+- 部品（Hono、wrangler など）の動きを前提にした指摘は、`package-lock.json` の版を書き、`node_modules` のコードで確かめたかを書く。確かめていなければ「（要確認：版）」とする（[learnings](../../docs/learnings/2026-11-25-check-review-premise-against-installed-version.md)）
 - 最後に、良くできている点を2〜3個書く
