@@ -1,6 +1,6 @@
 # デプロイとテーブル定義の変更の手順書
 
-状態：下書き（2026-10-26：手元の D1 が読み取りだけになったときの直し方を「確かめたこと」に足した。2026-10-19：`npm run deploy` に画面のビルドを足した。2026-10-17：`/review-docs`（26件）を受けて、バックアップを NFR-017 のとおり「毎回取り、1つだけ残す」に戻し、表の作り直しの決まり（子の表、番号の続き、トリガーの順番）を手元で試した結果で書き、戻す順番、ブックマークを控える時機、最初のデプロイ、バックアップからの作り直し、「公開」の意味を足した。2026-10-16：作った。決めたことは [ADR 0008](../adr/0008-deploy-from-pc-no-staging.md)。本番ではまだ1度も動かしていないので、最初のデプロイで〔未〕を確かめて直す）
+状態：下書き（2026-11-25：「最初のデプロイ」の 7 に WAF のカスタムルール2本の式と確かめを書き、6 に画面の埋め込ませない印の確かめを足した（S-6c）。トリガーの数を4つに直した（S-6b）。2026-10-26：手元の D1 が読み取りだけになったときの直し方を「確かめたこと」に足した。2026-10-19：`npm run deploy` に画面のビルドを足した。2026-10-17：`/review-docs`（26件）を受けて、バックアップを NFR-017 のとおり「毎回取り、1つだけ残す」に戻し、表の作り直しの決まり（子の表、番号の続き、トリガーの順番）を手元で試した結果で書き、戻す順番、ブックマークを控える時機、最初のデプロイ、バックアップからの作り直し、「公開」の意味を足した。2026-10-16：作った。決めたことは [ADR 0008](../adr/0008-deploy-from-pc-no-staging.md)。本番ではまだ1度も動かしていないので、最初のデプロイで〔未〕を確かめて直す）
 
 - 関係する要件：NFR-004（費用の上限）、NFR-014（運営者1人で回せる）、NFR-017（バックアップ）、NFR-008（消したデータの残り方）、NFR-006（保存先で守るもの）
 - 本番の構成は [architecture](architecture.md) の「環境」。設定は `wrangler.jsonc`
@@ -80,8 +80,31 @@ SQLite は列の型や制約をあとから変えられないので、「新し�
    2. 公開してよい鍵（サイトキー）で `web/src/config.ts` の本番の鍵（`npm run build` のときだけ使う）を差し替え、プルリクエストでマージする。手元の `npm run dev` はいつも試験用の鍵を使うので、本番のウィジェットに `localhost` は足さない
 4. 独自ドメインを `wrangler.jsonc` の `routes`（`custom_domain: true`）に足してマージし、`npm run deploy`。出力の vars に `TURNSTILE_HOSTNAME: tabikaigi-map.com` が出ていることを見る（手元の `.dev.vars` の値は本番に送られない）
 5. 秘密の鍵を `npx wrangler secret put TURNSTILE_SECRET` で入れる（リポジトリと画面に出さない）。Worker ができた後に入れる（先に入れると、wrangler が空の Worker を作るか聞いてくる見込み。要確認）。入れるまで、作成と参加は `503`
-6. 確かめる：独自ドメインで開ける、`*.workers.dev` とプレビューの URL で開けない（Q-031）、アプリの画面と API に `noindex` と `Referrer-Policy: no-referrer` が付いている、本番でグループを作れて、試験用の券（手元の画面で取ったもの）では作れない（`403`）。作れずに `503` になるときは、秘密の鍵の打ち間違い（Cloudflare の `invalid-input-secret`）を疑い、`wrangler tail` で理由の短い文を見る。`www.tabikaigi-map.com` では画面を配らない（www は付けない：architecture の OGP。Turnstile の `hostname` も合わない）
-7. WAF のレート制限のルールを作る（architecture の「無料枠を使い切られないために」）
+6. 確かめる：独自ドメインで開ける、`*.workers.dev` とプレビューの URL で開けない（Q-031）、アプリの画面と API に `noindex` と `Referrer-Policy: no-referrer` が付いている、アプリの画面に `Content-Security-Policy: frame-ancestors 'none'` と `X-Content-Type-Options: nosniff` が付いている（`curl -I https://tabikaigi-map.com/g/xxxxxxxxxxxxxxxxxxxxxx`）、本番でグループを作れて、試験用の券（手元の画面で取ったもの）では作れない（`403`）。作れずに `503` になるときは、秘密の鍵の打ち間違い（Cloudflare の `invalid-input-secret`）を疑い、`wrangler tail` で理由の短い文を見る。`www.tabikaigi-map.com` では画面を配らない（www は付けない：architecture の OGP。Turnstile の `hostname` も合わない）
+7. WAF のルールを作る（管理画面の「セキュリティ」→「WAF」。中身は architecture の「無料枠を使い切られないために」）
+   - 式は、大文字の `/API/…` でもすり抜けないよう、パスを `lower(…)` で小文字にして比べる。① の除外と ② は、必ず同じく `lower` にする（片方だけだと、`/API/ROOMS/…` が ① の除外に入り ② に当たらない、すき間ができる）
+   - 式を入れたら、管理画面の「式を検証」が通るかを先に見る。`starts_with`・`lower`・`http.request.headers` が Free で使えなければ、`http.request.uri.path wildcard "/api/*"`（大文字と小文字を区別しない：要確認）で書き直す。`matches`（正規表現）は Free では使えない
+   1. カスタムルール ①「目印のない API」：動作は「ブロック」。式：
+      ```
+      starts_with(lower(http.request.uri.path), "/api/")
+      and not starts_with(lower(http.request.uri.path), "/api/rooms/")
+      and not any(http.request.headers["x-tabikaigi"][*] eq "1")
+      ```
+   2. カスタムルール ②「よそのサイトからの部屋への接続」：動作は「ブロック」。式：
+      ```
+      starts_with(lower(http.request.uri.path), "/api/rooms/")
+      and not any(http.request.headers["origin"][*] eq "https://tabikaigi-map.com")
+      ```
+   3. レート制限のルール（`/api/*`、IP ごとに10秒で50回（仮の値）を超えたら10秒止める：Q-031）
+   4. 確かめる：
+      - `curl -i https://tabikaigi-map.com/api/health` が Cloudflare の `403`（Worker の `400` ではない）。`-H 'X-Tabikaigi: 1'` を付けると `200`
+      - `curl -i -H 'Origin: https://example.com' https://tabikaigi-map.com/api/rooms/<64文字>` と、Origin を付けない同じ URL が、どちらも Cloudflare の `403`
+      - `/API/health`・`/%61pi/health`・`/api/rooms/../health` が（`..` は curl が送る前に縮めるので `--path-as-is` を付ける）、Cloudflare の `403` かアセットの `404` になり、どれも Workers のリクエスト数が増えない
+      - URL の正規化（ゾーンの「ルール」→「設定」）が、Cloudflare の方式で「入ってくる URL」を正規化する設定のまま
+      - 本番の画面で、グループを作る・開く・「行った」を付ける・リアルタイムで届く、が今までどおりできる
+      - 止めた要求が、管理画面の「セキュリティ」の「イベント」に出て、Workers の「リクエスト数」には増えない
+   - ドメインを足すとき（www を配る、など）は、② の式の Origin と `TURNSTILE_HOSTNAME` を一緒に直す
+   - カスタムルールが Free で何本まで使えるかは要確認（5本の見込み）。日本だけにするか（roadmap のメモ）は、このときまでに決める
 8. 下の「確かめたこと」の〔未〕と、roadmap の Phase 2 の〔未〕を済ませる。わざと失敗するマイグレーション、Time Travel の巻き戻しと取り消し、バックアップからの作り直しは、利用者のいないこの時期に試す
 9. 試作の Worker（`tabikaigi-spike.tabikaigi.workers.dev`）と試作の D1 を消す（roadmap の Phase 2。消すのは `ask` で止まる）
 
@@ -148,8 +171,8 @@ SQLite は列の型や制約をあとから変えられないので、「新し�
 
 ## 確かめたこと
 
-- 〔済：ローカル、2026-10-16〕まっさらな手元の D1 に `0001_init.sql` を当てて（当時の、ログインをやめる前の `0001`）`wrangler d1 export --local` で書き出すと、トリガー6つ、部分インデックス（`members_one_owner`）、`d1_migrations` が入っていた。その書き出しを別の手元の D1 に `execute --local --file` で読み込むと、トリガー6つがそろっていた
-- 〔済：ローカル、2026-10-16〕いつもの `wrangler dev` 用の手元の D1（`.wrangler/`）は、`0001_init.sql` を書き換える前の古い形のままだった（トリガー4つで、名前も違う）。`migrations apply --local` は「当てるものはない」と答えた。当てたファイルを書き換えても二度と当たらない、の実例。テスト（Vitest）は毎回まっさらな D1 で動くので影響はない。`wrangler dev` で画面を試す前に、手元の D1 を作り直す（`.wrangler/state` の D1 を運営者が手で消し、`npm run db:migrate:local`）
+- 〔済：ローカル、2026-10-16〕まっさらな手元の D1 に `0001_init.sql` を当てて（当時の、ログインをやめる前の `0001`。`members_one_owner` などはいまの `0001` にはなく、いまのトリガーは上の「最初のデプロイ」2 の4つ）`wrangler d1 export --local` で書き出すと、トリガー6つ、部分インデックス（`members_one_owner`）、`d1_migrations` が入っていた。その書き出しを別の手元の D1 に `execute --local --file` で読み込むと、トリガー6つがそろっていた
+- 〔済：ローカル、2026-10-16〕いつもの `wrangler dev` 用の手元の D1（`.wrangler/`）は、`0001_init.sql` を書き換える前の古い形のままだった（ログインをやめる前の形で、トリガー4つ。名前はいまの4つと違う）。`migrations apply --local` は「当てるものはない」と答えた。当てたファイルを書き換えても二度と当たらない、の実例。テスト（Vitest）は毎回まっさらな D1 で動くので影響はない。`wrangler dev` で画面を試す前に、手元の D1 を作り直す（`.wrangler/state` の D1 を運営者が手で消し、`npm run db:migrate:local`）
 - 〔済：ローカル、2026-10-26〕手元の D1 が、`wrangler dev` からの書き込みで `SQLITE_READONLY`（読み取りだけ）を返した（2026-10-23）。本体のファイルが 4KB のままで、表の中身は書きかけの記録（`-wal`、111KB）に入ったままだった。`sqlite3` でファイルを1回開いて閉じると（`BEGIN IMMEDIATE; ROLLBACK;`）書きかけの記録が本体に移り、`wrangler dev` から書けるようになった。〔推測〕`wrangler dev` を強制終了（`pkill`）したことで書きかけの記録が残り、`wrangler dev` がそれを片付けられなかった。原因は確かめきれていない。同じことが起きたら、まず `sqlite3` で開いて閉じる。直らなければ手元の D1 を作り直す（`.wrangler/state/v3/d1` を運営者が消し、`npm run db:migrate:local`）。開発サーバーは強制終了せずに止める
 - 〔済：ローカル、2026-10-17〕メンバーを3人入れて3人目を消すと、`sqlite_sequence` の `members` は 3 のまま。書き出しに `sqlite_sequence` の行が入り、別の手元の D1 に読み込むと、次のメンバーの番号は 4 だった（使い回されない）
 - 〔済：ローカル、2026-10-17〕`groups` を作り直す SQL（新しい表に写す → `DROP TABLE groups` → 名前を替える）を当てると、`PRAGMA defer_foreign_keys = true` でも `PRAGMA foreign_keys = OFF` でも、`members` と `member_visits` が全部消えた（2行 → 0行）。子の表を先に写して消し、親を最後に消すと行は残った。ただし `CREATE TABLE … AS SELECT` で作った表には、トリガー（0個になった）と `sqlite_sequence` の値が残らなかった

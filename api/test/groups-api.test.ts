@@ -102,8 +102,11 @@ describe("目印のヘッダー（よそのサイトから読ませない）", (
     expect((await call("PUT", `/api/groups/${groupId}/name`, { body: { name: "旅の会" } })).status).toBe(200);
   });
 
-  it("/api/health は目印なしでも通る", async () => {
-    expect((await call("GET", "/api/health", { headers: { "X-Tabikaigi": "" } })).status).toBe(200);
+  it.each([undefined, "0", ""])("/api/health も目印がなければ 400（本番の WAF の ① とそろえる。目印：%s）", async (mark) => {
+    const opts = mark === undefined ? { omitMark: true } : { headers: { "X-Tabikaigi": mark } };
+    expect(await call("GET", "/api/health", opts)).toEqual({ status: 400, json: { error: "bad_request" } });
+    // 断りすぎの確認：目印があれば通る
+    expect((await call("GET", "/api/health")).status).toBe(200);
   });
 });
 

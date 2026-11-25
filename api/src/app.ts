@@ -66,9 +66,10 @@ export function createApp(deps: Deps) {
   app.use(bodyLimit({ maxSize: 4 * 1024, onError: (c) => c.json({ error: "bad_request" }, 413) }));
 
   // 画面が必ず付ける目印のヘッダー。よそのサイトに <img src="…/api/groups/…"> を置かれても、
-  // ブラウザはこのヘッダーを勝手に付けないので、D1 を読まずに断れる（読み取りの無料枠を使い切らせない。/api/health は除く）
+  // ブラウザはこのヘッダーを勝手に付けないので、D1 を読まずに断れる（読み取りの無料枠を使い切らせない）。
+  // 本番では WAF が同じ確かめを Worker の前で行う（Workers の回数も使わせない）。これは二重の守り。/api/health も除かない
   app.use(async (c, next) => {
-    if (c.req.path !== "/api/health" && c.req.header("X-Tabikaigi") !== "1") return fail(c, 400, "bad_request");
+    if (c.req.header("X-Tabikaigi") !== "1") return fail(c, 400, "bad_request");
     return next();
   });
 

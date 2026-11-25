@@ -1,14 +1,23 @@
 # アプリの画面は検索に出さない（NFR-019）。参照元の URL（/g/<グループID>）をよそに渡さない（NFR-005・NFR-010）
+# よそのページに埋め込ませない（透明に重ねて削除などを押させる手口を断つ）、ファイルの種類を推測させない（2026-11-25：S-6 の 5-B）
 # 付けるパスは architecture の「検索に出すページと出さないページ」
 /g/*
   X-Robots-Tag: noindex
   Referrer-Policy: no-referrer
+  Content-Security-Policy: frame-ancestors 'none'
+  X-Content-Type-Options: nosniff
 /new
   X-Robots-Tag: noindex
   Referrer-Policy: no-referrer
+  Content-Security-Policy: frame-ancestors 'none'
+  X-Content-Type-Options: nosniff
 /app
   X-Robots-Tag: noindex
   Referrer-Policy: no-referrer
+  Content-Security-Policy: frame-ancestors 'none'
+  X-Content-Type-Options: nosniff
 /app.html
   X-Robots-Tag: noindex
   Referrer-Policy: no-referrer
+  Content-Security-Policy: frame-ancestors 'none'
+  X-Content-Type-Options: nosniff
