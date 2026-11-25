@@ -7,6 +7,12 @@
   // Q-031：workers.dev とプレビューの URL は出さない（独自ドメインだけで公開する）
   "workers_dev": false,
   "preview_urls": false,
+  // 秘密でない設定の値（秘密の鍵は wrangler secret put で入れる：api/src/env.d.ts）
+  "vars": {
+    // Turnstile の応答の hostname（どのサイトで解いたか）と突き合わせる名前（api の「Turnstile」）。
+    // 手元の wrangler dev は .dev.vars に TURNSTILE_HOSTNAME=example.com を足して上書きする（試験用の鍵は example.com を返すため）
+    "TURNSTILE_HOSTNAME": "tabikaigi-map.com"
+  },
   // 画面の配信（architecture の「無料枠を使い切られないために」）。
   // Worker が画面のファイルを読まないので binding は付けない
   "assets": {
