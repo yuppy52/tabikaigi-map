@@ -122,6 +122,6 @@
 | 部屋の URL の `room_key`、WAF のレート制限 | [architecture](architecture.md)（無料枠を使い切られないために）、[data-model](data-model.md) | Q-031 |
 | 最後に開かれた日（`last_opened_on`） | [data-model](data-model.md)（groups） | Q-025（NFR-010 を支える） |
 | 目印のヘッダー（`X-Tabikaigi`） | [api](api.md)（共通の決まり）、[architecture](architecture.md)（無料枠を使い切られないために） | 2026-10-13：`access-reviewer`（よそのサイトから利用者のブラウザで API を呼ばせて、D1 の枠を使わせないため。NFR-012 を支える） |
-| 動いているかの確かめ（`/api/health`） | [api](api.md)（共通の決まり） | 目印のヘッダーなしで呼べる、D1 を使わない入口（NFR-011 の監視を支える） |
+| 動いているかの確かめ（`/api/health`） | [api](api.md)（共通の決まり） | D1 を使わない、動いているかの確かめ（運営者が目印のヘッダーを付けて呼ぶ。2026-11-25：本番では WAF が目印のない `/api/*` を止めるため。外の監視を入れるときは、目印を付けられるかを確かめる） |
 | ボット対策（Turnstile） | [api](api.md)（Turnstile）、[screens](screens.md)（参加の画面）、[architecture](architecture.md)（無料枠を使い切られないために） | Q-031（作成と参加を大量に送られて、D1 の書き込みの枠を使わせないため。NFR-012 を支える） |
 

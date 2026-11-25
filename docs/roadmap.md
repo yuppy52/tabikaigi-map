@@ -10,7 +10,7 @@
 |---|---|---|
 | Phase 0 | 要件定義 | 済 |
 | Phase 1 | 基本設計・詳細設計、API と D1 | 済 |
-| Phase 2 | ログインなしで公開 | **いまここ**（18項目のうち、済 9・作業中 0・これから 9） |
+| Phase 2 | ログインなしで公開 | **いまここ**（18項目のうち、済 10・作業中 0・これから 8） |
 | Phase 3 | ログインあり | **なし**（2026-11-06 にやめた：[ADR 0013](adr/0013-drop-login.md)） |
 | Phase 4 | βテスト、拡張 | これから |
 
@@ -19,8 +19,8 @@
 1. ログインをやめる（済：2026-11-18）
 2. 検索に出すページ（済：2026-11-23）
 3. 問い合わせ（済：フォームは作らず、メールアドレスにした：ADR 0014）
-4. **いまここ**：公開の前の安全の確かめ（`access-reviewer` で全体を1回見直す。CodeQL と Strix は使わない：ADR 0016・0017）
-5. 最初の本番のデプロイ
+4. 公開の前の安全の確かめ（済：2026-11-25。`access-reviewer` で全体を1回見直して直した。CodeQL と Strix は使わない：ADR 0016・0017）
+5. **いまここ**：最初の本番のデプロイ
 6. 本番でしか分からない確かめ（12件）
 7. iPhone の実機の確かめ（ユーザー）
 8. 公開の前の相談と確かめ（3件。相談ダイヤルへの電話など、ユーザー）
@@ -178,16 +178,16 @@
   - 〔未〕個人情報保護法相談ダイヤルに、運営者の氏名・住所を「請求があれば遅滞なく回答する」と書く形でよいかを電話で聞く（ユーザーが行う。[privacy](design/privacy.md)）
   - 〔未〕招待URLを LINE と X で実際に送り、OGP のカードの表示を確かめる。変えたら LINE の Page Poker で覚えたものを消す（[architecture](design/architecture.md) の「招待URLのプレビュー（OGP）」）。あわせて、`?openExternalBrowser=1` の付かない URL（アドレス欄からコピーしたもの、`/new`）を LINE で開いたときに、画面が足して開き直した後で外部ブラウザに移るか（LINE が押したリンクにだけ効かせるなら、LINE の中でそのまま使うことになる：2026-10-28 の `/code-review`）、外に出た後に LINE に戻ると何が見えるか（白い画面のまま）。`/g/*` には `X-Robots-Tag: noindex` が付いた状態で、カードが出るか（LINE がこのヘッダーを見るかは公開の情報がない：2026-10-28 の `access-reviewer` #3）
   - 〔未〕地図データの出典が、グループの画面・トップ・使い方の一番下に出ているか（[screens](design/screens.md)）。N03 のページにある「測量法に基づく国土地理院長承認（複製）」が、加工した形を使うときにも手続きを求めるかを、国土数値情報の問い合わせ窓口で確かめる（要確認：[ADR 0007](adr/0007-map-data-n03.md)）
-- [ ] 公開の前の安全の確かめ：CodeQL と Strix（下の「導入を検討している道具」）を調べて、入れるかを決める（道具の表にだけ書いてあったので、2026-11-02 に項目にした）
+- [x] 公開の前の安全の確かめ：CodeQL と Strix（下の「導入を検討している道具」）を調べて、入れるかを決める（道具の表にだけ書いてあったので、2026-11-02 に項目にした）
   - 小分け（2026-11-24 にユーザーと決めた：[ADR 0015](adr/0015-pre-launch-security-tools.md)。上から順に）
   - [x] S-1 調べて決める（2026-11-24：`researcher`。CodeQL は default setup・Extended・止めない（S-2 で入れないことにした）。Strix は Muse Spark 1.3 を OpenRouter の前払い $10 で、まず1回（認可））
   - [x] S-2 CodeQL は入れない（2026-11-24 にユーザーが決めた。推奨は入れるだった：[ADR 0016](adr/0016-no-codeql.md)）
   - [x] S-3〜S-5 Strix は使わない（2026-11-24 にユーザーが決めた。推奨は使うだった：[ADR 0017](adr/0017-no-strix.md)）
-  - [ ] S-6 `access-reviewer` に、API・D1 の制約・部屋（WebSocket）・配信の設定の全体を通しで1回見てもらい、指摘を直す（ADR 0017）
+  - [x] S-6 `access-reviewer` に、API・D1 の制約・部屋（WebSocket）・配信の設定の全体を通しで1回見てもらい、指摘を直す（ADR 0017）
     - 結果（2026-11-24）：他人のグループを読み書きする道はなかった。中5件・低10件。直し方は 2026-11-24 にユーザーと決めた（全部いま直す。6-C は「本当に書いたときだけ配る」）。上から順に、1つずつプルリクエストにする
     - [x] S-6a `fix/turnstile-hostname`（2026-11-25。`access-reviewer` の指摘で、秘密の鍵の打ち間違い（`invalid-input-secret` など）を `503` にして理由の短い文をログに残す、画面のサイトキーは手元では試験用・ビルドでは本番、を足した）：siteverify の応答の `hostname` を `TURNSTILE_HOSTNAME`（`wrangler.jsonc` の `vars`、本番は `tabikaigi-map.com`。手元は `.dev.vars` で `example.com`：試験用の鍵はいつもこの名前を返す）と突き合わせ、違えば `403 turnstile_failed`、値がなければ `503`（6-B）。`action` は試験用の鍵が返さないので見ない。siteverify は5秒で切って `503`（4-A）。`cloudflareTurnstile` のテスト（8-A）。deploy の「最初のデプロイ」に、本番のウィジェットを作る（ドメインの制限）→ サイトキーを差し替えてマージ → `wrangler secret put TURNSTILE_SECRET` を足す。`access-reviewer` に頼む
     - [x] S-6b `fix/api-hardening`（2026-11-25。`access-reviewer` の指摘で、API の応答に `X-Robots-Tag: noindex`・`Referrer-Policy: no-referrer` も付け、少しずつ送られた本文の 413 とトリガーの名前と数のテストを足した。deploy の「最初のデプロイ」2 のトリガーの数を4つに直した）：付いていた・外れていたときは部屋に配らない（6-C）、`/api/*` の応答に `Cache-Control: no-store`（5-A）、`member_visits` の `UPDATE` を断るトリガー（`0002`、1-A）、守りのテスト（8-B〜8-E）
-    - [ ] S-6c `fix/delivery-headers`：アプリの画面に `frame-ancestors 'none'` と `nosniff`（5-B）、deploy の「確かめたこと」のトリガーの数と古い名前（`members_owner_first_only`・`members_one_owner`）を、いまの形に合わせて注記する（9-A。「最初のデプロイ」の 2 の数は S-6b で4つに直した）、WAF のカスタムルール（目印のない `/api/*`、Origin の違う `/api/rooms/*`）を deploy の「最初のデプロイ」の 7 と architecture に書き、`/api/health` の目印の免除をやめる（6-A）、「分かっている限界」に 1-B・2-A・6-D
+    - [x] S-6c `fix/delivery-headers`（2026-11-25。`access-reviewer` の指摘で、WAF の式をパスの小文字で比べ、式の検証と使えないときの代わり、Origin なし・大文字・`%61pi`・URL の正規化の確かめを deploy の 7 に足した）：アプリの画面に `frame-ancestors 'none'` と `nosniff`（5-B）、deploy の「確かめたこと」のトリガーの数と古い名前（`members_owner_first_only`・`members_one_owner`）を、いまの形に合わせて注記する（9-A。「最初のデプロイ」の 2 の数は S-6b で4つに直した）、WAF のカスタムルール（目印のない `/api/*`、Origin の違う `/api/rooms/*`）を deploy の「最初のデプロイ」の 7 と architecture に書き、`/api/health` の目印の免除をやめる（6-A）、「分かっている限界」に 1-B・2-A・6-D
 - [ ] 画面の E2E テスト（Playwright Test）を入れるかを決める（道具の表の「画面ができたら」。2026-11-02 に項目にした）
 - [ ] 要件定義（requirements・use-cases・用語集）を見直して「確定」にする（確定の後に足したものがあり、「レビュー待ち」のまま。2026-11-02 に項目にした）
 - [ ] 公開の前に、試作の Worker（`tabikaigi-spike.tabikaigi.workers.dev`）と試作の D1 を消す（本番と同じアカウントの無料枠を使い、公開されたままのため）。試作の部品を上げる Dependabot の PR #62 も閉じる
