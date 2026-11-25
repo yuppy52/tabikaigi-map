@@ -7,11 +7,13 @@
 // - unavailable：いまは使えない。quota は無料枠を超えた（503 の reason: "quota"、または JSON でない応答＝Cloudflare のエラー画面）、
 //   temporary は一時的な失敗（503 のそれ以外）
 // - rate_limited：429（WAF のレート制限。JSON でないことがある）
+// - blocked：JSON でない 403（WAF の日本の外から止めるルール（NFR-021）。本文は Cloudflare の HTML）
 // - refused：API が理由を付けて断った（状態コードと error の値。本文の残り（name_taken の memberId など）は body に入れる）
 export type Failure =
   | { kind: "network" }
   | { kind: "unavailable"; reason: "quota" | "temporary" }
   | { kind: "rate_limited" }
+  | { kind: "blocked" }
   | { kind: "refused"; status: number; error: string; body: Record<string, unknown> };
 
 export type ApiResult = { ok: true; status: number; body: unknown } | { ok: false; failure: Failure };
@@ -42,7 +44,8 @@ export function failureOf(e: unknown): Failure {
 export const isRecord = (v: unknown): v is Record<string, unknown> => typeof v === "object" && v !== null && !Array.isArray(v);
 
 // 状態コードと本文の文字列を、成功か失敗の種類にする。
-// 429 は本文によらず先に見る。エラーの状態コードで JSON として読めない本文は、枠切れ（Cloudflare のエラー画面）とみなす（screens の「知らせ」）
+// 429 は本文によらず先に見る。JSON として読めない 403 は、日本の外から止められた（blocked）として枠切れより先に見分ける。
+// それ以外のエラーの状態コードで JSON として読めない本文は、枠切れ（Cloudflare のエラー画面）とみなす（screens の「知らせ」）
 export function interpretResponse(status: number, text: string): ApiResult {
   if (status === 429) return { ok: false, failure: { kind: "rate_limited" } };
   let body: unknown;
@@ -51,6 +54,8 @@ export function interpretResponse(status: number, text: string): ApiResult {
   } catch {
     // 成功の状態コードなのに JSON でないのは、配信の設定の誤り（/api/* が app.html に落ちた、など）。枠切れと出すと気づけないので、表にない値にする
     if (status >= 200 && status < 300) return { ok: false, failure: refused(status, BAD_RESPONSE) };
+    // WAF の日本の外から止めるルール（NFR-021）。JSON の 403（API の turnstile_failed など）は下の refused のまま
+    if (status === 403) return { ok: false, failure: { kind: "blocked" } };
     return { ok: false, failure: { kind: "unavailable", reason: "quota" } };
   }
   if (status === 503) {

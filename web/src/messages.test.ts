@@ -9,6 +9,7 @@ import {
   leaveErrorOf,
   memberDeletedText,
   BAD_NAME,
+  BLOCKED_ABROAD,
   createErrorText,
   GROUP_DELETED,
   GROUP_FULL,
@@ -33,6 +34,7 @@ const network: Failure = { kind: "network" };
 const temporary: Failure = { kind: "unavailable", reason: "temporary" };
 const quota: Failure = { kind: "unavailable", reason: "quota" };
 const rateLimited: Failure = { kind: "rate_limited" };
+const blocked: Failure = { kind: "blocked" };
 
 describe("loadErrorOf：グループを開けなかったとき", () => {
   it("404 group_not_found は「このグループは削除されました」で、覚えを忘れる。読み直すボタンは出さない", () => {
@@ -250,5 +252,34 @@ describe("参加の画面の文（screens の「参加の画面」：2026-11-09 
 
   it("満員の一言（REQ-005）", () => {
     expect(GROUP_FULL).toBe("20人いるので、新しくは参加できません");
+  });
+});
+
+describe("日本の外から止められたとき（JSON でない 403：NFR-021。screens の「API の応答と画面の動き」）", () => {
+  it("文は 2026-11-26 にユーザーと決めたもの", () => {
+    expect(BLOCKED_ABROAD).toBe("日本国内からだけ使えます。海外にいるときや、VPN を使っているときは、日本の回線で開き直してください");
+  });
+
+  it("グループを開けなかったときは、その文で、読み直すボタンを出さず（送り直さない）、覚えも忘れない", () => {
+    expect(loadErrorOf(blocked)).toEqual({ text: BLOCKED_ABROAD, retry: false, forget: false });
+  });
+
+  it("書き込み（付け外し・作成・参加・グループ名の変更・退出・削除）は、その文を出し、読み直さない（付け外しは元に戻す）", () => {
+    expect(visitErrorOf(blocked, "ゆう")).toEqual({ kind: "toast", text: BLOCKED_ABROAD, reload: false });
+    expect(createErrorText(blocked)).toBe(BLOCKED_ABROAD);
+    expect(joinErrorOf(blocked)).toEqual({ kind: "form", text: BLOCKED_ABROAD });
+    expect(renameErrorOf(blocked)).toEqual({ kind: "toast", text: BLOCKED_ABROAD, reload: false });
+    for (const errorOf of [(f: Failure) => leaveErrorOf(f), deleteMemberErrorOf, deleteGroupErrorOf]) {
+      expect(errorOf(blocked)).toEqual({ kind: "toast", text: BLOCKED_ABROAD, reload: false });
+    }
+  });
+
+  it("裏でグループを読み直したときは、429 と同じく、いまの画面のまま", () => {
+    expect(backgroundLoadErrorOf(blocked)).toBe("quiet");
+  });
+
+  it("枠切れ・429 の文とは分ける", () => {
+    expect(BLOCKED_ABROAD).not.toBe(UNAVAILABLE);
+    expect(BLOCKED_ABROAD).not.toBe(RATE_LIMITED);
   });
 });
