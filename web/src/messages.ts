@@ -18,6 +18,8 @@ export const RELOAD = "もう一度読み込む";
 export const UNAVAILABLE = "いまは混み合っていて使えません。遅くとも翌朝9時ごろには戻ります";
 // 429（WAF のレート制限）
 export const RATE_LIMITED = "少し待ってから、もう一度お試しください";
+// JSON でない 403（WAF の日本の外から止めるルール：NFR-021。2026-11-26 にユーザーと決めた文）
+export const BLOCKED_ABROAD = "日本国内からだけ使えます。海外にいるときや、VPN を使っているときは、日本の回線で開き直してください";
 // 404 group_not_found（REQ-006）
 export const GROUP_DELETED = "このグループは削除されました";
 // 満員のときに「＋ 新しく参加する」の代わりに出す一言（REQ-005。409 group_full で読み直したときも同じ：screens の「参加の画面」）
@@ -30,10 +32,12 @@ export const memberRemovedText = (name: string) => `${name}さんはグループ
 const isRefused = (f: Failure, status: number, error: string) => f.kind === "refused" && f.status === status && f.error === error;
 
 // 書き込み（作成・参加・付け外し）の失敗のうち、どの書き込みでも同じ文になるもの。
-// 通信エラーと一時的な 503 は「やり直せる失敗」、枠切れは「いまは使えない」、429 は「少し待って」、ほかは表にない値
+// 通信エラーと一時的な 503 は「やり直せる失敗」、枠切れは「いまは使えない」、429 は「少し待って」、
+// 日本の外から止められた（JSON でない 403）は「日本国内からだけ」、ほかは表にない値
 export function writeFailureText(f: Failure): string {
   if (f.kind === "unavailable" && f.reason === "quota") return UNAVAILABLE;
   if (f.kind === "rate_limited") return RATE_LIMITED;
+  if (f.kind === "blocked") return BLOCKED_ABROAD;
   return SAVE_FAILED;
 }
 
@@ -41,7 +45,8 @@ export function writeFailureText(f: Failure): string {
 export type LoadError = { text: string; retry: boolean; forget: boolean };
 
 // グループを開く（読み直すときも）の失敗 → エラーの画面。
-// 削除された（404 group_not_found）なら忘れる。通信エラー・一時的な 503 はその場で読み直せる。枠切れと 429 はボタンを出さない（すぐには送り直さない）。
+// 削除された（404 group_not_found）なら忘れる。通信エラー・一時的な 503 はその場で読み直せる。
+// 枠切れ・429・日本の外から止められた（NFR-021）はボタンを出さない（すぐには送り直さない）。
 // 表にない値（400 bad_request など、画面の不具合）は「保存できませんでした」と、読み直すボタン
 export function loadErrorOf(f: Failure): LoadError {
   if (isRefused(f, 404, "group_not_found")) return { text: GROUP_DELETED, retry: false, forget: true };
@@ -49,6 +54,7 @@ export function loadErrorOf(f: Failure): LoadError {
     return { text: LOAD_FAILED, retry: true, forget: false };
   if (f.kind === "unavailable") return { text: UNAVAILABLE, retry: false, forget: false };
   if (f.kind === "rate_limited") return { text: RATE_LIMITED, retry: false, forget: false };
+  if (f.kind === "blocked") return { text: BLOCKED_ABROAD, retry: false, forget: false };
   return { text: SAVE_FAILED, retry: true, forget: false };
 }
 

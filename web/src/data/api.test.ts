@@ -55,6 +55,25 @@ describe("interpretResponse：応答を成功か失敗の種類にする", () =>
     expect(interpretResponse(429, "<html>rate limited</html>")).toEqual({ ok: false, failure: { kind: "rate_limited" } });
     expect(interpretResponse(429, '{"error":"x"}')).toEqual({ ok: false, failure: { kind: "rate_limited" } });
   });
+
+  it("JSON でない 403（WAF の日本の外から止めるルール：NFR-021）は blocked にする（枠切れにしない）", () => {
+    for (const text of ["<!DOCTYPE html><html><title>Attention Required! | Cloudflare</title></html>", ""]) {
+      expect(interpretResponse(403, text)).toEqual({ ok: false, failure: { kind: "blocked" } });
+    }
+  });
+
+  it("JSON の 403（API の turnstile_failed）は、今までどおり refused（blocked と取り違えない）", () => {
+    expect(interpretResponse(403, '{"error":"turnstile_failed"}')).toEqual({
+      ok: false,
+      failure: { kind: "refused", status: 403, error: "turnstile_failed", body: { error: "turnstile_failed" } },
+    });
+  });
+
+  it("403 でないエラーの状態コードで JSON でない応答は、今までどおり枠切れ（blocked にしない）", () => {
+    for (const status of [400, 401, 404, 500, 502, 503]) {
+      expect(interpretResponse(status, "<html>error</html>")).toEqual({ ok: false, failure: { kind: "unavailable", reason: "quota" } });
+    }
+  });
 });
 
 // 呼ばれた要求を残し、決まった応答を返す fetch

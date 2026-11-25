@@ -1,6 +1,6 @@
 # デプロイとテーブル定義の変更の手順書
 
-状態：下書き（2026-11-25：「最初のデプロイ」の 7 に、日本の外から止めるカスタムルール ③ を足した（NFR-021）。2026-11-25：「最初のデプロイ」の 7 に WAF のカスタムルール2本の式と確かめを書き、6 に画面の埋め込ませない印の確かめを足した（S-6c）。トリガーの数を4つに直した（S-6b）。2026-10-26：手元の D1 が読み取りだけになったときの直し方を「確かめたこと」に足した。2026-10-19：`npm run deploy` に画面のビルドを足した。2026-10-17：`/review-docs`（26件）を受けて、バックアップを NFR-017 のとおり「毎回取り、1つだけ残す」に戻し、表の作り直しの決まり（子の表、番号の続き、トリガーの順番）を手元で試した結果で書き、戻す順番、ブックマークを控える時機、最初のデプロイ、バックアップからの作り直し、「公開」の意味を足した。2026-10-16：作った。決めたことは [ADR 0008](../adr/0008-deploy-from-pc-no-staging.md)。本番ではまだ1度も動かしていないので、最初のデプロイで〔未〕を確かめて直す）
+状態：下書き（2026-11-26：WAF（7）を独自ドメインのデプロイ（4）より前に作ることにし、海外からの確かめは行わずにイベントで見ることにした。2026-11-25：「最初のデプロイ」の 7 に、日本の外から止めるカスタムルール ③ を足した（NFR-021）。2026-11-25：「最初のデプロイ」の 7 に WAF のカスタムルール2本の式と確かめを書き、6 に画面の埋め込ませない印の確かめを足した（S-6c）。トリガーの数を4つに直した（S-6b）。2026-10-26：手元の D1 が読み取りだけになったときの直し方を「確かめたこと」に足した。2026-10-19：`npm run deploy` に画面のビルドを足した。2026-10-17：`/review-docs`（26件）を受けて、バックアップを NFR-017 のとおり「毎回取り、1つだけ残す」に戻し、表の作り直しの決まり（子の表、番号の続き、トリガーの順番）を手元で試した結果で書き、戻す順番、ブックマークを控える時機、最初のデプロイ、バックアップからの作り直し、「公開」の意味を足した。2026-10-16：作った。決めたことは [ADR 0008](../adr/0008-deploy-from-pc-no-staging.md)。本番ではまだ1度も動かしていないので、最初のデプロイで〔未〕を確かめて直す）
 
 - 関係する要件：NFR-004（費用の上限）、NFR-014（運営者1人で回せる）、NFR-017（バックアップ）、NFR-008（消したデータの残り方）、NFR-006（保存先で守るもの）
 - 本番の構成は [architecture](architecture.md) の「環境」。設定は `wrangler.jsonc`
@@ -78,10 +78,10 @@ SQLite は列の型や制約をあとから変えられないので、「新し�
 3. 本番の Turnstile を用意する（試験用の鍵のまま公開すると、ボット対策が黙って外れる：2026-11-24 の S-6 の `access-reviewer` 6-B）
    1. ダッシュボードの Turnstile でウィジェットを作る。使えるサイト（Hostname）は `tabikaigi-map.com` だけにする（`wrangler.jsonc` の `vars` の `TURNSTILE_HOSTNAME` と同じ値）
    2. 公開してよい鍵（サイトキー）で `web/src/config.ts` の本番の鍵（`npm run build` のときだけ使う）を差し替え、プルリクエストでマージする。手元の `npm run dev` はいつも試験用の鍵を使うので、本番のウィジェットに `localhost` は足さない
-4. 独自ドメインを `wrangler.jsonc` の `routes`（`custom_domain: true`）に足してマージし、`npm run deploy`。出力の vars に `TURNSTILE_HOSTNAME: tabikaigi-map.com` が出ていることを見る（手元の `.dev.vars` の値は本番に送られない）
+4. **先に 7 の WAF のルールを作ってから**行う（WAF はドメインに付くので、Worker を配る前に作れる。作るまでの間に海外から開けないように：2026-11-26 にユーザーと決めた）。独自ドメインを `wrangler.jsonc` の `routes`（`custom_domain: true`）に足してマージし、`npm run deploy`。出力の vars に `TURNSTILE_HOSTNAME: tabikaigi-map.com` が出ていることを見る（手元の `.dev.vars` の値は本番に送られない）
 5. 秘密の鍵を `npx wrangler secret put TURNSTILE_SECRET` で入れる（リポジトリと画面に出さない）。Worker ができた後に入れる（先に入れると、wrangler が空の Worker を作るか聞いてくる見込み。要確認）。入れるまで、作成と参加は `503`
 6. 確かめる：独自ドメインで開ける、`*.workers.dev` とプレビューの URL で開けない（Q-031）、アプリの画面と API に `noindex` と `Referrer-Policy: no-referrer` が付いている、アプリの画面に `Content-Security-Policy: frame-ancestors 'none'` と `X-Content-Type-Options: nosniff` が付いている（`curl -I https://tabikaigi-map.com/g/xxxxxxxxxxxxxxxxxxxxxx`）、本番でグループを作れて、試験用の券（手元の画面で取ったもの）では作れない（`403`）。作れずに `503` になるときは、秘密の鍵の打ち間違い（Cloudflare の `invalid-input-secret`）を疑い、`wrangler tail` で理由の短い文を見る。`www.tabikaigi-map.com` では画面を配らない（www は付けない：architecture の OGP。Turnstile の `hostname` も合わない）
-7. WAF のルールを作る（管理画面の「セキュリティ」→「WAF」。中身は architecture の「無料枠を使い切られないために」）
+7. WAF のルールを作る（**4 より前に行う**。確かめ（下の 5）は 4 の後。管理画面の「セキュリティ」→「WAF」。中身は architecture の「無料枠を使い切られないために」）
    - 式は、大文字の `/API/…` でもすり抜けないよう、パスを `lower(…)` で小文字にして比べる。① の除外と ② は、必ず同じく `lower` にする（片方だけだと、`/API/ROOMS/…` が ① の除外に入り ② に当たらない、すき間ができる）
    - 式を入れたら、管理画面の「式を検証」が通るかを先に見る。`starts_with`・`lower`・`http.request.headers` が Free で使えなければ、`http.request.uri.path wildcard "/api/*"`（大文字と小文字を区別しない：要確認）で書き直す。`matches`（正規表現）は Free では使えない
    1. カスタムルール ①「目印のない API」：動作は「ブロック」。式：
@@ -102,6 +102,7 @@ SQLite は列の型や制約をあとから変えられないので、「新し�
       - `ip.src.country` が Free で使えるかは、公式の例からの読み取り（要確認）。「式を検証」が通らなければ止めて相談する
    4. レート制限のルール（`/api/*`、IP ごとに10秒で50回（仮の値）を超えたら10秒止める：Q-031）
    5. 確かめる：
+      - 海外からの確かめ（次の3つ）は、運営者が VPN を持っていないので行わない（2026-11-26 にユーザーと決めた）。代わりに、公開の後に、イベントに海外からの要求が ③ で止まった記録（国が `JP` 以外、ルールが ③）が出るかを見る。VPN を使えるようになったら行う
       - 海外の VPN を通して試す前に、`curl -4 https://www.cloudflare.com/cdn-cgi/trace` と `curl -6 …` の `loc=` が `JP` でないことを見る（IPv6 を通さない VPN だと、日本の IPv6 でつながり「海外なのに開けた」と見誤る）。どちらかが `JP` なら、その方式では試せない
       - 海外から、`curl -4` と `curl -6` の両方で、トップと `/api/health`（`-H 'X-Tabikaigi: 1'` 付き）が Cloudflare の `403`。日本の回線に戻すと開ける
       - 海外から、Googlebot を名乗る（`-A 'Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)'`）`/api/health`（目印付き）と、`curl --path-as-is -H 'X-Tabikaigi: 1' https://tabikaigi-map.com/g/../api/health` が、どちらも Cloudflare の `403`
