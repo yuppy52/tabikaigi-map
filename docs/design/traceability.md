@@ -1,6 +1,6 @@
 # 要件IDの対応表
 
-状態：下書き（2026-11-10：L-1 の2回目の `/review-docs` を受けて、NFR-006 の行に screens（参加の画面）を足した。2026-11-09：参加の画面で名前を選ぶ形にした（REQ-012）のと、L-1 の `/review-docs` の直しに合わせて、REQ-007・REQ-012・REQ-024・REQ-025・REQ-046・REQ-047・REQ-056・NFR-006・NFR-018 の行を手で直した（作り直しのスクリプトが手元に残っていなかったため。変えた節の要件IDを grep で確かめた）。2026-11-06：ログインをやめた（[ADR 0013](../adr/0013-drop-login.md)）ので作り直した。なくした要件の行を消し、要件の節の名前を requirements に合わせた。作り直しは手元のスクリプト（リポジトリにはない）で行い、状態の行と「要件に対応しない設計」は手で直した。2026-10-15：`/review-docs` を受けて作り直し、要件に対応しない設計に目印のヘッダー・health・Turnstile を足した。2026-10-13：[api](api.md) に紐づけ・管理・退会などを足したので作り直した。2026-10-13：[api](api.md) を足して作り直した。2026-10-12：`/review-docs`（24件）を受けて、見出しの要件IDを数え、冒頭で名前を挙げただけのものを外し、「要件に対応しない設計」を足した。2026-10-12：要件IDの対応を付けるために作った）
+状態：下書き（2026-11-25：NFR-021 の行を足した。2026-11-10：L-1 の2回目の `/review-docs` を受けて、NFR-006 の行に screens（参加の画面）を足した。2026-11-09：参加の画面で名前を選ぶ形にした（REQ-012）のと、L-1 の `/review-docs` の直しに合わせて、REQ-007・REQ-012・REQ-024・REQ-025・REQ-046・REQ-047・REQ-056・NFR-006・NFR-018 の行を手で直した（作り直しのスクリプトが手元に残っていなかったため。変えた節の要件IDを grep で確かめた）。2026-11-06：ログインをやめた（[ADR 0013](../adr/0013-drop-login.md)）ので作り直した。なくした要件の行を消し、要件の節の名前を requirements に合わせた。作り直しは手元のスクリプト（リポジトリにはない）で行い、状態の行と「要件に対応しない設計」は手で直した。2026-10-15：`/review-docs` を受けて作り直し、要件に対応しない設計に目印のヘッダー・health・Turnstile を足した。2026-10-13：[api](api.md) に紐づけ・管理・退会などを足したので作り直した。2026-10-13：[api](api.md) を足して作り直した。2026-10-12：`/review-docs`（24件）を受けて、見出しの要件IDを数え、冒頭で名前を挙げただけのものを外し、「要件に対応しない設計」を足した。2026-10-12：要件IDの対応を付けるために作った）
 
 各要件（[requirements](../requirements.md) の REQ・NFR）を、設計書と ADR のどこで扱っているかの一覧。設計書の本文に書いた要件ID（`（REQ-012）` の形）を集めて作った。括弧の中は節の名前。画面の配置は [ワイヤーフレーム](wireframes.drawio.svg)、構成は [構成図](architecture.drawio.svg) も見る。
 
@@ -75,6 +75,7 @@
 | NFR-016 | 表示の速さ：スマホの回線で、招待URLを開いてから地図が出るまで3秒以内を目安… | [architecture](architecture.md)（運用）<br/>[0001-backend-firebase](../adr/0001-backend-firebase.md)（見直しの理由（2026-10-02））<br/>[0003-backend-selection](../adr/0003-backend-selection.md)（表示の速さ（NFR-016）、決定の前に確かめること）<br/>[0004-frontend-react-typescript](../adr/0004-frontend-react-typescript.md)（選択肢） |
 | NFR-020 | 独自ドメイン：最初から独自ドメインを使い、変えない（ドメインを変えると、全員が… | [architecture](architecture.md)（使うサービス） |
 | NFR-019 | 検索に出す：アプリを知らない人が検索で見つけられるように、トップ（アプリの説明… | [architecture](architecture.md)（検索に出すページと出さないページ（NFR-019、NFR-005））<br/>[screens](screens.md)（画面一覧）<br/>[0003-backend-selection](../adr/0003-backend-selection.md)（調査の前提と仮定）<br/>[0004-frontend-react-typescript](../adr/0004-frontend-react-typescript.md)（検索に出す・出さない（NFR-019）） |
+| NFR-021 | 使える場所：日本国内からだけ使える。日本の IP アドレスでなく、名の知れたボット… | [architecture](architecture.md)（使うサービス、無料枠を使い切られないために）<br/>[deploy](deploy.md)（最初のデプロイ）<br/>[screens](screens.md)（トップと URL） |
 
 ## 費用
 

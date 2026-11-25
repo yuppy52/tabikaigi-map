@@ -1,6 +1,6 @@
 # デプロイとテーブル定義の変更の手順書
 
-状態：下書き（2026-11-25：「最初のデプロイ」の 7 に WAF のカスタムルール2本の式と確かめを書き、6 に画面の埋め込ませない印の確かめを足した（S-6c）。トリガーの数を4つに直した（S-6b）。2026-10-26：手元の D1 が読み取りだけになったときの直し方を「確かめたこと」に足した。2026-10-19：`npm run deploy` に画面のビルドを足した。2026-10-17：`/review-docs`（26件）を受けて、バックアップを NFR-017 のとおり「毎回取り、1つだけ残す」に戻し、表の作り直しの決まり（子の表、番号の続き、トリガーの順番）を手元で試した結果で書き、戻す順番、ブックマークを控える時機、最初のデプロイ、バックアップからの作り直し、「公開」の意味を足した。2026-10-16：作った。決めたことは [ADR 0008](../adr/0008-deploy-from-pc-no-staging.md)。本番ではまだ1度も動かしていないので、最初のデプロイで〔未〕を確かめて直す）
+状態：下書き（2026-11-25：「最初のデプロイ」の 7 に、日本の外から止めるカスタムルール ③ を足した（NFR-021）。2026-11-25：「最初のデプロイ」の 7 に WAF のカスタムルール2本の式と確かめを書き、6 に画面の埋め込ませない印の確かめを足した（S-6c）。トリガーの数を4つに直した（S-6b）。2026-10-26：手元の D1 が読み取りだけになったときの直し方を「確かめたこと」に足した。2026-10-19：`npm run deploy` に画面のビルドを足した。2026-10-17：`/review-docs`（26件）を受けて、バックアップを NFR-017 のとおり「毎回取り、1つだけ残す」に戻し、表の作り直しの決まり（子の表、番号の続き、トリガーの順番）を手元で試した結果で書き、戻す順番、ブックマークを控える時機、最初のデプロイ、バックアップからの作り直し、「公開」の意味を足した。2026-10-16：作った。決めたことは [ADR 0008](../adr/0008-deploy-from-pc-no-staging.md)。本番ではまだ1度も動かしていないので、最初のデプロイで〔未〕を確かめて直す）
 
 - 関係する要件：NFR-004（費用の上限）、NFR-014（運営者1人で回せる）、NFR-017（バックアップ）、NFR-008（消したデータの残り方）、NFR-006（保存先で守るもの）
 - 本番の構成は [architecture](architecture.md) の「環境」。設定は `wrangler.jsonc`
@@ -95,8 +95,26 @@ SQLite は列の型や制約をあとから変えられないので、「新し�
       starts_with(lower(http.request.uri.path), "/api/rooms/")
       and not any(http.request.headers["origin"][*] eq "https://tabikaigi-map.com")
       ```
-   3. レート制限のルール（`/api/*`、IP ごとに10秒で50回（仮の値）を超えたら10秒止める：Q-031）
-   4. 確かめる：
+   3. カスタムルール ③「日本の外から」：動作は「ブロック」。サイト全体にかける。よいボットは `/api/` の外だけ通す。式：
+      ```
+      not (ip.src.country eq "JP" or (cf.client.bot and not starts_with(lower(http.request.uri.path), "/api/")))
+      ```
+      - `ip.src.country` が Free で使えるかは、公式の例からの読み取り（要確認）。「式を検証」が通らなければ止めて相談する
+   4. レート制限のルール（`/api/*`、IP ごとに10秒で50回（仮の値）を超えたら10秒止める：Q-031）
+   5. 確かめる：
+      - 海外の VPN を通して試す前に、`curl -4 https://www.cloudflare.com/cdn-cgi/trace` と `curl -6 …` の `loc=` が `JP` でないことを見る（IPv6 を通さない VPN だと、日本の IPv6 でつながり「海外なのに開けた」と見誤る）。どちらかが `JP` なら、その方式では試せない
+      - 海外から、`curl -4` と `curl -6` の両方で、トップと `/api/health`（`-H 'X-Tabikaigi: 1'` 付き）が Cloudflare の `403`。日本の回線に戻すと開ける
+      - 海外から、Googlebot を名乗る（`-A 'Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)'`）`/api/health`（目印付き）と、`curl --path-as-is -H 'X-Tabikaigi: 1' https://tabikaigi-map.com/g/../api/health` が、どちらも Cloudflare の `403`
+      - 招待URLを LINE と X に貼り、カード（OGP の画像と題名）が出る。LINE も X もカードを覚えるので、一度も貼っていない URL（新しいグループ）で試す（roadmap の「公開の前に、相談・確かめ」の OGP の確かめと一緒に行う）。出なければ ③ の式を次に替え、別の新しい URL で貼り直す（`contains` で書くと `/api/…/g/…` まで外れるので、この形のまま使う）：
+        ```
+        not (ip.src.country eq "JP"
+          or (cf.client.bot and not starts_with(lower(http.request.uri.path), "/api/"))
+          or starts_with(lower(http.request.uri.path), "/g/")
+          or http.request.uri.path eq "/ogp.png")
+        ```
+      - Google の Search Console の「URL 検査」で、トップを取得できる（よいボットが通る）
+      - ドメインの証明書が「有効」で、更新が Cloudflare の自動のまま（③ が更新の確かめを止めないか：要確認。止めるなら `/.well-known/acme-challenge/` を ③ から外す）
+      - 次の ① ② の確かめは、日本の回線から行う（海外からだと ③ が先に止め、① ② が効いているように見える）。止まったときは、イベントでどのルールに当たったかを見る
       - `curl -i https://tabikaigi-map.com/api/health` が Cloudflare の `403`（Worker の `400` ではない）。`-H 'X-Tabikaigi: 1'` を付けると `200`
       - `curl -i -H 'Origin: https://example.com' https://tabikaigi-map.com/api/rooms/<64文字>` と、Origin を付けない同じ URL が、どちらも Cloudflare の `403`
       - `/API/health`・`/%61pi/health`・`/api/rooms/../health` が（`..` は curl が送る前に縮めるので `--path-as-is` を付ける）、Cloudflare の `403` かアセットの `404` になり、どれも Workers のリクエスト数が増えない
@@ -104,7 +122,8 @@ SQLite は列の型や制約をあとから変えられないので、「新し�
       - 本番の画面で、グループを作る・開く・「行った」を付ける・リアルタイムで届く、が今までどおりできる
       - 止めた要求が、管理画面の「セキュリティ」の「イベント」に出て、Workers の「リクエスト数」には増えない
    - ドメインを足すとき（www を配る、など）は、② の式の Origin と `TURNSTILE_HOSTNAME` を一緒に直す
-   - カスタムルールが Free で何本まで使えるかは要確認（5本の見込み）。日本だけにするか（roadmap のメモ）は、このときまでに決める
+   - カスタムルールは Free で5本まで（https://developers.cloudflare.com/waf/custom-rules/ ）。いまは ①〜③ の3本
+   - WAF はドメインに付くので、`*.workers.dev` には効かない。試作の Worker（9）は ①〜③ の外で同じアカウントの Workers の枠を使わせられるので、7 と同じ日に消す
 8. 下の「確かめたこと」の〔未〕と、roadmap の Phase 2 の〔未〕を済ませる。わざと失敗するマイグレーション、Time Travel の巻き戻しと取り消し、バックアップからの作り直しは、利用者のいないこの時期に試す
 9. 試作の Worker（`tabikaigi-spike.tabikaigi.workers.dev`）と試作の D1 を消す（roadmap の Phase 2。消すのは `ask` で止まる）
 
