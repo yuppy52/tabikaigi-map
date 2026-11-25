@@ -24,3 +24,6 @@ S-6（公開の前の `access-reviewer`）の #6 で、「本文を読むとこ�
 - api/src/app.ts（`readBody`）
 - api/test/groups-api.test.ts（413 のテスト）
 - docs/learnings/2026-10-13-check-package-renames-and-audit.md
+
+## 反映
+- 2026-11-25：`.claude/agents/access-reviewer.md` の「報告の形式」に、版と確かめた場所を書く1行を足した
