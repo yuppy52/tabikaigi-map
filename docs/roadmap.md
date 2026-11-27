@@ -170,8 +170,8 @@
 - [ ] 最初の本番のデプロイ（[deploy](design/deploy.md) の「最初のデプロイ」）と、そこにある〔未〕の確かめ（配信の設定：GET 以外・大文字・`%61pi`・`//api/…`・`/api` で Worker が動かないか、動くなら WAF の式を `lower(…)` で広げる、独自ドメインを `wrangler.jsonc` の `routes` に書くか、管理画面のセキュリティのイベントに残るパス（architecture の「ログに残るもの」に足す）。2026-10-21 の `access-reviewer` #1・#5・#9・#10。Turnstile の確認の通信にグループIDを含む URL が入るか（2026-10-23 の `access-reviewer` #1：architecture の「ログに残るもの」）。トークンの権限、型の自動生成（`npm run types`）が `.dev.vars` から `TURNSTILE_SECRET` を「必ずある」と書いてしまうので、作り直す手順を決めて deploy に書く（2026-11-10：L-2 では手で2行消した。2026-11-24：S-6a では、`vars` の `TURNSTILE_HOSTNAME` が文字の型（`"tabikaigi-map.com"`）になるので `string` に直し、`declare namespace NodeJS` の3行も消した。`--strict-vars=false` を付ける案もある）、本物の D1 の書き出し、わざと失敗するマイグレーション、Time Travel の巻き戻しと取り消し、バックアップからの作り直し、`rollback` で静的アセットが戻るか、デプロイで部屋の接続が切れるか）。どれも公開の前に必須
   - 小分け（2026-11-26 に始めた。上から順に）：
     - [x] D-1 `feat/blocked-abroad-message`：WAF の ③ で止められたとき（403、JSON でない）に、画面が「混み合っています」でなく「日本国内からだけ使えます。海外にいるときや、VPN を使っているときは、日本の回線で開き直してください」を出す（2026-11-26 にユーザーと決めた。開いた後に止められたときだけ出せる）。deploy の順番を「WAF を先に」に直す
-    - [ ] D-2（運営者）：デプロイ用の API トークンを作り、`.env` に置く（deploy の「鍵」）。`npx wrangler whoami` で読めるかを見る
-    - [ ] D-3 `chore/prod-d1`：本番の D1 を作り、`database_id` を差し替えてマージ。テーブル定義を当て、トリガーが4つかを数える（deploy の 1・2）
+    - [x] D-2（運営者）：デプロイ用の API トークンを作り、`.env` に置く（deploy の「鍵」）。`npx wrangler whoami` で読めるかを見る
+    - [ ] D-3 `chore/prod-d1`（2026-11-27：D1 を作り `database_id` を差し替えた。テーブル定義はマージの後に当てる）：本番の D1 を作り、`database_id` を差し替えてマージ。テーブル定義を当て、トリガーが4つかを数える（deploy の 1・2）
     - [ ] D-4 `chore/prod-turnstile`：運営者が本番の Turnstile のウィジェットを作り、サイトキーを差し替えてマージ（deploy の 3）
     - [ ] D-5（運営者）：WAF のカスタムルール ①〜③ とレート制限を、最初のデプロイの前に作る（deploy の 7。2026-11-26 にユーザーと決めた：作るまでの間に海外から開けないように）
     - [ ] D-6 `chore/custom-domain`：独自ドメインを `routes` に足してマージし、`npm run deploy`、秘密の鍵を入れ、deploy の 6 の確かめ。型の自動生成（`npm run types`）の作り直しの手順を deploy に書く
