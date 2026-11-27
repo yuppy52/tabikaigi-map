@@ -35,12 +35,12 @@
     "bindings": [{ "name": "GROUP_ROOM", "class_name": "GroupRoom" }]
   },
   "migrations": [{ "tag": "v1", "new_sqlite_classes": ["GroupRoom"] }],
-  // D1（データベース）。本番のデータベースはまだ作っていない。作ったら database_id を差し替える
+  // D1（データベース）。本番のデータベースは 2026-11-27 に場所 apac で作った（場所は後から変えられない）
   "d1_databases": [
     {
       "binding": "DB",
       "database_name": "tabikaigi-map",
-      "database_id": "00000000-0000-0000-0000-000000000000",
+      "database_id": "575c138e-565c-4a10-b7da-da94d8a96668",
       "migrations_dir": "migrations"
     }
   ]
