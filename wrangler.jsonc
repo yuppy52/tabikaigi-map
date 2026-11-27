@@ -7,6 +7,9 @@
   // Q-031：workers.dev とプレビューの URL は出さない（独自ドメインだけで公開する）
   "workers_dev": false,
   "preview_urls": false,
+  // 独自ドメインで配る（Cloudflare が DNS のレコードと証明書を作る。www は付けない：architecture の OGP）。
+  // ドメインを足すときは、WAF の ② の Origin と vars の TURNSTILE_HOSTNAME も一緒に直す（deploy の「最初のデプロイ」の 7）
+  "routes": [{ "pattern": "tabikaigi-map.com", "custom_domain": true }],
   // 秘密でない設定の値（秘密の鍵は wrangler secret put で入れる：api/src/env.d.ts）
   "vars": {
     // Turnstile の応答の hostname（どのサイトで解いたか）と突き合わせる名前（api の「Turnstile」）。
