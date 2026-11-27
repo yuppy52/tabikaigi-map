@@ -5,6 +5,6 @@
 // npm run build（本番）では本番の鍵を使う。本番のウィジェットに localhost を足さない（手元は試験用の鍵で足りる）。
 // 秘密の鍵は API の側に wrangler secret put TURNSTILE_SECRET で入れる
 const TEST_SITE_KEY = "1x00000000000000000000AA";
-// 最初のデプロイで差し替える（deploy の「最初のデプロイ」の 3）。本番の鍵はまだないので、いまは試験用の値
-const PRODUCTION_SITE_KEY = "1x00000000000000000000AA";
+// 本番のウィジェット（使えるサイトは tabikaigi-map.com だけ）の公開してよい鍵。2026-11-27 に作った（deploy の「最初のデプロイ」の 3）
+const PRODUCTION_SITE_KEY = "0x4AAAAAAGVuRBGgwGui7szI";
 export const TURNSTILE_SITE_KEY = import.meta.env.PROD ? PRODUCTION_SITE_KEY : TEST_SITE_KEY;
